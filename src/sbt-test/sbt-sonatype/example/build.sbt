@@ -1,0 +1,1 @@
+import SonatypeKeys._organization := "org.xerial"sonatypeSettings
