@@ -15,6 +15,7 @@ import org.apache.http.client.methods.HttpGet
 import java.io.ByteArrayOutputStream
 import scala.xml.XML
 import org.apache.http.client.HttpClient
+import org.apache.http.HttpResponse
 
 
 /**
@@ -42,6 +43,7 @@ object Sonatype extends sbt.Plugin {
     list := {
       val rest = new NexusRESTService(streams.value, repository.value, profile.value, credentials.value, credentialHost.value)
       rest.stagingProfiles
+      rest.profiles
     },
     close := {
       true
@@ -53,9 +55,8 @@ object Sonatype extends sbt.Plugin {
 
 
 
-  case class StagingProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String)
-
-
+  case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String)
+  case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
 
   class NexusRESTService(s:TaskStreams, repositoryUrl:String, profileName:String, cred:Seq[Credentials], credentialHost:String) {
@@ -66,6 +67,16 @@ object Sonatype extends sbt.Plugin {
       val url = repoBase(repositoryUrl)
       s.log.info(s"Nexus repository: $url")
       url
+    }
+
+    def Get[U](path:String)(body: HttpResponse => U) : U = {
+      val req = new HttpGet(s"${repo}$path")
+      req.addHeader("Content-Type", "application/xml")
+      withHttpClient{ client =>
+        val response = client.execute(req)
+        s.log.info(s"Status line: ${response.getStatusLine}")
+        body(response)
+      }
     }
 
     def withHttpClient[U](body: HttpClient => U) : U = {
@@ -88,25 +99,42 @@ object Sonatype extends sbt.Plugin {
     }
 
     def stagingProfiles = {
-      s.log.info("Listing staging repository...")
-      val req = new HttpGet(s"${repo}/staging/profile_repositories")
-      req.addHeader("Content-Type", "application/xml")
-
-      withHttpClient { client =>
-        val response = client.execute(req)
-        s.log.info(s"Status line: ${response.getStatusLine}")
+      s.log.info("Listing staging repository profiles...")
+      Get("/staging/profile_repositories") { response =>
         val profileRepositoriesXML = XML.load(response.getEntity.getContent)
-        val profiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
-          StagingProfile(
+        val repositoryProfiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
+          StagingRepositoryProfile(
             (p \ "profileId").text,
             (p \ "profileName").text,
             (p \ "type").text,
             (p \ "repositoryId").text)
         }
-        s.log.info(s"profiles:\n${profiles.mkString("\n")}")
+        val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
+        s.log.info(s"my staging repository profiles:\n${myProfiles.mkString("\n")}")
       }
     }
 
+    def profiles = {
+      s.log.info("Listing staging profiles...")
+      Get("/staging/profiles") { response =>
+        val profileXML = XML.load(response.getEntity.getContent)
+        val profiles = for(p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
+          StagingProfile(
+            (p \ "id").text,
+            (p \ "name").text,
+            (p \ "repositoryTargetId").text
+          )
+        }
+        s.log.info(s"my staging profiles:\n${profiles.mkString("\n")}")
+      }
+    }
+
+    def closeStage = {
+      s.log.info("Closing staging repository...")
+
+
+
+    }
 
 
   }
