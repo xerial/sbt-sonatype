@@ -40,27 +40,8 @@ object Sonatype extends sbt.Plugin {
     credentialHost := "oss.sonatype.org",
     profile := organization.value,
     list := {
-      val s = streams.value
-      val repo = repoBase(repository.value)
-      s.log.info(s"Nexus repository: $repo")
-      s.log.info("Listing staging repository...")
-
-      val rest = new RESTAccess(profile.value, credentials.value, credentialHost.value)
-      rest.withHttpClient { client =>
-        val req = new HttpGet(s"${repo}/staging/profile_repositories")
-        req.addHeader("Content-Type", "application/xml")
-        val response = client.execute(req)
-        s.log.info(s"Status line: ${response.getStatusLine}")
-        val profileRepositoriesXML = XML.load(response.getEntity.getContent)
-        val profiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
-          StagingProfile(
-            (p \ "profileId").text,
-            (p \ "profileName").text,
-            (p \ "type").text,
-            (p \ "repositoryId").text)
-        }
-        s.log.info(s"profiles:\n${profiles.mkString("\n")}")
-      }
+      val rest = new NexusRESTService(streams.value, repository.value, profile.value, credentials.value, credentialHost.value)
+      rest.stagingProfiles
     },
     close := {
       true
@@ -75,9 +56,18 @@ object Sonatype extends sbt.Plugin {
   case class StagingProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String)
 
 
-  private def repoBase(url:String) = if(url.endsWith("/")) url.dropRight(1) else url
 
-  class RESTAccess(profileName:String, cred:Seq[Credentials], credentialHost:String) {
+
+  class NexusRESTService(s:TaskStreams, repositoryUrl:String, profileName:String, cred:Seq[Credentials], credentialHost:String) {
+
+    
+    private def repoBase(url:String) = if(url.endsWith("/")) url.dropRight(1) else url
+    private val repo = {
+      val url = repoBase(repositoryUrl)
+      s.log.info(s"Nexus repository: $url")
+      url
+    }
+
     def withHttpClient[U](body: HttpClient => U) : U = {
       val credt : Option[DirectCredentials] = cred.collectFirst{ case d:DirectCredentials if d.host == credentialHost => d}
       if(credt.isEmpty)
@@ -95,8 +85,30 @@ object Sonatype extends sbt.Plugin {
       }
       finally
         client.getConnectionManager.shutdown()
-
     }
+
+    def stagingProfiles = {
+      s.log.info("Listing staging repository...")
+      val req = new HttpGet(s"${repo}/staging/profile_repositories")
+      req.addHeader("Content-Type", "application/xml")
+
+      withHttpClient { client =>
+        val response = client.execute(req)
+        s.log.info(s"Status line: ${response.getStatusLine}")
+        val profileRepositoriesXML = XML.load(response.getEntity.getContent)
+        val profiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
+          StagingProfile(
+            (p \ "profileId").text,
+            (p \ "profileName").text,
+            (p \ "type").text,
+            (p \ "repositoryId").text)
+        }
+        s.log.info(s"profiles:\n${profiles.mkString("\n")}")
+      }
+    }
+
+
+
   }
 
 
