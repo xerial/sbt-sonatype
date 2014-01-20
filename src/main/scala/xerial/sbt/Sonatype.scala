@@ -204,7 +204,7 @@ object Sonatype extends sbt.Plugin {
 
     def closeStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
       s.log.info(s"Closing staging repository $repo")
-      val ret = Post(s"/staging/profiles/${repo.repositoryId}/finish",
+      val ret = Post(s"/staging/profiles/${profile.profileId}/finish",
         s"""<?xml version="1.0" encoding="UTF-8"?>
           <promoteRequest>
             <data>
@@ -220,13 +220,13 @@ object Sonatype extends sbt.Plugin {
 
     def promoteStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
       s.log.info(s"Promoting staging repository $repo")
-      val ret = Post(s"/staging/profiles/${repo.repositoryId}/promote",
+      val ret = Post(s"/staging/profiles/${profile.profileId}/promote",
         s"""<?xml version="1.0" encoding="UTF-8"?>
           <promoteRequest>
             <data>
               <description>Promoted</description>
-              <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
               <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
+              <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
             </data>
           </promoteRequest>
          """
