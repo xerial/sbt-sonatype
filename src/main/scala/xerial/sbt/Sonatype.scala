@@ -12,27 +12,29 @@ import Keys._
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.{DefaultHttpClient, BasicCredentialsProvider}
 import org.apache.http.client.methods.HttpGet
-import java.io.ByteArrayOutputStream
 import scala.xml.XML
 import org.apache.http.client.HttpClient
 import org.apache.http.HttpResponse
 
 
 /**
- * Plugin for automating releases at Sonatype 
+ * Plugin for automating release processes at Sonatype Nexus
  * @author Taro L. Saito
  */
 object Sonatype extends sbt.Plugin {
-
-
 
   object SonatypeKeys {
     val repository = settingKey[String]("Sonatype repository URL")
     val profile = settingKey[String]("profile name at Sonatype: e.g. org.xerial")
     val close = taskKey[Boolean]("Close the stage")
-    val promote = taskKey[Boolean]("close and promoe the repositoy")
-    val list = taskKey[Unit]("list staging repositories")
+    val promote = taskKey[Boolean]("close and promoe the repository")
+
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
+    val restService = taskKey[NexusRESTService]("REST API")
+
+    val list = taskKey[Unit]("list staging repositories")
+    val stagingRepositoryProfiles = taskKey[Unit]("List staging repository profiles")
+    val stagingProfiles = taskKey[Unit]("List staging profiles")
   }
 
   import SonatypeKeys._ 
@@ -40,12 +42,23 @@ object Sonatype extends sbt.Plugin {
     repository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profile := organization.value,
+    restService := new NexusRESTService(streams.value, repository.value, profile.value, credentials.value, credentialHost.value),
+    stagingRepositoryProfiles := {
+      val rest : NexusRESTService = restService.value
+      rest.stagingRepositoryProfiles
+    },
+    stagingProfiles := {
+      val rest : NexusRESTService = restService.value
+      rest.stagingRepositoryProfiles
+    },
     list := {
-      val rest = new NexusRESTService(streams.value, repository.value, profile.value, credentials.value, credentialHost.value)
+      val rest : NexusRESTService = restService.value
+      rest.stagingRepositoryProfiles
       rest.stagingProfiles
-      rest.profiles
     },
     close := {
+      val rest : NexusRESTService = restService.value
+
       true
     },
     promote := {
@@ -59,7 +72,11 @@ object Sonatype extends sbt.Plugin {
   case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
 
-  class NexusRESTService(s:TaskStreams, repositoryUrl:String, profileName:String, cred:Seq[Credentials], credentialHost:String) {
+  class NexusRESTService(s:TaskStreams,
+                         repositoryUrl:String,
+                         profileName:String,
+                         cred:Seq[Credentials],
+                         credentialHost:String) {
 
     
     private def repoBase(url:String) = if(url.endsWith("/")) url.dropRight(1) else url
@@ -98,7 +115,7 @@ object Sonatype extends sbt.Plugin {
         client.getConnectionManager.shutdown()
     }
 
-    def stagingProfiles = {
+    def stagingRepositoryProfiles = {
       s.log.info("Listing staging repository profiles...")
       Get("/staging/profile_repositories") { response =>
         val profileRepositoriesXML = XML.load(response.getEntity.getContent)
@@ -114,7 +131,7 @@ object Sonatype extends sbt.Plugin {
       }
     }
 
-    def profiles = {
+    def stagingProfiles = {
       s.log.info("Listing staging profiles...")
       Get("/staging/profiles") { response =>
         val profileXML = XML.load(response.getEntity.getContent)
