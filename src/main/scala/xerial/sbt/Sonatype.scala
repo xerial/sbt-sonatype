@@ -49,7 +49,7 @@ object Sonatype extends sbt.Plugin {
     },
     stagingProfiles := {
       val rest : NexusRESTService = restService.value
-      rest.stagingRepositoryProfiles
+      rest.stagingProfiles
     },
     list := {
       val rest : NexusRESTService = restService.value
