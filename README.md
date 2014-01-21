@@ -44,10 +44,13 @@ This adds [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-si
 
 **build.sbt**
 
+Import `xerial.sbt.Sonatype.sonatypeSettings` and `SonatypeKeys._`. Then set `profileName` (your Sonatype acount profile name. e.g. org.xerial) and `pomExtra`. 
+At least you need to set url, licenses, scm and deverlopers information.
+
 ```scala
 import SonatypeKeys._
 
-// Import default settings. This line changes `publishTo` to use Sonatype repository.
+// Import default settings. This line changes `publishTo` to use Sonatype repository and add several commands for publishing.
 sonatypeSettings
  // Your project orgnization (package name)
 organization := "org.xerial.example" 
