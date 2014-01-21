@@ -37,6 +37,8 @@ object Sonatype extends sbt.Plugin {
     val list = taskKey[Unit]("list staging repositories")
     val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
+    val closeAndPromote = taskKey[Boolean]("Publish to Maven central via close and promote")
+
   }
 
   import SonatypeKeys._ 
@@ -60,43 +62,32 @@ object Sonatype extends sbt.Plugin {
     close := {
       val s = streams.value
       val rest : NexusRESTService = restService.value
-      val openRepos = rest.openRepositories
-      if(openRepos.isEmpty) {
-        s.log.warn("No staging repository is found. Run publish-signed first")
-        false
-      }
-      else if(openRepos.size > 1) {
-        val label = openRepos.zipWithIndex.map{case (r, i) => s"[$i] $r"}
-        s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
-        s.log.warn("Run close (repository number)")
-        false
-      }
-      else {
-        val repo = openRepos.head
-        val p = stagingProfiles.value.head
-        rest.closeStage(p, repo)
+      rest.findTargetRepository(isPromote=false) match {
+        case Some(r) =>
+          val p = stagingProfiles.value.headOption
+          rest.closeStage(p, r)
+        case None =>
+          false
       }
     },
     promote := {
       val s = streams.value
       val rest : NexusRESTService = restService.value
-      val closedRepos = rest.closedRepositories
-      if(closedRepos.isEmpty) {
-        s.log.warn("No closed repository is found. Run publish-signed followed, then close")
-        false
+      rest.findTargetRepository(isPromote=true) match {
+        case Some(r) =>
+          val p = stagingProfiles.value.headOption
+          rest.promoteStage(p, r)
+        case None =>
+          false
       }
-      else if(closedRepos.size > 1) {
-        val label = closedRepos.zipWithIndex.map{case (r, i) => s"[$i] $r"}
-        s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
-        s.log.warn("Run promote (repository number)")
-        false
-      }
-      else {
-        val repo = closedRepos.head
-        val p = stagingProfiles.value.head
-        rest.promoteStage(p, repo)
-      }
+    },
+    closeAndPromote := {
+
+
+
+      false
     }
+
   )
 
 
@@ -114,6 +105,34 @@ object Sonatype extends sbt.Plugin {
                          profileName:String,
                          cred:Seq[Credentials],
                          credentialHost:String) {
+
+    def findTargetRepository(isPromote:Boolean) = {
+      val repos = if(isPromote) closedRepositories else openRepositories
+
+      if(repos.isEmpty) {
+        val err = if(isPromote)
+          "No closed repository is found. Run publish-signed and close commands."
+        else
+          "No staging repository is found. Run publish-signed first."
+
+        s.log.error(err)
+        None
+      }
+      else if(repos.size > 1) {
+        val label = repos.zipWithIndex.map{case (r, i) => s"[$i] $r"}
+        val err = if(isPromote)
+          "Specify a repository number via promote (repository number)"
+          else
+          "Specify a repository number via close (respotiory number)"
+
+        s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
+        s.log.warn(err)
+        None
+      }
+      else {
+        repos.headOption
+      }
+    }
 
 
     def openRepositories = stagingRepositoryProfiles.filter(_.isOpen).sortBy(_.repositoryId)
@@ -142,14 +161,13 @@ object Sonatype extends sbt.Plugin {
       req.addHeader("Content-Type", "application/xml")
       withHttpClient{ client =>
         val response = client.execute(req)
-        s.log.info(s"Status line: ${response.getStatusLine}")
+        s.log.debug(s"Status line: ${response.getStatusLine}")
         response
       }
-
     }
 
 
-    def withHttpClient[U](body: HttpClient => U) : U = {
+    private def withHttpClient[U](body: HttpClient => U) : U = {
       val credt : Option[DirectCredentials] = cred.collectFirst{ case d:DirectCredentials if d.host == credentialHost => d}
       if(credt.isEmpty)
         throw new IllegalStateException(s"No credential is found for ${credentialHost}. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file.")
@@ -202,35 +220,26 @@ object Sonatype extends sbt.Plugin {
       }
     }
 
+    private def promoteRequestXML(profile:StagingProfile, repo:StagingRepositoryProfile) =
+      s"""|<?xml version="1.0" encoding="UTF-8"?>
+          |<promoteRequest>
+          |  <data>
+          |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
+          |    <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
+          |    <description>Closing</description>
+          |  </data>
+          |</promoteRequest>
+         """.stripMargin
+
     def closeStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
       s.log.info(s"Closing staging repository $repo")
-      val ret = Post(s"/staging/profiles/${profile.profileId}/finish",
-        s"""<?xml version="1.0" encoding="UTF-8"?>
-          <promoteRequest>
-            <data>
-              <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
-              <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
-              <description>Closing</description>
-            </data>
-          </promoteRequest>
-         """
-      )
+      val ret = Post(s"/staging/profiles/${profile.profileId}/finish", promoteRequestXML(profile, repo))
       ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
     }
 
     def promoteStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
       s.log.info(s"Promoting staging repository $repo")
-      val ret = Post(s"/staging/profiles/${profile.profileId}/promote",
-        s"""<?xml version="1.0" encoding="UTF-8"?>
-          <promoteRequest>
-            <data>
-              <description>Promoted</description>
-              <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
-              <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
-            </data>
-          </promoteRequest>
-         """
-      )
+      val ret = Post(s"/staging/profiles/${profile.profileId}/promote", promoteRequestXML(profile, repo))
       ret.getStatusLine.getStatusCode match {
         case HttpStatus.SC_CREATED => true
         case other =>
@@ -240,8 +249,10 @@ object Sonatype extends sbt.Plugin {
           }
           false
       }
-
     }
+
+
+
   }
 
 
