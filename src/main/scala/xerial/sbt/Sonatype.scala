@@ -51,6 +51,7 @@ object Sonatype extends sbt.Plugin {
     // Add sonatyep repository settings
     publishTo <<= version { (v) => Some(releaseResolver(v)) },
     publishMavenStyle := true,
+    pomIncludeRepository := { _ => false },
     repository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
