@@ -42,7 +42,10 @@ object SonatypeBuild extends Build {
     }
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ Seq[Setting[_]](
+  import xerial.sbt.Sonatype.SonatypeKeys._
+
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
+    profileName := "org.xerial",
     organization := "org.xerial.sbt",
     organizationName := "Xerial project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -67,7 +70,6 @@ object SonatypeBuild extends Build {
       <url>http://xerial.org/</url>
       <licenses>
         <license>
-
           <name>Apache 2</name>
           <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
