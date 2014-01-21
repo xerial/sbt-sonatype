@@ -358,7 +358,7 @@ object Sonatype extends sbt.Plugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 1, intervalSeq:Int=3, maxRetries:Int=5) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 1, intervalSeq:Int=3, maxRetries:Int=10) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
 
@@ -386,20 +386,20 @@ object Sonatype extends sbt.Plugin {
         toContinue = false
       }
 
+      // Post close request
+      s.log.info(s"Closing staging repository $repo")
+      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+        throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
+      }
+
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
         activitiesOf(repo).filter(_.name == "close").lastOption match {
-          case None =>
-            // Post close request
-            s.log.info(s"Closing staging repository $repo")
-            val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
-            if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-              throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
-            }
           case Some(activity) =>
             if(activity.isCloseSucceeded(repo.repositoryId)) {
               toContinue = false
-              s.log.error("Closed successfully")
+              s.log.info("Closed successfully")
             }
             else if(activity.containsError) {
               s.log.error("Failed to close the repository")
@@ -410,6 +410,8 @@ object Sonatype extends sbt.Plugin {
               // Activity log exists, but the close phase is not yet terminated
               timer.doWait
             }
+          case None =>
+            timer.doWait
         }
       }
       if(toContinue == true)
@@ -431,20 +433,20 @@ object Sonatype extends sbt.Plugin {
         toContinue = false
       }
 
+      // Post promote(release) request
+      s.log.info(s"Promoting staging repository $repo")
+      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+        s.log.error(s"${ret.getStatusLine}")
+        for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
+          s.log.error(errorLine)
+        }
+        throw new Exception("Failed to promote the repository")
+      }
+
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
         activitiesOf(repo).filter(_.name == "release").lastOption match {
-          case None =>
-            // Post promote(release) request
-            s.log.info(s"Promoting staging repository $repo")
-            val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
-            if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-              s.log.error(s"${ret.getStatusLine}")
-              for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
-                s.log.error(errorLine)
-              }
-              throw new Exception("Failed to promote the repository")
-            }
           case Some(activity) =>
             if(activity.isReleaseSucceeded(repo.repositoryId)) {
               s.log.info("Promoted successfully")
@@ -455,9 +457,10 @@ object Sonatype extends sbt.Plugin {
               activity.reportFailure(s)
               throw new Exception("Failed to promote the repository")
             }
-            else {
+            else
               timer.doWait
-            }
+          case None =>
+            timer.doWait
         }
       }
       if(toContinue == true)
@@ -486,6 +489,7 @@ object Sonatype extends sbt.Plugin {
     }
 
     def activitiesOf(r:StagingRepositoryProfile) =  {
+      s.log.info(s"Checking activity logs of ${r.repositoryId} ...")
       val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
         val xml = XML.load(response.getEntity.getContent)
         for(sa <- xml \\ "stagingActivity") yield {
