@@ -117,7 +117,7 @@ Do close and promote at once:
 ```
 $ sbt release-sonatype
 ```
-This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then send close and promote commands. 
+This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
 
 
 ## Available Commands
