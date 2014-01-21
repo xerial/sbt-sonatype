@@ -49,11 +49,19 @@ object Sonatype extends sbt.Plugin {
     restService := new NexusRESTService(streams.value, repository.value, profileName.value, credentials.value, credentialHost.value),
     stagingRepositoryProfiles := {
       val rest : NexusRESTService = restService.value
-      rest.stagingRepositoryProfiles
+      val s = streams.value
+      val repos = rest.stagingRepositoryProfiles
+      s.log.info("Staging repository profiles:")
+      s.log.info(repos.mkString(", "))
+      repos
     },
     stagingProfiles := {
       val rest : NexusRESTService = restService.value
-      rest.stagingProfiles
+      val s = streams.value
+      val profiles =  rest.stagingProfiles
+      s.log.info("Staging profiles:")
+      s.log.info(profiles.mkString(", "))
+      profiles
     },
     list := {
       val rest : NexusRESTService = restService.value
@@ -63,8 +71,7 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       rest.findTargetRepository(isPromote=false) match {
         case Some(r) =>
-          val p = stagingProfiles.value.headOption
-          rest.closeStage(p, r)
+          rest.closeStage(r)
         case None =>
           false
       }
@@ -73,16 +80,13 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       rest.findTargetRepository(isPromote=true) match {
         case Some(r) =>
-          val p = stagingProfiles.value.headOption
-          rest.promoteStage(p, r)
+          rest.promoteStage(r)
         case None =>
           false
       }
     },
     closeAndPromote := {
       val rest : NexusRESTService = restService.value
-      rest.stagingRepositoryProfiles
-
 
       false
     }
@@ -98,6 +102,8 @@ object Sonatype extends sbt.Plugin {
   }
   case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
+  case class StagingActivity(name:String, started:String, stopped:String, events:Seq[ActivityEvent])
+  case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String])
 
   class NexusRESTService(s:TaskStreams,
                          repositoryUrl:String,
@@ -118,11 +124,11 @@ object Sonatype extends sbt.Plugin {
         None
       }
       else if(repos.size > 1) {
-        val label = repos.zipWithIndex.map{case (r, i) => s"[$i] $r"}
+        val label = repos.zipWithIndex.map{case (r, i) => s"[${r.repositoryId}] $r"}
         val err = if(isPromote)
-          "Specify a repository number via promote (repository number)"
+          "Specify a repository number via promote (repository id)"
           else
-          "Specify a repository number via close (respotiory number)"
+          "Specify a repository number via close (respotiory id)"
 
         s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
         s.log.warn(err)
@@ -198,7 +204,7 @@ object Sonatype extends sbt.Plugin {
             (p \ "repositoryId").text)
         }
         val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
-        s.log.info(s"Staging repository profiles:\n${myProfiles.mkString("\n")}")
+        //s.log.info(s"Staging repository profiles:\n${myProfiles.mkString("\n")}")
         myProfiles
       }
     }
@@ -214,31 +220,38 @@ object Sonatype extends sbt.Plugin {
             (p \ "repositoryTargetId").text
           )
         }
-        s.log.info(s"Staging profiles:\n${profiles.mkString("\n")}")
+        //s.log.info(s"Staging profiles:\n${profiles.mkString("\n")}")
         profiles
       }
     }
 
-    private def promoteRequestXML(profile:StagingProfile, repo:StagingRepositoryProfile) =
+    lazy val currentProfile = {
+      val profiles = stagingProfiles
+      if(profiles.isEmpty)
+        throw new IllegalArgumentException(s"Profile ${profileName} is not found")
+      profiles.head
+    }
+
+    private def promoteRequestXML(repo:StagingRepositoryProfile) =
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
           |  <data>
           |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
-          |    <targetRepositoryId>${profile.repositoryTargetId}</targetRepositoryId>
-          |    <description>Closing</description>
+          |    <targetRepositoryId>${currentProfile.repositoryTargetId}</targetRepositoryId>
+          |    <description>Requested by sbt-sonatype plugin</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
 
-    def closeStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
+    def closeStage(repo:StagingRepositoryProfile) = {
       s.log.info(s"Closing staging repository $repo")
-      val ret = Post(s"/staging/profiles/${profile.profileId}/finish", promoteRequestXML(profile, repo))
+      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
       ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
     }
 
-    def promoteStage(profile:StagingProfile, repo:StagingRepositoryProfile) = {
+    def promoteStage(repo:StagingRepositoryProfile) = {
       s.log.info(s"Promoting staging repository $repo")
-      val ret = Post(s"/staging/profiles/${profile.profileId}/promote", promoteRequestXML(profile, repo))
+      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
       ret.getStatusLine.getStatusCode match {
         case HttpStatus.SC_CREATED => true
         case other =>
@@ -248,6 +261,20 @@ object Sonatype extends sbt.Plugin {
           }
           false
       }
+    }
+
+    def stagingRepositoryInfo(repositoryId:String) = {
+      s.log.info(s"Seaching for repository $repositoryId ...")
+      val ret = Get(s"/staging/repository/${repositoryId}") { content =>
+        content
+      }
+    }
+
+    def closeAndPromote : Boolean = {
+
+
+
+      true
     }
 
 
