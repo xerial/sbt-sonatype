@@ -17,6 +17,7 @@ import org.apache.http.client.HttpClient
 import org.apache.http.{HttpStatus, HttpResponse}
 import org.apache.http.entity.StringEntity
 import scala.io.Source
+import java.io.IOException
 
 
 /**
@@ -34,7 +35,8 @@ object Sonatype extends sbt.Plugin {
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
     val restService = taskKey[NexusRESTService]("REST API")
 
-    val list = taskKey[Unit]("list staging repositories")
+    val list = taskKey[Unit]("List staging repositories")
+    val stagingActivities = taskKey[Unit]("Show repository activities")
     val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
     val closeAndPromote = taskKey[Boolean]("Publish to Maven central via close and promote")
@@ -65,7 +67,7 @@ object Sonatype extends sbt.Plugin {
     },
     list := {
       val rest : NexusRESTService = restService.value
-      rest.stagingRepositoryProfiles
+      stagingRepositoryProfiles.value
     },
     close := {
       val rest : NexusRESTService = restService.value
@@ -89,6 +91,16 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
 
       false
+    },
+    stagingActivities := {
+      val s = streams.value
+      val rest : NexusRESTService = restService.value
+      for((repo, activities) <- rest.activities) {
+        s.log.info(s"Staging activities of $repo:")
+        for(a <- activities) {
+          s.log.info(a.toString)
+        }
+      }
     }
 
   )
@@ -96,14 +108,26 @@ object Sonatype extends sbt.Plugin {
 
 
   case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String) {
-    override def toString = s"status:$stagingType, repository:$repositoryId, profile:$profileName($profileId)"
+    override def toString = s"[$repositoryId] status:$stagingType, profile:$profileName($profileId)"
     def isOpen = stagingType == "open"
     def isClosed = stagingType == "closed"
+    def isReleased = stagingType == "released"
   }
   case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
-  case class StagingActivity(name:String, started:String, stopped:String, events:Seq[ActivityEvent])
-  case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String])
+  case class StagingActivity(name:String, started:String, stopped:String, events:Seq[ActivityEvent]) {
+    override def toString = {
+      val b = Seq.newBuilder[String]
+      b += s"-activity -- name:$name, started:$started, stopped:$stopped"
+      for(e <- events)
+        b += s" ${e.toString}"
+      b.result.mkString("\n")
+    }
+  }
+
+  case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String]) {
+    override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
+  }
 
   class NexusRESTService(s:TaskStreams,
                          repositoryUrl:String,
@@ -126,9 +150,9 @@ object Sonatype extends sbt.Plugin {
       else if(repos.size > 1) {
         val label = repos.zipWithIndex.map{case (r, i) => s"[${r.repositoryId}] $r"}
         val err = if(isPromote)
-          "Specify a repository number via promote (repository id)"
+          "Specify a repository id via promote (repository id)"
           else
-          "Specify a repository number via close (respotiory id)"
+          "Specify a repository id via close (respotiory id)"
 
         s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
         s.log.warn(err)
@@ -156,6 +180,9 @@ object Sonatype extends sbt.Plugin {
       withHttpClient{ client =>
         val response = client.execute(req)
         s.log.debug(s"Status line: ${response.getStatusLine}")
+        if(response.getStatusLine.getStatusCode != HttpStatus.SC_OK) {
+          throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
+        }
         body(response)
       }
     }
@@ -265,8 +292,8 @@ object Sonatype extends sbt.Plugin {
 
     def stagingRepositoryInfo(repositoryId:String) = {
       s.log.info(s"Seaching for repository $repositoryId ...")
-      val ret = Get(s"/staging/repository/${repositoryId}") { content =>
-        content
+      val ret = Get(s"/staging/repository/${repositoryId}") { response =>
+        response
       }
     }
 
@@ -277,6 +304,23 @@ object Sonatype extends sbt.Plugin {
       true
     }
 
+    def activities : Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
+      for(r <- stagingRepositoryProfiles) yield {
+        val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
+          val xml = XML.load(response.getEntity.getContent)
+          for(sa <- xml \\ "stagingActivity") yield {
+            val ae = for(event <- sa \ "events" \ "stagingActivityEvent") yield {
+              val props = for(prop <- event \ "properties" \ "stagingProperty") yield {
+                (prop \ "name").text -> (prop \ "value").text
+              }
+              ActivityEvent((event \ "timestamp").text, (event \ "name").text, (event \ "severity").text, props.toMap)
+            }
+            StagingActivity((sa \ "name").text, (sa \ "started").text, (sa \ "stopped").text, ae.toSeq)
+          }
+        }
+        r -> a
+      }
+    }
 
 
   }
