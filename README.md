@@ -15,7 +15,7 @@ A sbt plugin for automating release processes at Sonatype Nexus. Deploying to So
 **project/plugins.sbt**
 
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.1")
 ```
 This import sbt-sonatype plugin to your project.
 
@@ -115,6 +115,6 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 * **list**: Show the list of staging repositories.
 * **close** (repositoryId)?: Close a staging repository.
 * **promote** (repositoyrId)?: Promote a staging repository.
-* **closeAndPromote** (repositoryId)?: Close and promote a staging repository.
+* **release-sonatype** (repositoryId)?: Close and promote a staging repository.
 * **stagingProfiles**: Show the list of staging profiles, which include profileName information
 
