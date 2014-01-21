@@ -1,14 +1,16 @@
 sbt-sonatype plugin
 ---
 
-A sbt plugin for automating release processes at Sonatype Nexus.
+A sbt plugin for automating release processes at Sonatype Nexus, that is required to synchronize your project artifacts to Maven central repository <http://repo1.maven.org/maven2>.
 
 
-## Prerequisite
+## Prerequisites
  
- * Create a Sonatype Repository account
+ * Create a Sonatype Repository account 
    * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide).
-
+   * Create a GPG key
+   * You need to open a JIRA ticket to publish your project to Maven central.
+     * https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide#SonatypeOSSMavenRepositoryUsageGuide-3.CreateaJIRAticket
 
 ## Usage
 
@@ -28,7 +30,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)"
 ```
 
-Use [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
+Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
 `$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt`
 
 ```scala
@@ -36,19 +38,19 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
 
-
 `build.sbt`
 
 ```scala
 import SonatypeKeys._
 
+// Import default settings. This line changes `publishTo` to use Sonatype repository.
 sonatypeSettings
  // Your project orgnization
 organization := "org.xerial.example" 
  // Your profile name of the sonatype account. The default is the same with the organization 
 profileName := "org.xerial" 
 
-// Project version
+// Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
 version := "0.1" 
 
 // To sync with Maven central, you need to supply the following information:
@@ -78,3 +80,26 @@ pomExtra := {
 }
 ```
 
+## Publish 
+
+First you need to set a release version (i.e. w/o SNAPSHOT) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+
+Publish a GPG-signed artifact to Sonatype:
+```
+$ sbt publish-signed
+```
+
+Do close and promote at once:
+```
+$ sbt closeAndPromote
+```
+This commands accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then send close and promote commands. 
+
+
+
+## Available Commands
+
+* **list**: List staging repositories 
+* **close** (repositoryId)?: Close a staging repository
+* **promote** (repositoyrId)?: Promote a staging repository
+* **closeAndPromote** (repositoryId)?: Close and promote a stagint repository.
