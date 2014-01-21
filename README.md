@@ -17,7 +17,7 @@ A sbt plugin for automating release processes at Sonatype Nexus. Deploying to So
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.1")
 ```
-This import sbt-sonatype plugin to your project.
+This imports sbt-sonatype plugin to your project.
 
 
 **$HOME/.sbt/(sbt-version)/sonatype.sbt**
