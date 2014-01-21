@@ -420,9 +420,12 @@ object Sonatype extends sbt.Plugin {
     }
 
     def dropStage(repo:StagingRepositoryProfile) = {
-      s.log.info(s"Closing staging repository $repo")
+      s.log.info(s"Dropping staging repository $repo")
       val ret = Post(s"/staging/profiles/${currentProfile.profileId}/drop", promoteRequestXML(repo))
-      ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+        throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
+      }
+      true
     }
 
 
@@ -450,6 +453,9 @@ object Sonatype extends sbt.Plugin {
           case Some(activity) =>
             if(activity.isReleaseSucceeded(repo.repositoryId)) {
               s.log.info("Promoted successfully")
+
+              // Drop after release
+              dropStage(repo)
               toContinue = false
             }
             else if(activity.containsError) {
