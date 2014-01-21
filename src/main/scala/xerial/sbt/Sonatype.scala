@@ -276,6 +276,13 @@ object Sonatype extends sbt.Plugin {
       ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
     }
 
+    def dropStage(repo:StagingRepositoryProfile) = {
+      s.log.info(s"Closing staging repository $repo")
+      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/drop", promoteRequestXML(repo))
+      ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
+    }
+
+
     def promoteStage(repo:StagingRepositoryProfile) = {
       s.log.info(s"Promoting staging repository $repo")
       val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
