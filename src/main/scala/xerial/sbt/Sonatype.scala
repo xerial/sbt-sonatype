@@ -360,7 +360,6 @@ object Sonatype extends sbt.Plugin {
 
     class ExponentialBackOffRetry(initialWaitSeq:Int= 1, intervalSeq:Int=3, maxRetries:Int=5) {
       private var numTrial = 0
-      private val currentWait = initialWaitSeq
       private var currentInterval = intervalSeq
 
       def hasNext = numTrial < maxRetries
@@ -448,8 +447,8 @@ object Sonatype extends sbt.Plugin {
             }
           case Some(activity) =>
             if(activity.isReleaseSucceeded(repo.repositoryId)) {
+              s.log.info("Promoted successfully")
               toContinue = false
-              s.log.error("Promoted successfully")
             }
             else if(activity.containsError) {
               s.log.error("Failed to promote the repository")
