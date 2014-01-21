@@ -370,37 +370,45 @@ object Sonatype extends sbt.Plugin {
         interval
       }
 
+      def doWait  {
+        val w = nextWait
+        Thread.sleep(w * 1000)
+      }
+
     }
 
 
     def closeStage(repo:StagingRepositoryProfile) = {
-      s.log.info(s"Closing staging repository $repo")
-      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
-      ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
-
-      //stagingRepositoryInfo(repo.repositoryId)
       var toContinue = true
-
       val timer = new ExponentialBackOffRetry()
-      def wait = {
-        val nextWait = timer.nextWait
-        Thread.sleep(nextWait * 1000)
-      }
-
       while(toContinue && timer.hasNext) {
-        wait
         activitiesOf(repo).filter(_.name == "close").lastOption match {
+          case None =>
+            // Post close request
+            s.log.info(s"Closing staging repository $repo")
+            val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
+            if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+              throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
+            }
           case Some(activity) =>
-            if(activity.isCloseSucceeded(repo.repositoryId))
+            if(activity.isCloseSucceeded(repo.repositoryId)) {
               toContinue = false
+              s.log.error("Closed successfully")
+            }
             else if(activity.containsError) {
               s.log.error("Failed to close the repository")
               activity.reportFailure(s)
               throw new Exception("Failed to close the repository")
             }
-          case None =>
+            else {
+              // Activity log exists, but the close phase is not yet terminated
+              timer.doWait
+            }
         }
       }
+      if(toContinue == true)
+        throw new IOException("Timed out")
+
       true
     }
 
