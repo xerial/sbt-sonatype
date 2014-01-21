@@ -4,7 +4,7 @@ sbt-sonatype plugin
 A sbt plugin for automating release processes at Sonatype Nexus. This plugin enables two-step release of your Scala/Java projects:
 
  * First, `publish-signed` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
- * Next, `release-sonatype` to performe the close and release steps in Sonatype Nexus repository. 
+ * Next, `release-sonatype` to perform the close and release steps in Sonatype Nexus repository. 
  * That's all. Your project will be synchoronized to Maven central in a few hours. No need to enter the web interface of [Sonatype Nexus repository](http://oss.sonatype.org/).
 
 
