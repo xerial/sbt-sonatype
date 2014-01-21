@@ -1,7 +1,7 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for automating release processes at Sonatype Nexus, that is required to synchronize your project jars to the [Maven central repository](http://repo1.maven.org/maven2).
+A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required to synchronize your Scala (or Java) project artifacts to the [Maven central repository](http://repo1.maven.org/maven2).
 
 
 ## Prerequisites
