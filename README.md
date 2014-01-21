@@ -1,7 +1,7 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required to synchronize your Scala (or Java) project artifacts to the [Maven central repository](http://repo1.maven.org/maven2).
+A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required for synchronizing your Scala (or Java) projects to the [Maven central repository](http://repo1.maven.org/maven2).
 
 
 ## Prerequisites
@@ -11,8 +11,6 @@ A sbt plugin for automating release processes at Sonatype Nexus. Deploying to So
    * At least you need to create a GPG key, and open a JIRA ticket to get a permission for synchronizing your project to Maven central.
 
 ## Usage
-
-
 
 **project/plugins.sbt**
 
@@ -96,7 +94,7 @@ The general steps for publishing your artifact to Maven Central are:
  * `promote` the closed repository so that it can be synched with Maven central. 
    * `closeAndPromote` will do `close` and `promote` in one step.
 
-First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+You need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
 
 ### Command Line Usage
 
