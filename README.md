@@ -1,16 +1,13 @@
 sbt-sonatype plugin
 ---
 
-A sbt plugin for automating release processes at Sonatype Nexus, that is required to synchronize your project artifacts to Maven central repository <http://repo1.maven.org/maven2>.
+A sbt plugin for automating release processes at Sonatype Nexus, that is required to synchronize your project jars to the [Maven central repository](http://repo1.maven.org/maven2).
 
 
 ## Prerequisites
  
  * Create a Sonatype Repository account 
-   * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide).
-   * Create a GPG key
-   * You need to open a JIRA ticket to publish your project to Maven central.
-     * https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide#SonatypeOSSMavenRepositoryUsageGuide-3.CreateaJIRAticket
+   * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide). At least you need to create a GPG key, and open a JIRA ticket to get a permission for publishing your project to Maven central.
 
 ## Usage
 
@@ -45,7 +42,7 @@ import SonatypeKeys._
 
 // Import default settings. This line changes `publishTo` to use Sonatype repository.
 sonatypeSettings
- // Your project orgnization
+ // Your project orgnization (package name)
 organization := "org.xerial.example" 
  // Your profile name of the sonatype account. The default is the same with the organization 
 profileName := "org.xerial" 
@@ -80,9 +77,15 @@ pomExtra := {
 }
 ```
 
-## Publish 
+## Publish your artifact
 
-First you need to set a release version (i.e. w/o SNAPSHOT) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+The general step to publish your artifact to maven central is: 
+
+ * `publish-signed` to deploy your artifact to staging repository at Sonatype.
+ * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
+ * `promote` the closed repository so that it can be synched with Maven central. 
+
+First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype and cannot be promoted.
 
 Publish a GPG-signed artifact to Sonatype:
 ```
