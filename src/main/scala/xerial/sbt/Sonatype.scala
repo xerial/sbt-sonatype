@@ -43,8 +43,13 @@ object Sonatype extends sbt.Plugin {
 
   }
 
-  import SonatypeKeys._ 
+
+
+  import SonatypeKeys._
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
+    // Add sonatyep repository settings
+    publishTo <<= version { (v) => Some(releaseResolver(v)) },
+    publishMavenStyle := true,
     repository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
@@ -54,7 +59,7 @@ object Sonatype extends sbt.Plugin {
       val s = streams.value
       val repos = rest.stagingRepositoryProfiles
       s.log.info("Staging repository profiles:")
-      s.log.info(repos.mkString(", "))
+      s.log.info(repos.mkString("\n"))
       repos
     },
     stagingProfiles := {
@@ -62,7 +67,7 @@ object Sonatype extends sbt.Plugin {
       val s = streams.value
       val profiles =  rest.stagingProfiles
       s.log.info("Staging profiles:")
-      s.log.info(profiles.mkString(", "))
+      s.log.info(profiles.mkString("\n"))
       profiles
     },
     list := {
@@ -98,13 +103,21 @@ object Sonatype extends sbt.Plugin {
       for((repo, activities) <- rest.activities) {
         s.log.info(s"Staging activities of $repo:")
         for(a <- activities) {
-          s.log.info(a.toString)
+          a.log(s)
         }
       }
     }
 
   )
 
+
+  def releaseResolver(v: String): Resolver = {
+    val nexus = "https://oss.sonatype.org/"
+    if (v.trim.endsWith("SNAPSHOT"))
+      "snapshots" at nexus + "content/repositories/snapshots"
+    else
+      "releases" at nexus + "service/local/staging/deploy/maven2"
+  }
 
 
   case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String) {
@@ -123,10 +136,38 @@ object Sonatype extends sbt.Plugin {
         b += s" ${e.toString}"
       b.result.mkString("\n")
     }
+
+    def log(s:TaskStreams) {
+      s.log.info(s"Activity $name")
+      val hasError = containsError
+      for(e <- events) {
+        e.log(s, hasError)
+      }
+    }
+
+    def containsError = events.exists(_.severity != "0")
   }
 
   case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String]) {
     override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
+
+
+    def log(s:TaskStreams, useErrorLog:Boolean = false) {
+      val props = {
+        val front = if(property.contains("typeId"))
+          Seq(property("typeId"))
+        else
+          Seq.empty
+        front ++ property.filter(_._1 != "typeId").map(p => s"${p._1}:${p._2}")
+      }
+      val messageLine = props.mkString(", ")
+      val name_s = name.replaceAll("rule(s)?","")
+      val message = f"$name_s%10s: $messageLine"
+      if(useErrorLog)
+        s.log.error(message)
+      else
+        s.log.info(message)
+    }
   }
 
   class NexusRESTService(s:TaskStreams,
@@ -220,7 +261,7 @@ object Sonatype extends sbt.Plugin {
 
 
     def stagingRepositoryProfiles = {
-      s.log.info("Listing staging repository profiles...")
+      s.log.info("Reading staging repository profiles...")
       Get("/staging/profile_repositories") { response =>
         val profileRepositoriesXML = XML.load(response.getEntity.getContent)
         val repositoryProfiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
@@ -237,7 +278,7 @@ object Sonatype extends sbt.Plugin {
     }
 
     def stagingProfiles = {
-      s.log.info("Listing staging profiles...")
+      s.log.info("Reading staging profiles...")
       Get("/staging/profiles") { response =>
         val profileXML = XML.load(response.getEntity.getContent)
         val profiles = for(p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
