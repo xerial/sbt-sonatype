@@ -178,14 +178,16 @@ object Sonatype extends sbt.Plugin {
 
     }
 
-    def isReleaseSucceeded : Boolean = {
-      events.find(_.name == "repositoryReleased").isDefined
+    def isReleaseSucceeded(repositoryId:String) : Boolean = {
+      events
+        .find(_.name == "repositoryReleased")
+        .find(_.property.getOrElse("id", "") == repositoryId).isDefined
     }
 
     def isCloseSucceeded(repositoryId:String) : Boolean = {
       events
         .find(_.name == "repositoryClosed")
-        .find(log => log.property.contains("id") && log.property("id") == repositoryId).isDefined
+        .find(_.property.getOrElse("id", "") == repositoryId).isDefined
     }
 
   }
@@ -237,7 +239,7 @@ object Sonatype extends sbt.Plugin {
         val err = if(isPromote)
           "Specify a repository id via promote (repository id)"
           else
-          "Specify a repository id via close (respotiory id)"
+          "Specify a repository id via close (repository id)"
 
         s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
         s.log.warn(err)
@@ -380,6 +382,11 @@ object Sonatype extends sbt.Plugin {
 
     def closeStage(repo:StagingRepositoryProfile) = {
       var toContinue = true
+      if(repo.isClosed || repo.isReleased) {
+        s.log.info(s"Repository ${repo.repositoryId} is already closed")
+        toContinue = false
+      }
+
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
         activitiesOf(repo).filter(_.name == "close").lastOption match {
@@ -408,7 +415,6 @@ object Sonatype extends sbt.Plugin {
       }
       if(toContinue == true)
         throw new IOException("Timed out")
-
       true
     }
 
@@ -420,17 +426,45 @@ object Sonatype extends sbt.Plugin {
 
 
     def promoteStage(repo:StagingRepositoryProfile) = {
-      s.log.info(s"Promoting staging repository $repo")
-      val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
-      ret.getStatusLine.getStatusCode match {
-        case HttpStatus.SC_CREATED => true
-        case other =>
-          s.log.error(s"${ret.getStatusLine}")
-          for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
-            s.log.error(errorLine)
-          }
-          false
+      var toContinue = true
+      if(repo.isReleased) {
+        s.log.info(s"Repository ${repo.repositoryId} is already released")
+        toContinue = false
       }
+
+      val timer = new ExponentialBackOffRetry()
+      while(toContinue && timer.hasNext) {
+        activitiesOf(repo).filter(_.name == "release").lastOption match {
+          case None =>
+            // Post promote(release) request
+            s.log.info(s"Promoting staging repository $repo")
+            val ret = Post(s"/staging/profiles/${currentProfile.profileId}/promote", promoteRequestXML(repo))
+            if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+              s.log.error(s"${ret.getStatusLine}")
+              for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
+                s.log.error(errorLine)
+              }
+              throw new Exception("Failed to promote the repository")
+            }
+          case Some(activity) =>
+            if(activity.isReleaseSucceeded(repo.repositoryId)) {
+              toContinue = false
+              s.log.error("Promoted successfully")
+            }
+            else if(activity.containsError) {
+              s.log.error("Failed to promote the repository")
+              activity.reportFailure(s)
+              throw new Exception("Failed to promote the repository")
+            }
+            else {
+              timer.doWait
+            }
+        }
+      }
+      if(toContinue == true)
+        throw new IOException("Timed out")
+      true
+
     }
 
     def stagingRepositoryInfo(repositoryId:String) = {
