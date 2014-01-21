@@ -50,7 +50,7 @@ Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) in order to use `publish
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
-**build.sbt**
+### build.sbt
 
 Import `xerial.sbt.Sonatype.sonatypeSettings` and `SonatypeKeys._`. Then set `profileName` (your Sonatype acount profile name. e.g. `org.xerial`) and `pomExtra`. 
 At least you need to set url, licenses, scm and deverlopers information in the XML.
@@ -122,16 +122,16 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 ## Available Commands
 
-list
-: Show the list of staging repositories.
-close (repositoryId)?
-: Close a staging repository.
-promote (repositoryId)?
-: Promote a staging repository.
-release-sonatype (repositoryId)?
-: Close and promote a staging repository.
-stagingProfiles
-: Show the list of staging profiles, which include profileName information.
-stagingActivities
-: Show the staging activity logs
+* __list__
+  * Show the list of staging repositories.
+* __close__ (repositoryId)?
+  * Close a staging repository.
+* __promote__ (repositoryId)?
+  * Promote a staging repository.
+* __release-sonatype__ (repositoryId)?
+  * Close and promote a staging repository.
+* __stagingProfiles__
+  * Show the list of staging profiles, which include profileName information.
+* __stagingActivities__
+  * Show the staging activity logs
 
