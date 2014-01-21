@@ -27,7 +27,7 @@ object Sonatype extends sbt.Plugin {
 
   object SonatypeKeys {
     val repository = settingKey[String]("Sonatype repository URL")
-    val profile = settingKey[String]("profile name at Sonatype: e.g. org.xerial")
+    val profileName = settingKey[String]("profile name at Sonatype: e.g. org.xerial")
     val close = taskKey[Boolean]("Close the stage")
     val promote = taskKey[Boolean]("close and promoe the repository")
 
@@ -45,8 +45,8 @@ object Sonatype extends sbt.Plugin {
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     repository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
-    profile := organization.value,
-    restService := new NexusRESTService(streams.value, repository.value, profile.value, credentials.value, credentialHost.value),
+    profileName := organization.value,
+    restService := new NexusRESTService(streams.value, repository.value, profileName.value, credentials.value, credentialHost.value),
     stagingRepositoryProfiles := {
       val rest : NexusRESTService = restService.value
       rest.stagingRepositoryProfiles
@@ -60,7 +60,6 @@ object Sonatype extends sbt.Plugin {
       rest.stagingRepositoryProfiles
     },
     close := {
-      val s = streams.value
       val rest : NexusRESTService = restService.value
       rest.findTargetRepository(isPromote=false) match {
         case Some(r) =>
@@ -71,7 +70,6 @@ object Sonatype extends sbt.Plugin {
       }
     },
     promote := {
-      val s = streams.value
       val rest : NexusRESTService = restService.value
       rest.findTargetRepository(isPromote=true) match {
         case Some(r) =>
@@ -82,7 +80,8 @@ object Sonatype extends sbt.Plugin {
       }
     },
     closeAndPromote := {
-
+      val rest : NexusRESTService = restService.value
+      rest.stagingRepositoryProfiles
 
 
       false
