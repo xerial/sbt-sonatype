@@ -87,9 +87,9 @@ pomExtra := {
 }
 ```
 
-## Publish your artifact
+## Publishing Your Artifact
 
-The general steps to publish your artifact to maven central are: 
+The general steps for publishing your artifact to Maven Central are: 
 
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
  * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
@@ -98,7 +98,7 @@ The general steps to publish your artifact to maven central are:
 
 First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
 
-### Steps
+### Command Line Usage
 
 Publish a GPG-signed artifact to Sonatype:
 ```
@@ -109,7 +109,7 @@ Do close and promote at once:
 ```
 $ sbt closeAndPromote
 ```
-This commands accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then send close and promote commands. 
+This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then send close and promote commands. 
 
 
 
