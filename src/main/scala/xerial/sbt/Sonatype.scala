@@ -32,6 +32,7 @@ object Sonatype extends sbt.Plugin {
     val close = inputKey[Boolean]("Close the stage")
     val promote = inputKey[Boolean]("close and promoe the repository")
     val closeAndPromote = inputKey[Boolean]("Publish to Maven central via close and promote")
+    val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
 
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
     val restService = taskKey[NexusRESTService]("REST API")
@@ -87,6 +88,13 @@ object Sonatype extends sbt.Plugin {
       rest.promoteStage(repo)
     },
     closeAndPromote := {
+      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val rest : NexusRESTService = restService.value
+      val repo = rest.findTargetRepository(CloseAndPromote, arg)
+      rest.closeAndPromote(repo)
+      false
+    },
+    releaseSonatype := {
       val arg: Seq[String] = spaceDelimited("<arg>").parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
@@ -367,7 +375,7 @@ object Sonatype extends sbt.Plugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 1, intervalSeq:Int=3, maxRetries:Int=10) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 3, intervalSeq:Int=3, maxRetries:Int=10) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
 
