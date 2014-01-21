@@ -29,8 +29,9 @@ object Sonatype extends sbt.Plugin {
   object SonatypeKeys {
     val repository = settingKey[String]("Sonatype repository URL")
     val profileName = settingKey[String]("profile name at Sonatype: e.g. org.xerial")
-    val close = taskKey[Boolean]("Close the stage")
-    val promote = taskKey[Boolean]("close and promoe the repository")
+    val close = inputKey[Boolean]("Close the stage")
+    val promote = inputKey[Boolean]("close and promoe the repository")
+    val closeAndPromote = inputKey[Boolean]("Publish to Maven central via close and promote")
 
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
     val restService = taskKey[NexusRESTService]("REST API")
@@ -39,12 +40,11 @@ object Sonatype extends sbt.Plugin {
     val stagingActivities = taskKey[Unit]("Show repository activities")
     val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
-    val closeAndPromote = taskKey[Boolean]("Publish to Maven central via close and promote")
 
   }
 
 
-
+  import complete.DefaultParsers._
   import SonatypeKeys._
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     // Add sonatyep repository settings
@@ -75,26 +75,22 @@ object Sonatype extends sbt.Plugin {
       stagingRepositoryProfiles.value
     },
     close := {
+      val arg: Seq[String] = spaceDelimited("<arg>").parsed
       val rest : NexusRESTService = restService.value
-      rest.findTargetRepository(isPromote=false) match {
-        case Some(r) =>
-          rest.closeStage(r)
-        case None =>
-          false
-      }
+      val repo = rest.findTargetRepository(Close, arg)
+      rest.closeStage(repo)
     },
     promote := {
+      val arg: Seq[String] = spaceDelimited("<arg>").parsed
       val rest : NexusRESTService = restService.value
-      rest.findTargetRepository(isPromote=true) match {
-        case Some(r) =>
-          rest.promoteStage(r)
-        case None =>
-          false
-      }
+      val repo = rest.findTargetRepository(Promote, arg)
+      rest.promoteStage(repo)
     },
     closeAndPromote := {
+      val arg: Seq[String] = spaceDelimited("<arg>").parsed
       val rest : NexusRESTService = restService.value
-
+      val repo = rest.findTargetRepository(CloseAndPromote, arg)
+      rest.closeAndPromote(repo)
       false
     },
     stagingActivities := {
@@ -119,6 +115,18 @@ object Sonatype extends sbt.Plugin {
       "releases" at nexus + "service/local/staging/deploy/maven2"
   }
 
+  sealed trait CommandType {
+    def errNotFound : String
+  }
+  case object Close extends CommandType {
+    def errNotFound = "No open repository is found. Run publish-signed first"
+  }
+  case object Promote extends CommandType {
+    def errNotFound = "No closed repository is found. Run publish-signed and close commands"
+  }
+  case object CloseAndPromote extends CommandType {
+    def errNotFound = "No staging repository is found. Run publish-signed first"
+  }
 
   case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String) {
     override def toString = s"[$repositoryId] status:$stagingType, profile:$profileName($profileId)"
@@ -222,34 +230,35 @@ object Sonatype extends sbt.Plugin {
                          cred:Seq[Credentials],
                          credentialHost:String) {
 
-    def findTargetRepository(isPromote:Boolean) = {
-      val repos = if(isPromote) closedRepositories else openRepositories
-
-      if(repos.isEmpty) {
-        val err = if(isPromote)
-          "No closed repository is found. Run publish-signed and close commands."
-        else
-          "No staging repository is found. Run publish-signed first."
-
-        s.log.error(err)
-        None
+    def findTargetRepository(command:CommandType, args:Seq[String]) : StagingRepositoryProfile = {
+      val repos = command match {
+        case Close => closedRepositories
+        case Promote => openRepositories
+        case CloseAndPromote => stagingRepositoryProfiles.filterNot(_.isReleased)
       }
-      else if(repos.size > 1) {
-        val label = repos.zipWithIndex.map{case (r, i) => s"[${r.repositoryId}] $r"}
-        val err = if(isPromote)
-          "Specify a repository id via promote (repository id)"
-          else
-          "Specify a repository id via close (repository id)"
+      if(repos.isEmpty)
+        throw new IllegalStateException(command.errNotFound)
 
-        s.log.warn(s"Multiple repositories are found: ${label.mkString(", ")}")
-        s.log.warn(err)
-        None
+      if(repos.size > 1) {
+        if(args.isEmpty) {
+          s.log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
+          s.log.error(s"Specify one of the repository ids in the command line")
+          throw new IllegalStateException("Found multiple staging repositories")
+        }
+        else {
+          val target = args(0)
+          repos.find(_.repositoryId == target) match {
+            case Some(x) => x
+            case None =>
+              s.log.error(s"Repository ${target} is not found")
+              s.log.error(s"Specify one of the repositoryies in:\n${repos.mkString("\n")}")
+              throw new IllegalArgumentException(s"Repository ${target} is not found")
+          }
+        }
       }
-      else {
-        repos.headOption
-      }
+      else
+        repos.head
     }
-
 
     def openRepositories = stagingRepositoryProfiles.filter(_.isOpen).sortBy(_.repositoryId)
     def closedRepositories = stagingRepositoryProfiles.filter(_.isClosed).sortBy(_.repositoryId)
@@ -482,10 +491,14 @@ object Sonatype extends sbt.Plugin {
       }
     }
 
-    def closeAndPromote : Boolean = {
-
-
-
+    def closeAndPromote(repo:StagingRepositoryProfile) : Boolean = {
+      if(repo.isReleased) {
+        dropStage(repo)
+      }
+      else {
+        closeStage(repo)
+        promoteStage(repo)
+      }
       true
     }
 
