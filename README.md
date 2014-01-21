@@ -7,19 +7,20 @@ A sbt plugin for automating release processes at Sonatype Nexus, that is require
 ## Prerequisites
  
  * Create a Sonatype Repository account 
-   * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide). At least you need to create a GPG key, and open a JIRA ticket to get a permission for publishing your project to Maven central.
+   * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide). 
+   * At least you need to create a GPG key, and open a JIRA ticket to get a permission for synchronizing your project to Maven central.
 
 ## Usage
 
-Add sbt-sonatype plugin to your project settings:
+
 
 **project/plugins.sbt**
 
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.0")
 ```
+Add sbt-sonatype plugin to your project settings:
 
-Set Sonatype account information (user name and password) in the global setting file. Never include this settings to your project. 
 
 **$HOME/.sbt/(sbt-version)/sonatype.sbt**
 
@@ -30,7 +31,8 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)"
 ```
 
-Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
+Set Sonatype account information (user name and password) in the global setting file. Never include this settings to your project. 
+
 
 **$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt**
 
@@ -38,6 +40,7 @@ Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
+Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
 
 **build.sbt**
 
