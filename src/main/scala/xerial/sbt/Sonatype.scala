@@ -137,20 +137,64 @@ object Sonatype extends sbt.Plugin {
       b.result.mkString("\n")
     }
 
+    def activityLog = s"Activity $name started:$started, stopped:$stopped"
+
     def log(s:TaskStreams) {
-      s.log.info(s"Activity $name")
+      s.log.info(activityLog)
       val hasError = containsError
-      for(e <- events) {
+      for(e <- suppressEvaluateLog) {
         e.log(s, hasError)
       }
     }
 
+    def suppressEvaluateLog = {
+      val in = events.toIndexedSeq
+      var cursor = 0
+      val b = Seq.newBuilder[ActivityEvent]
+      while(cursor < in.size) {
+        val current = in(cursor)
+        if(cursor < in.size - 1) {
+          val next = in(cursor+1)
+          if(current.name == "ruleEvaluate" && current.ruleType == next.ruleType) {
+            // skip
+          }
+          else {
+            b += current
+          }
+        }
+        cursor += 1
+      }
+      b.result
+    }
+
     def containsError = events.exists(_.severity != "0")
+
+    def reportFailure(s:TaskStreams) {
+      s.log.error(activityLog)
+      val failureReport = suppressEvaluateLog.filter(_.isFailure)
+      for(e <- failureReport) {
+        e.log(s, useErrorLog=true)
+      }
+
+    }
+
+    def isReleaseSucceeded : Boolean = {
+      events.find(_.name == "repositoryReleased").isDefined
+    }
+
+    def isCloseSucceeded(repositoryId:String) : Boolean = {
+      events
+        .find(_.name == "repositoryClosed")
+        .find(log => log.property.contains("id") && log.property("id") == repositoryId).isDefined
+    }
+
   }
 
   case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String]) {
-    override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
+    def ruleType : String = property.getOrElse("typeId", "other")
+    def isFailure = name == "ruleFailed"
 
+    override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
 
     def log(s:TaskStreams, useErrorLog:Boolean = false) {
       val props = {
@@ -311,10 +355,53 @@ object Sonatype extends sbt.Plugin {
           |</promoteRequest>
          """.stripMargin
 
+
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 1, intervalSeq:Int=3, maxRetries:Int=5) {
+      private var numTrial = 0
+      private val currentWait = initialWaitSeq
+      private var currentInterval = intervalSeq
+
+      def hasNext = numTrial < maxRetries
+
+      def nextWait = {
+        val interval = if(numTrial == 0) initialWaitSeq else currentInterval
+        currentInterval = (currentInterval * 1.5 + 0.5).toInt
+        numTrial += 1
+        interval
+      }
+
+    }
+
+
     def closeStage(repo:StagingRepositoryProfile) = {
       s.log.info(s"Closing staging repository $repo")
       val ret = Post(s"/staging/profiles/${currentProfile.profileId}/finish", promoteRequestXML(repo))
       ret.getStatusLine.getStatusCode == HttpStatus.SC_CREATED
+
+      //stagingRepositoryInfo(repo.repositoryId)
+      var toContinue = true
+
+      val timer = new ExponentialBackOffRetry()
+      def wait = {
+        val nextWait = timer.nextWait
+        Thread.sleep(nextWait * 1000)
+      }
+
+      while(toContinue && timer.hasNext) {
+        wait
+        activitiesOf(repo).filter(_.name == "close").lastOption match {
+          case Some(activity) =>
+            if(activity.isCloseSucceeded(repo.repositoryId))
+              toContinue = false
+            else if(activity.containsError) {
+              s.log.error("Failed to close the repository")
+              activity.reportFailure(s)
+              throw new Exception("Failed to close the repository")
+            }
+          case None =>
+        }
+      }
+      true
     }
 
     def dropStage(repo:StagingRepositoryProfile) = {
@@ -341,7 +428,7 @@ object Sonatype extends sbt.Plugin {
     def stagingRepositoryInfo(repositoryId:String) = {
       s.log.info(s"Seaching for repository $repositoryId ...")
       val ret = Get(s"/staging/repository/${repositoryId}") { response =>
-        response
+        XML.load(response.getEntity.getContent)
       }
     }
 
@@ -353,21 +440,24 @@ object Sonatype extends sbt.Plugin {
     }
 
     def activities : Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
-      for(r <- stagingRepositoryProfiles) yield {
-        val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
-          val xml = XML.load(response.getEntity.getContent)
-          for(sa <- xml \\ "stagingActivity") yield {
-            val ae = for(event <- sa \ "events" \ "stagingActivityEvent") yield {
-              val props = for(prop <- event \ "properties" \ "stagingProperty") yield {
-                (prop \ "name").text -> (prop \ "value").text
-              }
-              ActivityEvent((event \ "timestamp").text, (event \ "name").text, (event \ "severity").text, props.toMap)
+      for(r <- stagingRepositoryProfiles) yield
+        r -> activitiesOf(r)
+    }
+
+    def activitiesOf(r:StagingRepositoryProfile) =  {
+      val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
+        val xml = XML.load(response.getEntity.getContent)
+        for(sa <- xml \\ "stagingActivity") yield {
+          val ae = for(event <- sa \ "events" \ "stagingActivityEvent") yield {
+            val props = for(prop <- event \ "properties" \ "stagingProperty") yield {
+              (prop \ "name").text -> (prop \ "value").text
             }
-            StagingActivity((sa \ "name").text, (sa \ "started").text, (sa \ "stopped").text, ae.toSeq)
+            ActivityEvent((event \ "timestamp").text, (event \ "name").text, (event \ "severity").text, props.toMap)
           }
+          StagingActivity((sa \ "name").text, (sa \ "started").text, (sa \ "stopped").text, ae.toSeq)
         }
-        r -> a
       }
+      a
     }
 
 
