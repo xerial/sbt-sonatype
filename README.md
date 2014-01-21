@@ -55,17 +55,22 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 
 ### build.sbt
 
-Import `xerial.sbt.Sonatype.sonatypeSettings` and `SonatypeKeys._`. Then set `profileName` (your Sonatype acount profile name. e.g. `org.xerial`) and `pomExtra`. 
-At least you need to set url, licenses, scm and deverlopers information in the XML.
+Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. The important settings are:
+
+  * `profileName` 
+     * This is your Sonatype acount profile name, e.g. `org.xerial` 
+  * `pomExtra`
+     * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy Maven central sync requirements.
+  
 
 ```scala
 import SonatypeKeys._
 
 // Import default settings. This changes publishTo settings to use the Sonatype repository and add several commands for publishing.
 sonatypeSettings
- // Your project orgnization (package name)
+窶ィ// Your project orgnization (package name)
 organization := "org.xerial.example" 
- // Your profile name of the sonatype account. The default is the same with the organization 
+窶ィ// Your profile name of the sonatype account. The default is the same with the organization 
 profileName := "org.xerial" 
 
 // Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
