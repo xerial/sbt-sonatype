@@ -1,26 +1,39 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required for synchronizing your Scala (or Java) projects to the [Maven central repository](http://repo1.maven.org/maven2).
+A sbt plugin for automating release processes at Sonatype Nexus. This plugin enables two-step release of your Scala/Java projects:
 
+ * First, `publish-signed` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
+ * Next, `release-sonatype` to performe the close and release steps in Sonatype Nexus repository. 
+ * That's all. Your project will be synchoronized to Maven central in a few hours. No need to enter the web interface of [Sonatype Nexus repository](http://oss.sonatype.org/).
+
+
+Deploying to Sonatype repository is required for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/).
 
 ## Prerequisites
  
  * Create a Sonatype Repository account 
    * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide). 
-   * At least you need to create a GPG key, and open a JIRA ticket to get a permission for synchronizing your project to Maven central.
+     * Create a Sonatype account
+     * Create a GPG key
+     * Open a JIRA ticket to get a permission for synchronizing your project to Maven central.
+   * Related articles:   
+     * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/) 
 
 ## Usage
 
-**project/plugins.sbt**
+### project/plugins.sbt
 
+Import ***sbt-sonatype*** plugin to your project.
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.1")
 ```
-This imports sbt-sonatype plugin to your project.
 
+ * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
 
-**$HOME/.sbt/(sbt-version)/sonatype.sbt**
+### $HOME/.sbt/(sbt-version)/sonatype.sbt
+
+Set Sonatype account information (user name and password) in the global sbt settings. Never include this setting file to your project. 
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
@@ -29,26 +42,23 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)"
 ```
 
-This sets Sonatype account information (user name and password) in the global sbt settings. Never include this setting file to your project. 
+### $HOME/.sbt/(sbt-vesrion)/plugins/build.sbt
 
-
-**$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt**
+Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) in order to use `publish-signed` command.
 
 ```scala
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
-This adds [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command.
-
 **build.sbt**
 
-Import `xerial.sbt.Sonatype.sonatypeSettings` and `SonatypeKeys._`. Then set `profileName` (your Sonatype acount profile name. e.g. org.xerial) and `pomExtra`. 
-At least you need to set url, licenses, scm and deverlopers information.
+Import `xerial.sbt.Sonatype.sonatypeSettings` and `SonatypeKeys._`. Then set `profileName` (your Sonatype acount profile name. e.g. `org.xerial`) and `pomExtra`. 
+At least you need to set url, licenses, scm and deverlopers information in the XML.
 
 ```scala
 import SonatypeKeys._
 
-// Import default settings. This line changes `publishTo` to use Sonatype repository and add several commands for publishing.
+// Import default settings. This changes publishTo settings to use the Sonatype repository and add several commands for publishing.
 sonatypeSettings
  // Your project orgnization (package name)
 organization := "org.xerial.example" 
@@ -87,14 +97,14 @@ pomExtra := {
 
 ## Publishing Your Artifact
 
-The general steps for publishing your artifact to Maven Central are: 
+The general steps for publishing your artifact to Maven Central are as follows: 
 
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
  * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
  * `promote` the closed repository so that it can be synched with Maven central. 
-   * `release-sonatype` will do `close` and `promote` in one step.
+   * `release-sonatype` will do both `close` and `promote` in one step.
 
-You need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `release-sonatype` command. 
 
 ### Command Line Usage
 
@@ -112,10 +122,16 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 ## Available Commands
 
-* **list**: Show the list of staging repositories.
-* **close** (repositoryId)?: Close a staging repository.
-* **promote** (repositoyrId)?: Promote a staging repository.
-* **release-sonatype** (repositoryId)?: Close and promote a staging repository.
-* **stagingProfiles**: Show the list of staging profiles, which include profileName information
-* **stagingActivities**: Show staging activity logs
+list
+: Show the list of staging repositories.
+close (repositoryId)?
+: Close a staging repository.
+promote (repositoryId)?
+: Promote a staging repository.
+release-sonatype (repositoryId)?
+: Close and promote a staging repository.
+stagingProfiles
+: Show the list of staging profiles, which include profileName information.
+stagingActivities
+: Show the staging activity logs
 
