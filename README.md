@@ -117,4 +117,5 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 * **promote** (repositoyrId)?: Promote a staging repository.
 * **release-sonatype** (repositoryId)?: Close and promote a staging repository.
 * **stagingProfiles**: Show the list of staging profiles, which include profileName information
+* **stagingActivities**: Show staging activity logs
 
