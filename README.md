@@ -1,7 +1,7 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required to synchronize your Scala (or Java) project artifacts to the [Maven central repository](http://repo1.maven.org/maven2).
+A sbt plugin for automating release processes at Sonatype Nexus. Deploying to Sonatype repository is required for synchronizing your Scala (or Java) projects to the [Maven central repository](http://repo1.maven.org/maven2).
 
 
 ## Prerequisites
@@ -12,12 +12,10 @@ A sbt plugin for automating release processes at Sonatype Nexus. Deploying to So
 
 ## Usage
 
-
-
 **project/plugins.sbt**
 
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.1")
 ```
 This import sbt-sonatype plugin to your project.
 
@@ -94,9 +92,9 @@ The general steps for publishing your artifact to Maven Central are:
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
  * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
  * `promote` the closed repository so that it can be synched with Maven central. 
-   * `closeAndPromote` will do `close` and `promote` in one step.
+   * `release-sonatype` will do `close` and `promote` in one step.
 
-First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+You need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
 
 ### Command Line Usage
 
@@ -107,10 +105,9 @@ $ sbt publish-signed
 
 Do close and promote at once:
 ```
-$ sbt closeAndPromote
+$ sbt release-sonatype
 ```
 This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then send close and promote commands. 
-
 
 
 ## Available Commands
@@ -118,4 +115,6 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 * **list**: Show the list of staging repositories.
 * **close** (repositoryId)?: Close a staging repository.
 * **promote** (repositoyrId)?: Promote a staging repository.
-* **closeAndPromote** (repositoryId)?: Close and promote a staging repository.
+* **release-sonatype** (repositoryId)?: Close and promote a staging repository.
+* **stagingProfiles**: Show the list of staging profiles, which include profileName information
+
