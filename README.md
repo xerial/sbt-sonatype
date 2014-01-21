@@ -1,5 +1,5 @@
 sbt-sonatype plugin
----
+======
 
 A sbt plugin for automating release processes at Sonatype Nexus, that is required to synchronize your project jars to the [Maven central repository](http://repo1.maven.org/maven2).
 
@@ -12,13 +12,16 @@ A sbt plugin for automating release processes at Sonatype Nexus, that is require
 ## Usage
 
 Add sbt-sonatype plugin to your project settings:
-`project/plugins.sbt`
+
+**project/plugins.sbt**
+
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.0")
 ```
 
 Set Sonatype account information (user name and password) in the global setting file. Never include this settings to your project. 
-`$HOME/.sbt/(sbt-version)/sonatype.sbt`
+
+**$HOME/.sbt/(sbt-version)/sonatype.sbt**
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
@@ -28,14 +31,15 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 ```
 
 Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
-`$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt`
+
+**$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt**
 
 ```scala
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
 
-`build.sbt`
+**build.sbt**
 
 ```scala
 import SonatypeKeys._
@@ -60,7 +64,7 @@ pomExtra := {
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
-  <!-- SCM information. Modify -->
+  <!-- SCM information. Modify the follwing settings: -->
   <scm>
     <connection>scm:git:github.com/xerial/sbt-sonatype.git</connection>
     <developerConnection>scm:git:git@github.com:xerial/sbt-sonatype.git</developerConnection>
@@ -69,9 +73,9 @@ pomExtra := {
   <!-- Developer contact information -->
   <developers>
     <developer>
-      <id>leo</id>
-      <name>Taro L. Saito</name>
-      <url>http://xerial.org/leo</url>
+      <id>(your favorite id)</id>
+      <name>(your name)</name>
+      <url>(your web page)</url>
     </developer>
   </developers>
 }
@@ -79,13 +83,14 @@ pomExtra := {
 
 ## Publish your artifact
 
-The general step to publish your artifact to maven central is: 
+The general steps to publish your artifact to maven central are: 
 
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
  * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
  * `promote` the closed repository so that it can be synched with Maven central. 
+ * `closeAndPromote` do `close` and `promote` in one command.
 
-First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype and cannot be promoted.
+First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
 
 Publish a GPG-signed artifact to Sonatype:
 ```
@@ -102,7 +107,7 @@ This commands accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-
 
 ## Available Commands
 
-* **list**: List staging repositories 
-* **close** (repositoryId)?: Close a staging repository
-* **promote** (repositoyrId)?: Promote a staging repository
-* **closeAndPromote** (repositoryId)?: Close and promote a stagint repository.
+* **list**: Show the list of staging repositories.
+* **close** (repositoryId)?: Close a staging repository.
+* **promote** (repositoyrId)?: Promote a staging repository.
+* **closeAndPromote** (repositoryId)?: Close and promote a staging repository.
