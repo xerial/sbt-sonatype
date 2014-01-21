@@ -68,9 +68,11 @@ import SonatypeKeys._
 
 // Import default settings. This changes publishTo settings to use the Sonatype repository and add several commands for publishing.
 sonatypeSettings
-窶ィ// Your project orgnization (package name)
+
+// Your project orgnization (package name)
 organization := "org.xerial.example" 
-窶ィ// Your profile name of the sonatype account. The default is the same with the organization 
+
+// Your profile name of the sonatype account. The default is the same with the organization 
 profileName := "org.xerial" 
 
 // Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
