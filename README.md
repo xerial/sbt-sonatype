@@ -19,7 +19,7 @@ A sbt plugin for automating release processes at Sonatype Nexus, that is require
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.0")
 ```
-Add sbt-sonatype plugin to your project settings:
+This import sbt-sonatype plugin to your project.
 
 
 **$HOME/.sbt/(sbt-version)/sonatype.sbt**
@@ -31,7 +31,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)"
 ```
 
-Set Sonatype account information (user name and password) in the global setting file. Never include this settings to your project. 
+This sets Sonatype account information (user name and password) in the global sbt settings. Never include this setting file to your project. 
 
 
 **$HOME/.sbt/(sbt-vesrion)/plugins/build.sbt**
@@ -40,7 +40,7 @@ Set Sonatype account information (user name and password) in the global setting 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
-Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command:
+This adds [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `publish-signed` command.
 
 **build.sbt**
 
@@ -91,9 +91,11 @@ The general steps to publish your artifact to maven central are:
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
  * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
  * `promote` the closed repository so that it can be synched with Maven central. 
- * `closeAndPromote` do `close` and `promote` in one command.
+   * `closeAndPromote` will do `close` and `promote` in one step.
 
 First you need to set a release version (that is a version without SNAPSHOT suffix) in your project settings. Otherwise your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype.
+
+### Steps
 
 Publish a GPG-signed artifact to Sonatype:
 ```
