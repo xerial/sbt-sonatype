@@ -150,6 +150,9 @@ object Sonatype extends sbt.Plugin {
     def isOpen = stagingType == "open"
     def isClosed = stagingType == "closed"
     def isReleased = stagingType == "released"
+
+    def toClosed = StagingRepositoryProfile(profileId, profileName, "closed", repositoryId)
+    def toReleased = StagingRepositoryProfile(profileId, profileName, "released", repositoryId)
   }
   case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
@@ -487,7 +490,7 @@ object Sonatype extends sbt.Plugin {
               s.log.info("Promoted successfully")
 
               // Drop after release
-              dropStage(repo)
+              dropStage(repo.toReleased)
               toContinue = false
             }
             else if(activity.containsError) {
@@ -522,7 +525,7 @@ object Sonatype extends sbt.Plugin {
       }
       else {
         closeStage(repo)
-        promoteStage(repo)
+        promoteStage(repo.toClosed)
       }
       true
     }
