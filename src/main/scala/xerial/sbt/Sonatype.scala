@@ -72,7 +72,7 @@ object Sonatype extends sbt.Plugin {
       val s = streams.value
       val profiles =  rest.stagingProfiles
       s.log.info(s"Staging profiles (profileName:${profileName.value}):")
-      if(repos.isEmpty)
+      if(profiles.isEmpty)
         s.log.warn(s"No staging profile is found for ${profileName.value}")
       else
         s.log.info(profiles.mkString("\n"))
