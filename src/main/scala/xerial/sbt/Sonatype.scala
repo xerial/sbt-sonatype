@@ -105,7 +105,6 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
       rest.closeAndPromote(repo)
-      false
     },
     stagingActivities := {
       val s = streams.value
