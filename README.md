@@ -28,7 +28,7 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
 
 Import ***sbt-sonatype*** plugin to your project.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.2")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.3")
 ```
 
  * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
