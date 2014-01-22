@@ -28,7 +28,7 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
 
 Import ***sbt-sonatype*** plugin to your project.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.2")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.3")
 ```
 
  * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
@@ -110,8 +110,8 @@ pomExtra := {
 The general steps for publishing your artifact to Maven Central are as follows: 
 
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
- * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
- * `promote` the closed repository so that it can be synched with Maven central. 
+ * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, GPG-signature, javadoc and source code presence, pom.xml settings, etc.
+ * `promote` verifies the closed repository so that it can be synched with Maven central. 
    * `release-sonatype` will do both `close` and `promote` in one step.
 
 Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `release-sonatype` command. 
@@ -138,6 +138,8 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Close a staging repository.
 * __promote__ (repositoryId)?
   * Promote a staging repository.
+* __drop__ (repositoryId)?
+  * Drop a staging repository.
 * __release-sonatype__ (repositoryId)?
   * Close and promote a staging repository.
 * __stagingProfiles__
