@@ -241,8 +241,8 @@ object Sonatype extends sbt.Plugin {
 
     def findTargetRepository(command:CommandType, args:Seq[String]) : StagingRepositoryProfile = {
       val repos = command match {
-        case Close => closedRepositories
-        case Promote => openRepositories
+        case Close => openRepositories
+        case Promote => closedRepositories
         case CloseAndPromote => stagingRepositoryProfiles.filterNot(_.isReleased)
       }
       if(repos.isEmpty)
