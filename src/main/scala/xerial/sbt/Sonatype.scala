@@ -92,7 +92,7 @@ object Sonatype extends sbt.Plugin {
     drop := {
       val arg: Seq[String] = spaceDelimited("<arg>").parsed
       val rest : NexusRESTService = restService.value
-      val repo = rest.findTargetRepository(Promote, arg)
+      val repo = rest.findTargetRepository(Drop, arg)
       rest.dropStage(repo)
     },
     closeAndPromote := {
