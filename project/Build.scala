@@ -34,7 +34,7 @@ object SonatypeBuild extends Build {
     organizationName := "Xerial project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "A sbt plugin for automating staging processes in Sonatype",
-    crossScalaVersions := Seq("2.10.3", "2.11.0-M8"),
+    crossScalaVersions := Seq("2.10.3", "2.11.0-M7"),
     publishArtifact in Test := false,
     sbtPlugin := true,
     parallelExecution := true,
@@ -84,7 +84,10 @@ object SonatypeBuild extends Build {
     settings = buildSettings ++ Seq(
       libraryDependencies ++= (
         if(scalaVersion.value.startsWith("2.11"))
-          Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7") ++ commonLib
+          Seq(
+            "org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7",
+            "org.scala-lang" % "scala-reflect" % scalaVersion.value
+          ) ++ commonLib
         else
           commonLib
         )
