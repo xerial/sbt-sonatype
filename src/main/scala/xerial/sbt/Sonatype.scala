@@ -32,7 +32,6 @@ object Sonatype extends sbt.Plugin {
     val close = inputKey[Boolean]("Close the stage")
     val promote = inputKey[Boolean]("close and promoe the repository")
     val drop = inputKey[Boolean]("drop the repository")
-    val closeAndPromote = inputKey[Boolean]("Publish to Maven central via close and promote")
     val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
 
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
@@ -62,15 +61,21 @@ object Sonatype extends sbt.Plugin {
       val s = streams.value
       val repos = rest.stagingRepositoryProfiles
       s.log.info("Staging repository profiles:")
-      s.log.info(repos.mkString("\n"))
+      if(repos.isEmpty)
+        s.log.warn("No staging repository is found.")
+      else
+        s.log.info(repos.mkString("\n"))
       repos
     },
     stagingProfiles := {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val profiles =  rest.stagingProfiles
-      s.log.info("Staging profiles:")
-      s.log.info(profiles.mkString("\n"))
+      s.log.info(s"Staging profiles (profileName:${profileName.value}):")
+      if(repos.isEmpty)
+        s.log.warn(s"No staging profile is found for ${profileName.value}")
+      else
+        s.log.info(profiles.mkString("\n"))
       profiles
     },
     list := {
@@ -94,13 +99,6 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Drop, arg)
       rest.dropStage(repo)
-    },
-    closeAndPromote := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
-      val rest : NexusRESTService = restService.value
-      val repo = rest.findTargetRepository(CloseAndPromote, arg)
-      rest.closeAndPromote(repo)
-      false
     },
     releaseSonatype := {
       val arg: Seq[String] = spaceDelimited("<arg>").parsed
