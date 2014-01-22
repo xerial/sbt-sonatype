@@ -26,22 +26,6 @@ object SonatypeBuild extends Build {
 
   val SCALA_VERSION = "2.10.3"
 
-  def releaseResolver(v: String): Resolver = {
-    val profile = System.getProperty("xerial.profile", "default")
-    profile match {
-      case "default" => {
-        val nexus = "https://oss.sonatype.org/"
-        if (v.trim.endsWith("SNAPSHOT"))
-          "snapshots" at nexus + "content/repositories/snapshots"
-        else
-          "releases" at nexus + "service/local/staging/deploy/maven2"
-      }
-      case p => {
-        sys.error("unknown xerial.profile:%s".format(p))
-      }
-    }
-  }
-
   import xerial.sbt.Sonatype.SonatypeKeys._
 
   lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
@@ -50,16 +34,11 @@ object SonatypeBuild extends Build {
     organizationName := "Xerial project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "A sbt plugin for automating staging processes in Sonatype",
-    scalaVersion := SCALA_VERSION,
-    publishMavenStyle := true,
+    crossScalaVersions := Seq("2.10.3", "2.11.0-M8"),
     publishArtifact in Test := false,
-    publishTo <<= version { (v) => Some(releaseResolver(v)) },
-    pomIncludeRepository := {
-      _ => false
-    },
     sbtPlugin := true,
     parallelExecution := true,
-    crossPaths := false,
+    crossPaths := true,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),
     scriptedBufferLog := false,
     scriptedLaunchOpts ++= {
@@ -89,18 +68,26 @@ object SonatypeBuild extends Build {
     }
   )
 
+  object Dependencies {
+    val commonLib = Seq(
+      "org.apache.httpcomponents" % "httpclient" % "4.2.6",
+      "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
+    )
+  }
+
+  import Dependencies._
 
   // Project modules
   lazy val sbtSonatype = Project(
     id = "sbt-sonatype",
     base = file("."),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= Seq(
-        //"io.spray" % "spray-client" % "1.2.0",
-        //"com.typesafe.akka" %% "akka-actor" % "2.2.3",
-        "org.apache.httpcomponents" % "httpclient" % "4.2.6",
-        "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
-      )
+      libraryDependencies ++= (
+        if(scalaVersion.value.startsWith("2.11"))
+          Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.0-RC7") ++ commonLib
+        else
+          commonLib
+        )
     )
   )
 
