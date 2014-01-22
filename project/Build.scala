@@ -59,7 +59,6 @@ object SonatypeBuild extends Build {
     },
     sbtPlugin := true,
     parallelExecution := true,
-    crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),
     scriptedBufferLog := false,
     scriptedLaunchOpts ++= {
