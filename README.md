@@ -138,6 +138,8 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Close a staging repository.
 * __promote__ (repositoryId)?
   * Promote a staging repository.
+* __drop__ (repositoryId)?
+  * Drop a staging repository.
 * __release-sonatype__ (repositoryId)?
   * Close and promote a staging repository.
 * __stagingProfiles__
