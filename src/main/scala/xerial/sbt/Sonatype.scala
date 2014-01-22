@@ -209,13 +209,13 @@ object Sonatype extends sbt.Plugin {
     def isReleaseSucceeded(repositoryId:String) : Boolean = {
       events
         .find(_.name == "repositoryReleased")
-        .find(_.property.getOrElse("id", "") == repositoryId).isDefined
+        .exists(_.property.getOrElse("id", "") == repositoryId)
     }
 
     def isCloseSucceeded(repositoryId:String) : Boolean = {
       events
         .find(_.name == "repositoryClosed")
-        .find(_.property.getOrElse("id", "") == repositoryId).isDefined
+        .exists(_.property.getOrElse("id", "") == repositoryId)
     }
 
   }
@@ -270,9 +270,9 @@ object Sonatype extends sbt.Plugin {
         repos.find(_.repositoryId == target) match {
           case Some(x) => x
           case None =>
-            s.log.error(s"Repository ${target} is not found")
+            s.log.error(s"Repository $target is not found")
             s.log.error(s"Specify one of the repositoryies in:\n${repos.mkString("\n")}")
-            throw new IllegalArgumentException(s"Repository ${target} is not found")
+            throw new IllegalArgumentException(s"Repository $target is not found")
         }
       }
 
@@ -332,7 +332,7 @@ object Sonatype extends sbt.Plugin {
     private def withHttpClient[U](body: HttpClient => U) : U = {
       val credt : Option[DirectCredentials] = cred.collectFirst{ case d:DirectCredentials if d.host == credentialHost => d}
       if(credt.isEmpty)
-        throw new IllegalStateException(s"No credential is found for ${credentialHost}. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file.")
+        throw new IllegalStateException(s"No credential is found for $credentialHost. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file.")
 
       val client = new DefaultHttpClient()
       try {
@@ -384,8 +384,9 @@ object Sonatype extends sbt.Plugin {
 
     lazy val currentProfile = {
       val profiles = stagingProfiles
-      if(profiles.isEmpty)
+      if(profiles.isEmpty) {
         throw new IllegalArgumentException(s"Profile ${profileName} is not found")
+      }
       profiles.head
     }
 
@@ -459,7 +460,7 @@ object Sonatype extends sbt.Plugin {
             timer.doWait
         }
       }
-      if(toContinue == true)
+      if(toContinue)
         throw new IOException("Timed out")
       true
     }
@@ -519,7 +520,7 @@ object Sonatype extends sbt.Plugin {
             timer.doWait
         }
       }
-      if(toContinue == true)
+      if(toContinue)
         throw new IOException("Timed out")
       true
 
@@ -527,7 +528,7 @@ object Sonatype extends sbt.Plugin {
 
     def stagingRepositoryInfo(repositoryId:String) = {
       s.log.info(s"Seaching for repository $repositoryId ...")
-      val ret = Get(s"/staging/repository/${repositoryId}") { response =>
+      val ret = Get(s"/staging/repository/$repositoryId") { response =>
         XML.load(response.getEntity.getContent)
       }
     }
