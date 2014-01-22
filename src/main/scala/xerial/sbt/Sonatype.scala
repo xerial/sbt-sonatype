@@ -260,25 +260,38 @@ object Sonatype extends sbt.Plugin {
       if(repos.isEmpty)
         throw new IllegalStateException(command.errNotFound)
 
+      def selectOne = {
+        val target = args(0)
+        repos.find(_.repositoryId == target)
+      }
+
+      def findSpecifiedInArg = {
+        val target = args(0)
+        repos.find(_.repositoryId == target) match {
+          case Some(x) => x
+          case None =>
+            s.log.error(s"Repository ${target} is not found")
+            s.log.error(s"Specify one of the repositoryies in:\n${repos.mkString("\n")}")
+            throw new IllegalArgumentException(s"Repository ${target} is not found")
+        }
+      }
+
       if(repos.size > 1) {
         if(args.isEmpty) {
           s.log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
           s.log.error(s"Specify one of the repository ids in the command line")
           throw new IllegalStateException("Found multiple staging repositories")
         }
-        else {
-          val target = args(0)
-          repos.find(_.repositoryId == target) match {
-            case Some(x) => x
-            case None =>
-              s.log.error(s"Repository ${target} is not found")
-              s.log.error(s"Specify one of the repositoryies in:\n${repos.mkString("\n")}")
-              throw new IllegalArgumentException(s"Repository ${target} is not found")
-          }
-        }
+        else
+          findSpecifiedInArg
       }
-      else
-        repos.head
+      else {
+        // repos.size == 1
+        if(args.isEmpty)
+          repos.head
+        else
+          findSpecifiedInArg
+      }
     }
 
     def openRepositories = stagingRepositoryProfiles.filter(_.isOpen).sortBy(_.repositoryId)
@@ -388,7 +401,7 @@ object Sonatype extends sbt.Plugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 3, intervalSeq:Int=3, maxRetries:Int=10) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=10) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
 
@@ -417,8 +430,8 @@ object Sonatype extends sbt.Plugin {
       }
 
       // Post close request
-      s.log.info(s"Closing staging repository $repo")
       val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
+      s.log.info(s"Closing staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo))
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
@@ -439,7 +452,7 @@ object Sonatype extends sbt.Plugin {
             }
             else {
               // Activity log exists, but the close phase is not yet terminated
-              s.log.info("Close process is in progress")
+              s.log.info("Close process is in progress ...")
               timer.doWait
             }
           case None =>
@@ -452,8 +465,8 @@ object Sonatype extends sbt.Plugin {
     }
 
     def dropStage(repo:StagingRepositoryProfile) = {
-      s.log.info(s"Dropping staging repository $repo")
       val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
+      s.log.info(s"Dropping staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo))
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
@@ -499,7 +512,7 @@ object Sonatype extends sbt.Plugin {
               throw new Exception("Failed to promote the repository")
             }
             else {
-              s.log.info("Release process is in progress")
+              s.log.info("Release process is in progress ...")
               timer.doWait
             }
           case None =>

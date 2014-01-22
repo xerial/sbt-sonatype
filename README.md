@@ -110,8 +110,8 @@ pomExtra := {
 The general steps for publishing your artifact to Maven Central are as follows: 
 
  * `publish-signed` to deploy your artifact to staging repository at Sonatype.
- * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, including GPG signature, pom.xml settings, etc.
- * `promote` the closed repository so that it can be synched with Maven central. 
+ * `close` your staging repository at Sonatype. This step verifiles Maven central sync requiement, GPG-signature, javadoc and source code presence, pom.xml settings, etc.
+ * `promote` verifies the closed repository so that it can be synched with Maven central. 
    * `release-sonatype` will do both `close` and `promote` in one step.
 
 Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `release-sonatype` command. 
