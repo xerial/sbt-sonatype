@@ -45,7 +45,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)"
 ```
 
-### $HOME/.sbt/(sbt-vesrion)/plugins/gpg.sbt
+### $HOME/.sbt/(sbt-version)/plugins/gpg.sbt
 
 Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) in order to use `publish-signed` command.
 
