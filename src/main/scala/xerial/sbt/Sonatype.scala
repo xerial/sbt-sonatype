@@ -255,7 +255,7 @@ object Sonatype extends sbt.Plugin {
         case Close => openRepositories
         case Promote => closedRepositories
         case Drop => stagingRepositoryProfiles
-        case CloseAndPromote => stagingRepositoryProfiles.filterNot(_.isReleased)
+        case CloseAndPromote => stagingRepositoryProfiles
       }
       if(repos.isEmpty)
         throw new IllegalStateException(command.errNotFound)
@@ -429,12 +429,14 @@ object Sonatype extends sbt.Plugin {
         toContinue = false
       }
 
-      // Post close request
-      val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
-      s.log.info(s"Closing staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo))
-      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-        throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
+      if(toContinue) {
+        // Post close request
+        val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
+        s.log.info(s"Closing staging repository $repo")
+        val ret = Post(postURL, promoteRequestXML(repo))
+        if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+          throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
+        }
       }
 
       val timer = new ExponentialBackOffRetry()
@@ -483,16 +485,18 @@ object Sonatype extends sbt.Plugin {
         toContinue = false
       }
 
-      // Post promote(release) request
-      val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
-      s.log.info(s"Promoting staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo))
-      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-        s.log.error(s"${ret.getStatusLine}")
-        for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
-          s.log.error(errorLine)
+      if(toContinue) {
+        // Post promote(release) request
+        val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
+        s.log.info(s"Promoting staging repository $repo")
+        val ret = Post(postURL, promoteRequestXML(repo))
+        if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+          s.log.error(s"${ret.getStatusLine}")
+          for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
+            s.log.error(errorLine)
+          }
+          throw new Exception("Failed to promote the repository")
         }
-        throw new Exception("Failed to promote the repository")
       }
 
       val timer = new ExponentialBackOffRetry()
