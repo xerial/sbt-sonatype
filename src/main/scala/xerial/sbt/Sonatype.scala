@@ -35,7 +35,7 @@ object Sonatype extends sbt.Plugin {
     val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
 
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
-    val restService = taskKey[NexusRESTService]("REST API")
+    private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
 
     val list = taskKey[Unit]("List staging repositories")
     val stagingActivities = taskKey[Unit]("Show repository activities")
@@ -120,7 +120,7 @@ object Sonatype extends sbt.Plugin {
   )
 
 
-  def releaseResolver(v: String): Resolver = {
+  private def releaseResolver(v: String): Resolver = {
     val nexus = "https://oss.sonatype.org/"
     if (v.trim.endsWith("SNAPSHOT"))
       "snapshots" at nexus + "content/repositories/snapshots"
@@ -128,19 +128,19 @@ object Sonatype extends sbt.Plugin {
       "releases" at nexus + "service/local/staging/deploy/maven2"
   }
 
-  sealed trait CommandType {
+  private sealed trait CommandType {
     def errNotFound : String
   }
-  case object Close extends CommandType {
+  private case object Close extends CommandType {
     def errNotFound = "No open repository is found. Run publish-signed first"
   }
-  case object Promote extends CommandType {
+  private case object Promote extends CommandType {
     def errNotFound = "No closed repository is found. Run publish-signed and close commands"
   }
-  case object Drop extends CommandType {
+  private case object Drop extends CommandType {
     def errNotFound = "No staging repository is found. Run publish-signed first"
   }
-  case object CloseAndPromote extends CommandType {
+  private case object CloseAndPromote extends CommandType {
     def errNotFound = "No staging repository is found. Run publish-signed first"
   }
 
@@ -244,10 +244,10 @@ object Sonatype extends sbt.Plugin {
   }
 
   class NexusRESTService(s:TaskStreams,
-                         repositoryUrl:String,
-                         profileName:String,
-                         cred:Seq[Credentials],
-                         credentialHost:String) {
+                                 repositoryUrl:String,
+                                 profileName:String,
+                                 cred:Seq[Credentials],
+                                 credentialHost:String) {
 
     def findTargetRepository(command:CommandType, args:Seq[String]) : StagingRepositoryProfile = {
       val repos = command match {
