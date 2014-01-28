@@ -28,14 +28,14 @@ object Sonatype extends sbt.Plugin {
 
   object SonatypeKeys {
     val repository = settingKey[String]("Sonatype repository URL")
-    val profileName = settingKey[String]("profile name at Sonatype: e.g. org.xerial")
+    val profileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val close = inputKey[Boolean]("Close the stage")
-    val promote = inputKey[Boolean]("close and promoe the repository")
-    val drop = inputKey[Boolean]("drop the repository")
+    val promote = inputKey[Boolean]("Close and promoe the repository")
+    val drop = inputKey[Boolean]("Drop the repository")
     val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
     val releaseAllSonatype = InputKey[Boolean]("release-all-sonatype", "Publish all staging repositories to Maven central")
 
-    val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
+    val credentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
 
     val list = taskKey[Unit]("List staging repositories")
@@ -48,7 +48,7 @@ object Sonatype extends sbt.Plugin {
 
   import complete.DefaultParsers._
 
-  private val repositoryNameParser: complete.Parser[Option[String]] =
+  private val repositoryIdParser: complete.Parser[Option[String]] =
     Space ~> token(StringBasic, "repository name").?.!!!("invalid input. please input repository name")
 
   import SonatypeKeys._
@@ -89,31 +89,31 @@ object Sonatype extends sbt.Plugin {
       stagingRepositoryProfiles.value
     },
     close := {
-      val arg = repositoryNameParser.parsed
+      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Close, arg)
       rest.closeStage(repo)
     },
     promote := {
-      val arg = repositoryNameParser.parsed
+      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Promote, arg)
       rest.promoteStage(repo)
     },
     drop := {
-      val arg = repositoryNameParser.parsed
+      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Drop, arg)
       rest.dropStage(repo)
     },
     releaseSonatype := {
-      val arg = repositoryNameParser.parsed
+      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
       rest.closeAndPromote(repo)
     },
     releaseAllSonatype := {
-      val arg = repositoryNameParser.parsed
+      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
         rest.closeAndPromote(repo)
@@ -258,10 +258,10 @@ object Sonatype extends sbt.Plugin {
   }
 
   class NexusRESTService(s:TaskStreams,
-                                 repositoryUrl:String,
-                                 profileName:String,
-                                 cred:Seq[Credentials],
-                                 credentialHost:String) {
+                         repositoryUrl:String,
+                         profileName:String,
+                         cred:Seq[Credentials],
+                         credentialHost:String) {
 
     def findTargetRepository(command:CommandType, arg: Option[String]) : StagingRepositoryProfile = {
       val repos = command match {
