@@ -145,7 +145,7 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Drop a staging repository.
 * __release-sonatype__ (repositoryId)?
   * Close and promote a staging repository.
-* __release-sonatype-all__ 
+* __release-all-sonatype__
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __stagingProfiles__
   * Show the list of staging profiles, which include profileName information.
