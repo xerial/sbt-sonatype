@@ -48,7 +48,7 @@ object Sonatype extends sbt.Plugin {
   import complete.DefaultParsers._
   import SonatypeKeys._
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
-    // Add sonatyep repository settings
+    // Add sonatype repository settings
     publishTo <<= version { (v) => Some(releaseResolver(v)) },
     publishMavenStyle := true,
     pomIncludeRepository := { _ => false },
@@ -71,11 +71,12 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val profiles =  rest.stagingProfiles
-      s.log.info(s"Staging profiles (profileName:${profileName.value}):")
       if(profiles.isEmpty)
         s.log.warn(s"No staging profile is found for ${profileName.value}")
-      else
+      else {
+        s.log.info(s"Staging profiles (profileName:${profileName.value}):")
         s.log.info(profiles.mkString("\n"))
+      }
       profiles
     },
     list := {
@@ -270,7 +271,7 @@ object Sonatype extends sbt.Plugin {
           case Some(x) => x
           case None =>
             s.log.error(s"Repository $target is not found")
-            s.log.error(s"Specify one of the repositoryies in:\n${repos.mkString("\n")}")
+            s.log.error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
             throw new IllegalArgumentException(s"Repository $target is not found")
         }
       }
