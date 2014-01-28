@@ -33,7 +33,7 @@ Import ***sbt-sonatype*** plugin to your project.
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.5")
 ```
 
- * If the plugin cannot be downloaded, check the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
+ * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
  It will be synchronized every ~4 hours.
 
 
