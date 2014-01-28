@@ -33,6 +33,7 @@ object Sonatype extends sbt.Plugin {
     val promote = inputKey[Boolean]("close and promoe the repository")
     val drop = inputKey[Boolean]("drop the repository")
     val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
+    val releaseAllSonatype = InputKey[Boolean]("release-all-sonatype", "Publish all staging repositories to Maven central")
 
     val credentialHost = settingKey[String]("Credential host e.g. oss.sonatype.org")
     private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
@@ -106,6 +107,14 @@ object Sonatype extends sbt.Plugin {
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
       rest.closeAndPromote(repo)
+    },
+    releaseAllSonatype := {
+      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val rest : NexusRESTService = restService.value
+      val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
+        rest.closeAndPromote(repo)
+      }
+      ret.forall(_ == true)
     },
     stagingActivities := {
       val s = streams.value

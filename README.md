@@ -28,7 +28,7 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
 
 Import ***sbt-sonatype*** plugin to your project.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.4")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.5")
 ```
 
  * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
@@ -142,6 +142,8 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Drop a staging repository.
 * __release-sonatype__ (repositoryId)?
   * Close and promote a staging repository.
+* __release-sonatype-all__ 
+  * Close and promote all staging repositories (Useful for cross-building projects)
 * __stagingProfiles__
   * Show the list of staging profiles, which include profileName information.
 * __stagingActivities__
