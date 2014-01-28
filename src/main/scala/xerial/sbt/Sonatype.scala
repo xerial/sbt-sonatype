@@ -47,6 +47,10 @@ object Sonatype extends sbt.Plugin {
 
 
   import complete.DefaultParsers._
+
+  private val repositoryNameParser: complete.Parser[Option[String]] =
+    Space ~> token(StringBasic, "repository name").?.!!!("invalid input. please input repository name")
+
   import SonatypeKeys._
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     // Add sonatype repository settings
@@ -85,31 +89,31 @@ object Sonatype extends sbt.Plugin {
       stagingRepositoryProfiles.value
     },
     close := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val arg = repositoryNameParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Close, arg)
       rest.closeStage(repo)
     },
     promote := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val arg = repositoryNameParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Promote, arg)
       rest.promoteStage(repo)
     },
     drop := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val arg = repositoryNameParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Drop, arg)
       rest.dropStage(repo)
     },
     releaseSonatype := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val arg = repositoryNameParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
       rest.closeAndPromote(repo)
     },
     releaseAllSonatype := {
-      val arg: Seq[String] = spaceDelimited("<arg>").parsed
+      val arg = repositoryNameParser.parsed
       val rest : NexusRESTService = restService.value
       val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
         rest.closeAndPromote(repo)
@@ -259,7 +263,7 @@ object Sonatype extends sbt.Plugin {
                                  cred:Seq[Credentials],
                                  credentialHost:String) {
 
-    def findTargetRepository(command:CommandType, args:Seq[String]) : StagingRepositoryProfile = {
+    def findTargetRepository(command:CommandType, arg: Option[String]) : StagingRepositoryProfile = {
       val repos = command match {
         case Close => openRepositories
         case Promote => closedRepositories
@@ -269,37 +273,22 @@ object Sonatype extends sbt.Plugin {
       if(repos.isEmpty)
         throw new IllegalStateException(command.errNotFound)
 
-      def selectOne = {
-        val target = args(0)
-        repos.find(_.repositoryId == target)
-      }
-
-      def findSpecifiedInArg = {
-        val target = args(0)
-        repos.find(_.repositoryId == target) match {
-          case Some(x) => x
-          case None =>
-            s.log.error(s"Repository $target is not found")
-            s.log.error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
-            throw new IllegalArgumentException(s"Repository $target is not found")
+      def findSpecifiedInArg(target: String) = {
+        repos.find(_.repositoryId == target).getOrElse{
+          s.log.error(s"Repository $target is not found")
+          s.log.error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
+          throw new IllegalArgumentException(s"Repository $target is not found")
         }
       }
 
-      if(repos.size > 1) {
-        if(args.isEmpty) {
+      arg.map(findSpecifiedInArg).getOrElse{
+        if(repos.size > 1) {
           s.log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
           s.log.error(s"Specify one of the repository ids in the command line")
           throw new IllegalStateException("Found multiple staging repositories")
-        }
-        else
-          findSpecifiedInArg
-      }
-      else {
-        // repos.size == 1
-        if(args.isEmpty)
+        } else {
           repos.head
-        else
-          findSpecifiedInArg
+        }
       }
     }
 
