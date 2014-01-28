@@ -24,6 +24,8 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
 
 ## Usage
 
+sbt-sonatype is built for Scala2.10.x and sbt-0.13.x.
+
 ### project/plugins.sbt
 
 Import ***sbt-sonatype*** plugin to your project.
@@ -31,7 +33,8 @@ Import ***sbt-sonatype*** plugin to your project.
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.5")
 ```
 
- * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
+ * If the plugin cannot be downloaded, check the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
+ It will be synchronized every ~4 hours.
 
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
