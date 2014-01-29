@@ -63,7 +63,7 @@ Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your s
   * `profileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial` 
   * `pomExtra`
-     * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy Maven central sync requirements.
+     * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy [Maven central sync requirements](https://docs.sonatype.org/display/Repository/Central+Sync+Requirements).
   
 
 ```scala
