@@ -54,7 +54,11 @@ object Sonatype extends sbt.Plugin {
   import SonatypeKeys._
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     // Add sonatype repository settings
-    publishTo <<= version { (v) => Some(releaseResolver(v)) },
+    publishTo := {
+      val v : String = version.value
+      val orig : Option[Resolver] = publishTo.value
+      orig.map(o => releaseResolver(v))
+    },
     publishMavenStyle := true,
     pomIncludeRepository := { _ => false },
     repository := "https://oss.sonatype.org/service/local",
