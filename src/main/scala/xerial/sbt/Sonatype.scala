@@ -41,9 +41,9 @@ object Sonatype extends sbt.Plugin {
 
     val sonatypeList = taskKey[Unit]("List staging repositories")
     val sonatypeLog = taskKey[Unit]("Show repository activities")
-    val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
-    val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
-  }
+    val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
+    val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
+  }  
 
 
   import complete.DefaultParsers._
@@ -65,7 +65,7 @@ object Sonatype extends sbt.Plugin {
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
     restService := new NexusRESTService(streams.value, sonatypeRepository.value, profileName.value, credentials.value, credentialHost.value),
-    stagingRepositoryProfiles := {
+    sonatypeStagingRepositoryProfiles := {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val repos = rest.stagingRepositoryProfiles
@@ -76,7 +76,7 @@ object Sonatype extends sbt.Plugin {
         s.log.info(repos.mkString("\n"))
       repos
     },
-    stagingProfiles := {
+    sonatypeStagingProfiles := {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val profiles =  rest.stagingProfiles
@@ -90,7 +90,7 @@ object Sonatype extends sbt.Plugin {
     },
     sonatypeList := {
       val rest : NexusRESTService = restService.value
-      stagingRepositoryProfiles.value
+      sonatypeStagingRepositoryProfiles.value
     },
     sonatypeClose := {
       val arg = repositoryIdParser.parsed
