@@ -3,8 +3,8 @@ sbt-sonatype plugin
 
 A sbt plugin for automating release processes at Sonatype Nexus. This plugin enables two-step release of your Scala/Java projects:
 
- * First, `publish-signed` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
- * Next, `release-sonatype` to perform the close and release steps in Sonatype Nexus repository. 
+ * First, `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
+ * Next, `sonatypeRelease` to perform the close and release steps in Sonatype Nexus repository. 
  * That's all. Your project will be synchoronized to Maven central in a few hours. No need to enter the web interface of [Sonatype Nexus repository](http://oss.sonatype.org/).
 
 
@@ -30,7 +30,7 @@ sbt-sonatype is built for Scala2.10.x and sbt-0.13.x.
 
 Import ***sbt-sonatype*** plugin to your project.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.7")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.0")
 ```
 
  * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
@@ -61,7 +61,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. The important settings are:
 
   * `profileName` 
-     * This is your Sonatype acount profile name, e.g. `org.xerial` 
+     * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
      * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy [Maven central sync requirements](https://docs.sonatype.org/display/Repository/Central+Sync+Requirements).
   
@@ -123,32 +123,32 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 
 Publish a GPG-signed artifact to Sonatype:
 ```
-$ sbt publish-signed
+$ sbt publishSigned
 ```
 
 Do close and promote at once:
 ```
-$ sbt release-sonatype
+$ sbt sonatypeRelease
 ```
 This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
 
 
 ## Available Commands
 
-* __list__
+* __sonatypeList__
   * Show the list of staging repositories.
-* __close__ (repositoryId)?
+* __sonatypeClose__ (repositoryId)?
   * Close a staging repository.
-* __promote__ (repositoryId)?
+* __sonatypePromote__ (repositoryId)?
   * Promote a staging repository.
-* __drop__ (repositoryId)?
+* __sonatypeDrop__ (repositoryId)?
   * Drop a staging repository.
-* __releaseSonatype__ (repositoryId)?
+* __sonatypeRelease__ (repositoryId)?
   * Close and promote a staging repository.
-* __releaseAllSonatype__
+* __sonatypeReleaseAll__
   * Close and promote all staging repositories (Useful for cross-building projects)
-* __stagingProfiles__
+* __sonatypeStagingProfiles__
   * Show the list of staging profiles, which include profileName information.
-* __stagingActivities__
+* __sonatypeLog__
   * Show the staging activity logs
 

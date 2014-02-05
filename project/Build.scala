@@ -35,7 +35,6 @@ object SonatypeBuild extends Build {
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "A sbt plugin for automating staging processes in Sonatype",
     scalaVersion := SCALA_VERSION,
-    publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := {
       _ => false

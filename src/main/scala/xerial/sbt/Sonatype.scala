@@ -27,21 +27,21 @@ import java.io.IOException
 object Sonatype extends sbt.Plugin {
 
   object SonatypeKeys {
-    val repository = settingKey[String]("Sonatype repository URL")
+    val sonatypeRepository = settingKey[String]("Sonatype repository URL")
     val profileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
-    val close = inputKey[Boolean]("Close the stage")
-    val promote = inputKey[Boolean]("Close and promoe the repository")
-    val drop = inputKey[Boolean]("Drop the repository")
-    val releaseSonatype = InputKey[Boolean]("release-sonatype", "Publish to Maven central via close and promote")
-    val releaseAllSonatype = InputKey[Boolean]("release-all-sonatype", "Publish all staging repositories to Maven central")
-
+    val sonatypeClose = inputKey[Boolean]("Close the stage")
+    val sonatypePromote = inputKey[Boolean]("Close and promoe the repository")
+    val sonatypeDrop = inputKey[Boolean]("Drop the repository")
+    val sonatypeRelease = inputKey[Boolean]("Publish to Maven central via sonatypeClose and sonatypePromote")
+    val sonatypeReleaseAll = inputKey[Boolean]("Publish all staging repositories to Maven central")
+    val releaseSonatype = InputKey[Unit]("release-sonatype", "Publish to Maven central via close and promote")
+    val releaseAllSonatype = InputKey[Unit]("release-all-sonatype", "Publish all staging repositories to Maven central")
     val credentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
-
-    val list = taskKey[Unit]("List staging repositories")
-    val stagingActivities = taskKey[Unit]("Show repository activities")
-    val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
-    val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
+    val sonatypeList = taskKey[Unit]("List staging repositories")
+    val sonatypeLog = taskKey[Unit]("Show repository activities")
+    val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
+    val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
   }
 
@@ -49,17 +49,26 @@ object Sonatype extends sbt.Plugin {
   import complete.DefaultParsers._
 
   private val repositoryIdParser: complete.Parser[Option[String]] =
-    Space ~> token(StringBasic, "repository name").?.!!!("invalid input. please input repository name")
+    (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
   import SonatypeKeys._
 
+  lazy val sonatypeSettings : Seq[Def.Setting[_]] = Seq[Def.Setting[_]](
+    // Add sonatype repository settings
+    publishTo := {
+      Some(sonatypeDefaultResolver.value)
+    },
+    publishMavenStyle := true,
+    pomIncludeRepository := { _ => false }
+  ) ++ sonatypeGlobalSettings
+
   lazy val sonatypeGlobalSettings = Seq[Def.Setting[_]](
     sonatypeDefaultResolver := { releaseResolver(version.value) },
-    repository := "https://oss.sonatype.org/service/local",
+    sonatypeRepository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
-    restService := new NexusRESTService(streams.value, repository.value, profileName.value, credentials.value, credentialHost.value),
-    stagingRepositoryProfiles := {
+    restService := new NexusRESTService(streams.value, sonatypeRepository.value, profileName.value, credentials.value, credentialHost.value),
+    sonatypeStagingRepositoryProfiles := {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val repos = rest.stagingRepositoryProfiles
@@ -70,7 +79,7 @@ object Sonatype extends sbt.Plugin {
         s.log.info(repos.mkString("\n"))
       repos
     },
-    stagingProfiles := {
+    sonatypeStagingProfiles := {
       val rest : NexusRESTService = restService.value
       val s = streams.value
       val profiles =  rest.stagingProfiles
@@ -82,35 +91,41 @@ object Sonatype extends sbt.Plugin {
       }
       profiles
     },
-    list := {
+    sonatypeList := {
       val rest : NexusRESTService = restService.value
-      stagingRepositoryProfiles.value
+      sonatypeStagingRepositoryProfiles.value
     },
-    close := {
+    sonatypeClose := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Close, arg)
       rest.closeStage(repo)
     },
-    promote := {
+    sonatypePromote := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Promote, arg)
       rest.promoteStage(repo)
     },
-    drop := {
+    sonatypeDrop := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(Drop, arg)
       rest.dropStage(repo)
     },
     releaseSonatype := {
+      streams.value.log.warn("releaseSonatype is deprecated. Use sonatypeRelease instead")
+    },
+    sonatypeRelease := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val repo = rest.findTargetRepository(CloseAndPromote, arg)
       rest.closeAndPromote(repo)
     },
     releaseAllSonatype := {
+      streams.value.log.warn("releaseAllSonatype is deprecated. Use sonatypeReleaseAll instead")
+    },
+    sonatypeReleaseAll := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
@@ -118,25 +133,19 @@ object Sonatype extends sbt.Plugin {
       }
       ret.forall(_ == true)
     },
-    stagingActivities := {
+    sonatypeLog := {
       val s = streams.value
       val rest : NexusRESTService = restService.value
-      for((repo, activities) <- rest.activities) {
+      val alist = rest.activities
+      if(alist.isEmpty)
+        s.log.warn("No staging log is found")
+      for((repo, activities) <- alist) {
         s.log.info(s"Staging activities of $repo:")
         for(a <- activities) {
           a.log(s)
         }
       }
     }
-  )
-
-  lazy val sonatypeSettings = sonatypeGlobalSettings ++ Seq[Def.Setting[_]](
-    // Add sonatype repository settings
-    publishTo := {
-      Some(sonatypeDefaultResolver.value)
-    },
-    publishMavenStyle := true,
-    pomIncludeRepository := { _ => false }
   )
 
 
