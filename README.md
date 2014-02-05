@@ -61,7 +61,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. The important settings are:
 
   * `profileName` 
-     * This is your Sonatype acount profile name, e.g. `org.xerial` 
+     * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
      * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy [Maven central sync requirements](https://docs.sonatype.org/display/Repository/Central+Sync+Requirements).
   
