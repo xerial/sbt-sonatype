@@ -17,14 +17,15 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
      * Create a Sonatype account
      * Create a GPG key
      * Open a JIRA ticket to get a permission for synchronizing your project to Maven central.
-   * Related articles:   
-     * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/) 
-     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html
-)
+
+
+ * Related articles:
+    * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
+    * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/)
 
 ## Usage
 
-sbt-sonatype is built for Scala2.10.x and sbt-0.13.x.
+sbt-sonatype is built for sbt-0.13.x.
 
 ### project/plugins.sbt
 
@@ -33,7 +34,7 @@ Import ***sbt-sonatype*** plugin to your project.
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.0")
 ```
 
- * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
+ * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.10_0.13>.
  It will be synchronized every ~4 hours.
 
 
