@@ -32,35 +32,38 @@ object Sonatype extends sbt.Plugin {
     val sonatypeClose = inputKey[Boolean]("Close the stage")
     val sonatypePromote = inputKey[Boolean]("Close and promoe the repository")
     val sonatypeDrop = inputKey[Boolean]("Drop the repository")
-    val sonatypeRelease = InputKey[Boolean]("sonatype-release", "Publish to Maven central via close and promote")
-    val sonatypeReleaseAll = InputKey[Boolean]("sonatype-release-all", "Publish all staging repositories to Maven central")
+    val sonatypeRelease = inputKey[Boolean]("Publish to Maven central via sonatypeClose and sonatypePromote")
+    val sonatypeReleaseAll = inputKey[Boolean]("Publish all staging repositories to Maven central")
     val releaseSonatype = InputKey[Unit]("release-sonatype", "Publish to Maven central via close and promote")
     val releaseAllSonatype = InputKey[Unit]("release-all-sonatype", "Publish all staging repositories to Maven central")
     val credentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
-
     val sonatypeList = taskKey[Unit]("List staging repositories")
     val sonatypeLog = taskKey[Unit]("Show repository activities")
     val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
+    val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
   }
 
 
   import complete.DefaultParsers._
 
   private val repositoryIdParser: complete.Parser[Option[String]] =
-    Space ~> token(StringBasic, "repository name").?.!!!("invalid input. please input repository name")
+    (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
   import SonatypeKeys._
-  lazy val sonatypeSettings = Seq[Def.Setting[_]](
+
+  lazy val sonatypeSettings : Seq[Def.Setting[_]] = Seq[Def.Setting[_]](
     // Add sonatype repository settings
     publishTo := {
-      val v : String = version.value
-      val orig : Option[Resolver] = publishTo.value
-      orig.map(o => releaseResolver(v))
+      Some(sonatypeDefaultResolver.value)
     },
     publishMavenStyle := true,
-    pomIncludeRepository := { _ => false },
+    pomIncludeRepository := { _ => false }
+  ) ++ sonatypeGlobalSettings
+
+  lazy val sonatypeGlobalSettings = Seq[Def.Setting[_]](
+    sonatypeDefaultResolver := { releaseResolver(version.value) },
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
@@ -143,7 +146,6 @@ object Sonatype extends sbt.Plugin {
         }
       }
     }
-
   )
 
 
