@@ -30,7 +30,7 @@ sbt-sonatype is built for Scala2.10.x and sbt-0.13.x.
 
 Import ***sbt-sonatype*** plugin to your project.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.5")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.7")
 ```
 
  * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
