@@ -24,6 +24,8 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
 
 ## Usage
 
+sbt-sonatype is built for Scala2.10.x and sbt-0.13.x.
+
 ### project/plugins.sbt
 
 Import ***sbt-sonatype*** plugin to your project.
@@ -31,7 +33,8 @@ Import ***sbt-sonatype*** plugin to your project.
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.1.5")
 ```
 
- * Here is the plugin repository at Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>
+ * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/>.
+ It will be synchronized every ~4 hours.
 
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
@@ -60,7 +63,7 @@ Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your s
   * `profileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial` 
   * `pomExtra`
-     * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy Maven central sync requirements.
+     * A fragment of Maven's pom.xml. At least you need to define url, licenses, scm and deverlopers tags in this XML to satisfy [Maven central sync requirements](https://docs.sonatype.org/display/Repository/Central+Sync+Requirements).
   
 
 ```scala
@@ -140,9 +143,9 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Promote a staging repository.
 * __drop__ (repositoryId)?
   * Drop a staging repository.
-* __release-sonatype__ (repositoryId)?
+* __releaseSonatype__ (repositoryId)?
   * Close and promote a staging repository.
-* __release-sonatype-all__ 
+* __releaseAllSonatype__
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __stagingProfiles__
   * Show the list of staging profiles, which include profileName information.

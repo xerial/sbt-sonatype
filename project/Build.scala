@@ -26,22 +26,6 @@ object SonatypeBuild extends Build {
 
   val SCALA_VERSION = "2.10.3"
 
-  def releaseResolver(v: String): Resolver = {
-    val profile = System.getProperty("xerial.profile", "default")
-    profile match {
-      case "default" => {
-        val nexus = "https://oss.sonatype.org/"
-        if (v.trim.endsWith("SNAPSHOT"))
-          "snapshots" at nexus + "content/repositories/snapshots"
-        else
-          "releases" at nexus + "service/local/staging/deploy/maven2"
-      }
-      case p => {
-        sys.error("unknown xerial.profile:%s".format(p))
-      }
-    }
-  }
-
   import xerial.sbt.Sonatype.SonatypeKeys._
 
   lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
@@ -53,7 +37,6 @@ object SonatypeBuild extends Build {
     scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
-    publishTo <<= version { (v) => Some(releaseResolver(v)) },
     pomIncludeRepository := {
       _ => false
     },
