@@ -43,7 +43,7 @@ object Sonatype extends sbt.Plugin {
     val sonatypeLog = taskKey[Unit]("Show repository activities")
     val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
-  }  
+  }
 
 
   import complete.DefaultParsers._
