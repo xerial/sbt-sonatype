@@ -42,7 +42,7 @@ object Sonatype extends sbt.Plugin {
     val stagingActivities = taskKey[Unit]("Show repository activities")
     val stagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val stagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
-
+    val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
   }
 
 
@@ -52,15 +52,9 @@ object Sonatype extends sbt.Plugin {
     Space ~> token(StringBasic, "repository name").?.!!!("invalid input. please input repository name")
 
   import SonatypeKeys._
-  lazy val sonatypeSettings = Seq[Def.Setting[_]](
-    // Add sonatype repository settings
-    publishTo := {
-      val v : String = version.value
-      val orig : Option[Resolver] = publishTo.value
-      orig.map(o => releaseResolver(v))
-    },
-    publishMavenStyle := true,
-    pomIncludeRepository := { _ => false },
+
+  lazy val sonatypeGlobalSettings = Seq[Def.Setting[_]](
+    sonatypeDefaultResolver := { releaseResolver(version.value) },
     repository := "https://oss.sonatype.org/service/local",
     credentialHost := "oss.sonatype.org",
     profileName := organization.value,
@@ -134,7 +128,15 @@ object Sonatype extends sbt.Plugin {
         }
       }
     }
+  )
 
+  lazy val sonatypeSettings = sonatypeGlobalSettings ++ Seq[Def.Setting[_]](
+    // Add sonatype repository settings
+    publishTo := {
+      Some(sonatypeDefaultResolver.value)
+    },
+    publishMavenStyle := true,
+    pomIncludeRepository := { _ => false }
   )
 
 
