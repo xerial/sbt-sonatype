@@ -118,7 +118,7 @@ The general steps for publishing your artifact to Maven Central are as follows:
  * `sonatypePromote` command verifies the closed repository so that it can be synchronized with Maven central. 
    * `sonatypeRelease` will do both `sonatypeClose` and `sonatypePromote` in one step.
 
-Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `release-sonatype` command. 
+Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `sonatypeRelease` command. 
 
 ### Command Line Usage
 
