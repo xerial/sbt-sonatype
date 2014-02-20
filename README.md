@@ -1,14 +1,13 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for automating release processes at Sonatype Nexus. This plugin enables two-step release of your Scala/Java projects:
+A sbt plugin for publishing your project to Maven central repository through REST API of Sonatype Nexus Web UI. This plugin enables two-step release of your Scala/Java projects.
 
- * First, `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
- * Next, `sonatypeRelease` to perform the close and release steps in Sonatype Nexus repository. 
+ * First `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
+ * Next `sonatypeRelease` to perform the close and release steps in the Sonatype Nexus repository. 
  * That's all. Your project will be synchoronized to Maven central in a few hours. No need to enter the web interface of [Sonatype Nexus repository](http://oss.sonatype.org/).
 
-
-Deploying to Sonatype repository is required for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/).
+Deploying to Sonatype repository is a requiremnt for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/).
 
 ## Prerequisites
  
@@ -18,14 +17,13 @@ Deploying to Sonatype repository is required for synchronizing your projects to 
      * Create a GPG key
      * Open a JIRA ticket to get a permission for synchronizing your project to Maven central.
 
-
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
     * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/)
 
 ## Usage
 
-sbt-sonatype is built for sbt-0.13.x.
+sbt-sonatype is available for sbt-0.13.x.
 
 ### project/plugins.sbt
 
@@ -40,13 +38,13 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.0")
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
 
-Set Sonatype account information (user name and password) in the global sbt settings. Never include this setting file to your project. 
+Set Sonatype account information (user name and password) in the global sbt settings. Never include this file under your project to protect your password.
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "oss.sonatype.org",
 	    "(Sonatype user name)",
-	    "(Sonatype password)"
+	    "(Sonatype password)")
 ```
 
 ### $HOME/.sbt/(sbt-version)/plugins/gpg.sbt
@@ -59,7 +57,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 
 ### build.sbt
 
-Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. The important settings are:
+Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. As least you need to set the following keys:
 
   * `profileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
