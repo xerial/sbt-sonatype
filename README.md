@@ -27,13 +27,15 @@ sbt-sonatype is available for sbt-0.13.x.
 
 ### project/plugins.sbt
 
-Import ***sbt-sonatype*** plugin to your project.
+Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publish-signed` commands.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.1")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
  * If downloading the plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.10_0.13>.
- It will be synchronized every ~4 hours.
+ It will be synchronized every ~2 hours.
 
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
@@ -45,14 +47,6 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "oss.sonatype.org",
 	    "(Sonatype user name)",
 	    "(Sonatype password)")
-```
-
-### $HOME/.sbt/(sbt-version)/plugins/gpg.sbt
-
-Add [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) in order to use `publish-signed` command.
-
-```scala
-addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 ```
 
 ### build.sbt
@@ -68,7 +62,7 @@ Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your s
 ```scala
 import SonatypeKeys._
 
-// Import default settings. This changes publishTo settings to use the Sonatype repository and add several commands for publishing.
+// Import default settings. This changes `publishTo` settings to use the Sonatype repository and add several commands for publishing.
 sonatypeSettings
 
 // Your project orgnization (package name)
