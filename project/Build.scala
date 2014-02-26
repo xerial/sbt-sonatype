@@ -20,7 +20,12 @@ import java.io.File
 import sbt._
 import Keys._
 import sbt.ScriptedPlugin._
+import sbtrelease._
+import ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin._
+import sbtrelease.ReleaseStep
+import com.typesafe.sbt.pgp.PgpKeys
+import Sonatype.SonatypeKeys._
 
 object SonatypeBuild extends Build {
 
@@ -33,7 +38,7 @@ object SonatypeBuild extends Build {
     organization := "org.xerial.sbt",
     organizationName := "Xerial project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
-    description := "A sbt plugin for automating staging processes in Sonatype",
+    description := "A sbt plugin for publishing Scala/Java projects to the Maven Central through Sonatype Nexus REST API",
     scalaVersion := SCALA_VERSION,
     publishArtifact in Test := false,
     pomIncludeRepository := {
@@ -47,8 +52,31 @@ object SonatypeBuild extends Build {
       import scala.collection.JavaConverters._
       management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
     },
+    ReleaseKeys.tagName := { (version in ThisBuild).value },
+    ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+      checkSnapshotDependencies,
+      inquireVersions,
+      runClean,
+      runTest,
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      ReleaseStep(
+        action = { state =>
+          val extracted = Project extract state
+          extracted.runAggregated(PgpKeys.publishSigned in Global in extracted.get(thisProjectRef), state)
+        }
+      ),
+      setNextVersion,
+      commitNextVersion,
+      ReleaseStep{ state =>
+        val extracted = Project extract state
+        extracted.runAggregated(sonatypeReleaseAll in Global in extracted.get(thisProjectRef), state)
+      },
+      pushChanges
+    ),
     pomExtra := {
-      <url>http://xerial.org/</url>
+      <url>https://github.com/xerial/sbt-sonatype</url>
       <licenses>
         <license>
           <name>Apache 2</name>
@@ -77,8 +105,6 @@ object SonatypeBuild extends Build {
     base = file("."),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= Seq(
-        //"io.spray" % "spray-client" % "1.2.0",
-        //"com.typesafe.akka" %% "akka-actor" % "2.2.3",
         "org.apache.httpcomponents" % "httpclient" % "4.2.6",
         "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
       )

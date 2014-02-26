@@ -33,9 +33,9 @@ object Sonatype extends sbt.Plugin {
     val sonatypePromote = inputKey[Boolean]("Close and promoe the repository")
     val sonatypeDrop = inputKey[Boolean]("Drop the repository")
     val sonatypeRelease = inputKey[Boolean]("Publish to Maven central via sonatypeClose and sonatypePromote")
-    val sonatypeReleaseAll = inputKey[Boolean]("Publish all staging repositories to Maven central")
+    val sonatypeReleaseAll = taskKey[Boolean]("Publish all staging repositories to Maven central")
     val releaseSonatype = InputKey[Unit]("release-sonatype", "Publish to Maven central via close and promote")
-    val releaseAllSonatype = InputKey[Unit]("release-all-sonatype", "Publish all staging repositories to Maven central")
+    val releaseAllSonatype = TaskKey[Unit]("release-all-sonatype", "Publish all staging repositories to Maven central")
     val credentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     private[Sonatype] val restService = taskKey[NexusRESTService]("REST API")
     val sonatypeList = taskKey[Unit]("List staging repositories")
@@ -126,7 +126,6 @@ object Sonatype extends sbt.Plugin {
       streams.value.log.warn("releaseAllSonatype is deprecated. Use sonatypeReleaseAll instead")
     },
     sonatypeReleaseAll := {
-      val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = restService.value
       val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
         rest.closeAndPromote(repo)
