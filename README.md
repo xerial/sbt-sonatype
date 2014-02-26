@@ -73,7 +73,7 @@ version := "0.1"
 // To sync with Maven central, you need to supply the following information:
 pomExtra := {
   <url>(your project URL)</url>
-  <!-- License of your choice. -->
+  <!-- License of your choice -->
   <licenses>
     <license>
       <name>Apache 2</name>
@@ -82,9 +82,9 @@ pomExtra := {
   </licenses>
   <!-- SCM information. Modify the follwing URLs -->
   <scm>
-    <connection>scm:git:github.com/xerial/sbt-sonatype.git</connection>
-    <developerConnection>scm:git:git@github.com:xerial/sbt-sonatype.git</developerConnection>
-    <url>github.com/xerial/sbt-sonatype.git</url>
+    <connection>scm:git:github.com/(your repository URL)</connection>
+    <developerConnection>scm:git:git@github.com:(your repository URL)</developerConnection>
+    <url>github.com/(your repository url)</url>
   </scm>
   <!-- Developer contact information -->
   <developers>
