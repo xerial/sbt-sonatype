@@ -29,7 +29,7 @@ Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/s
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.1")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
+addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 ```
 
  * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.10_0.13>. It will be synchronized every ~2 hours.
