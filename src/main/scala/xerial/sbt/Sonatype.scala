@@ -48,6 +48,9 @@ object Sonatype extends sbt.Plugin {
 
   import complete.DefaultParsers._
 
+  /**
+   * Parsing repository id argument
+   */
   private val repositoryIdParser: complete.Parser[Option[String]] =
     (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
@@ -156,6 +159,9 @@ object Sonatype extends sbt.Plugin {
       "releases" at nexus + "service/local/staging/deploy/maven2"
   }
 
+  /**
+   * Switches of a Sonatype command to use
+   */
   private sealed trait CommandType {
     def errNotFound : String
   }
@@ -172,6 +178,13 @@ object Sonatype extends sbt.Plugin {
     def errNotFound = "No staging repository is found. Run publish-signed first"
   }
 
+  /**
+   * Staging repository profile has an id of deployed artifact and the current staging state.
+   * @param profileId
+   * @param profileName
+   * @param stagingType
+   * @param repositoryId
+   */
   case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String) {
     override def toString = s"[$repositoryId] status:$stagingType, profile:$profileName($profileId)"
     def isOpen = stagingType == "open"
@@ -181,8 +194,22 @@ object Sonatype extends sbt.Plugin {
     def toClosed = StagingRepositoryProfile(profileId, profileName, "closed", repositoryId)
     def toReleased = StagingRepositoryProfile(profileId, profileName, "released", repositoryId)
   }
+
+  /**
+   * Staging profile is the information associated to a Sonatype account.
+   * @param profileId
+   * @param profileName
+   * @param repositoryTargetId
+   */
   case class StagingProfile(profileId:String, profileName:String, repositoryTargetId:String)
 
+  /**
+   * Staging activity is an action to the staged repository
+   * @param name activity name, e.g. open, close, promote, etc.
+   * @param started
+   * @param stopped
+   * @param events
+   */
   case class StagingActivity(name:String, started:String, stopped:String, events:Seq[ActivityEvent]) {
     override def toString = {
       val b = Seq.newBuilder[String]
@@ -247,6 +274,13 @@ object Sonatype extends sbt.Plugin {
 
   }
 
+  /**
+   * ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
+   * @param timestamp
+   * @param name
+   * @param severity
+   * @param property
+   */
   case class ActivityEvent(timestamp:String, name:String, severity:String, property:Map[String, String]) {
     def ruleType : String = property.getOrElse("typeId", "other")
     def isFailure = name == "ruleFailed"
@@ -271,6 +305,14 @@ object Sonatype extends sbt.Plugin {
     }
   }
 
+  /**
+   * Interface to access the REST API of Nexus
+   * @param s
+   * @param repositoryUrl
+   * @param profileName
+   * @param cred
+   * @param credentialHost
+   */
   class NexusRESTService(s:TaskStreams,
                          repositoryUrl:String,
                          profileName:String,

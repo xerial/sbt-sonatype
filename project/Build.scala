@@ -50,7 +50,8 @@ object SonatypeBuild extends Build {
     scriptedBufferLog := false,
     scriptedLaunchOpts ++= {
       import scala.collection.JavaConverters._
-      management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
+      val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
+      memOpt ++ Seq(s"-Dplugin.version=${version.value}")
     },
     ReleaseKeys.tagName := { (version in ThisBuild).value },
     ReleaseKeys.releaseProcess := Seq[ReleaseStep](
