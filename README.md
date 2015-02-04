@@ -10,10 +10,10 @@ A sbt plugin for publishing your project to the Maven central repository through
 ## Prerequisites
  
  * Create a Sonatype Repository account 
-   * Follow the instruction in [Sonatype OSS Maven Repository Usage Guide](https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide). 
+   * Follow the instruction in the [Central Repository documentation site](http://central.sonatype.org). 
      * Create a Sonatype account
      * Create a GPG key
-     * Open a JIRA ticket to get a permission for synchronizing your project to Maven central.
+     * Open a JIRA ticket to get a permission for synchronizing your project to the Central Repository (aka Maven Central).
 
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
@@ -52,7 +52,7 @@ Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your s
   * `profileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
-     * A fragment of Maven's pom.xml. Yoou must define url, licenses, scm and deverlopers tags in this XML to satisfy [Maven central sync requirements](https://docs.sonatype.org/display/Repository/Central+Sync+Requirements).
+     * A fragment of Maven's pom.xml. You must define url, licenses, scm and deverlopers tags in this XML to satisfy [Central Repository sync requirements](http://central.sonatype.org/pages/requirements.html).
   
 
 ```scala
@@ -99,7 +99,7 @@ pomExtra := {
 
 ## Publishing Your Artifact
 
-The general steps for publishing your artifact to Maven Central are as follows: 
+The general steps for publishing your artifact to the Central Repository are as follows: 
 
  * `publishSigned` to deploy your artifact to staging repository at Sonatype.
  * `sonatypeClose` closes your staging repository at Sonatype. This step verifiles Maven central sync requiement, GPG-signature, javadoc and source code presence, pom.xml settings, etc.
