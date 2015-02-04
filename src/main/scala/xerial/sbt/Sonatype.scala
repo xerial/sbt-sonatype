@@ -342,16 +342,17 @@ object Sonatype extends sbt.Plugin {
 
 
     private def withHttpClient[U](body: HttpClient => U) : U = {
-      val credt : Option[DirectCredentials] = cred.collectFirst{ case d:DirectCredentials if d.host == credentialHost => d}
-      if(credt.isEmpty)
-        throw new IllegalStateException(s"No credential is found for $credentialHost. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file.")
+      val credt : DirectCredentials = Credentials.forHost(cred, credentialHost)
+        .getOrElse {
+          throw new IllegalStateException(s"No credential is found for $credentialHost. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file.")
+        }
 
       val client = new DefaultHttpClient()
       try {
-        val user = credt.get.userName
-        val passwd = credt.get.passwd
+        val user = credt.userName
+        val passwd = credt.passwd
         client.getCredentialsProvider.setCredentials(
-          new AuthScope(credt.get.host, AuthScope.ANY_PORT),
+          new AuthScope(credt.host, AuthScope.ANY_PORT),
           new UsernamePasswordCredentials(user, passwd)
         )
         body(client)
