@@ -47,9 +47,9 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 
 ### build.sbt
 
-Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your sbt settings. As least you need to set the following keys:
+sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define yourself.  Import `SonatypeKeys._`, and then define the following keys:
 
-  * `profileName` 
+  * `sonatypeProfileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
      * A fragment of Maven's pom.xml. You must define url, licenses, scm and deverlopers tags in this XML to satisfy [Central Repository sync requirements](http://central.sonatype.org/pages/requirements.html).
@@ -58,14 +58,11 @@ Import `SonatypeKeys._` and add `xerial.sbt.Sonatype.sonatypeSettings` to your s
 ```scala
 import SonatypeKeys._
 
-// Import default settings. This changes `publishTo` settings to use the Sonatype repository and add several commands for publishing.
-sonatypeSettings
-
 // Your project orgnization (package name)
 organization := "org.xerial.example" 
 
 // Your profile name of the sonatype account. The default is the same with the organization 
-profileName := "org.xerial" 
+sonatypeProfileName := "org.xerial" 
 
 // Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
 version := "0.1" 

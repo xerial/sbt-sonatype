@@ -16,7 +16,6 @@
 
 package xerial.sbt
 
-import java.io.File
 import sbt._
 import Keys._
 import sbt.ScriptedPlugin._
@@ -25,7 +24,6 @@ import ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleaseStep
 import com.typesafe.sbt.pgp.PgpKeys
-import Sonatype.SonatypeKeys._
 
 object SonatypeBuild extends Build {
 
@@ -33,7 +31,7 @@ object SonatypeBuild extends Build {
 
   import xerial.sbt.Sonatype.SonatypeKeys._
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
     profileName := "org.xerial",
     organization := "org.xerial.sbt",
     organizationName := "Xerial project",
@@ -103,14 +101,14 @@ object SonatypeBuild extends Build {
   // Project modules
   lazy val sbtSonatype = Project(
     id = "sbt-sonatype",
-    base = file("."),
-    settings = buildSettings ++ Seq(
+    base = file(".")
+  ).settings(buildSettings: _*)
+    .settings(
       libraryDependencies ++= Seq(
         "org.apache.httpcomponents" % "httpclient" % "4.2.6",
         "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
       )
     )
-  )
 
 }
 
