@@ -1,11 +1,9 @@
 import sbt.Keys._
 import SonatypeKeys._
 
-sonatypeSettings
-
 organization := "org.xerial.example"
 
-profileName := "org.xerial"
+sonatypeProfileName := "org.xerial"
 
 version := "0.1.1"
 
