@@ -378,6 +378,9 @@ object Sonatype extends AutoPlugin {
               throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
           }
         }
+        if(toContinue) {
+          throw new IOException(s"Failed to retrieve data from $path")
+        }
         body(response)
       }
     }
@@ -400,6 +403,9 @@ object Sonatype extends AutoPlugin {
               s.log.debug(s"Status line: ${response.getStatusLine}")
               toContinue = false
           }
+        }
+        if(toContinue) {
+          throw new IOException(s"Failed to retrieve data from $path")
         }
         response
       }
