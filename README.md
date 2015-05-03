@@ -27,7 +27,7 @@ sbt-sonatype is available for sbt-0.13.x.
 
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publish-signed` commands.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.3.3")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.4.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 ```
@@ -47,7 +47,8 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 
 ### build.sbt
 
-sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define yourself.  Import `SonatypeKeys._`, and then define the following keys:
+sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define
+yourself. Add `Sonatype.sonatypeSettings` in your root project, and then define the following keys:
 
   * `sonatypeProfileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
@@ -56,13 +57,13 @@ sbt-sonatype is an autoplugin, it will automatically configure your build.  Ther
   
 
 ```scala
-import SonatypeKeys._
+Sonatype.sonatypeSettings
+
+// Your profile name of the sonatype account. The default is the same with the organization
+sonatypeProfileName := "org.xerial"
 
 // Your project orgnization (package name)
 organization := "org.xerial.example" 
-
-// Your profile name of the sonatype account. The default is the same with the organization 
-sonatypeProfileName := "org.xerial" 
 
 // Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
 version := "0.1" 

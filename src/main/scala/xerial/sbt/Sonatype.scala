@@ -27,7 +27,7 @@ import java.io.IOException
  */
 object Sonatype extends AutoPlugin {
 
-  object SonatypeKeys {
+  trait SonatypeKeys {
     val sonatypeRepository = settingKey[String]("Sonatype repository URL")
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeClose = inputKey[Boolean]("Close the stage")
@@ -43,16 +43,17 @@ object Sonatype extends AutoPlugin {
     val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
   }
+  object SonatypeKeys extends SonatypeKeys {
+  }
 
-  object autoImport {
-    val SonatypeKeys = Sonatype.SonatypeKeys
+  object autoImport extends SonatypeKeys {
   }
 
   override def trigger = allRequirements
 
   override def requires = JvmPlugin
 
-  override def projectSettings = sonatypeSettings
+  override def projectSettings = sonatypePublishSettings
 
   import complete.DefaultParsers._
 
@@ -62,28 +63,33 @@ object Sonatype extends AutoPlugin {
   private val repositoryIdParser: complete.Parser[Option[String]] =
     (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
-  import SonatypeKeys._
+  import autoImport._
 
-  lazy val sonatypeSettings : Seq[Def.Setting[_]] = Seq[Def.Setting[_]](
+  lazy val sonatypeSettings : Seq[Def.Setting[_]] = sonatypePublishSettings ++ sonatypeRootSettings
+
+  lazy val sonatypeCommonSettings = Seq[Def.Setting[_]](
+    sonatypeProfileName := organization.value
+  )
+
+  lazy val sonatypePublishSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
     // Add sonatype repository settings
     publishTo := {
       Some(sonatypeDefaultResolver.value)
     },
     publishMavenStyle := true,
-    pomIncludeRepository := { _ => false }
-  ) ++ sonatypeGlobalSettings
-
-  lazy val sonatypeGlobalSettings = Seq[Def.Setting[_]](
+    pomIncludeRepository := { _ => false },
     sonatypeDefaultResolver := {
       if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
       } else {
         Opts.resolver.sonatypeStaging
       }
-    },
+    }
+  )
+
+  lazy val sonatypeRootSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
-    sonatypeProfileName := organization.value,
     sonatypeRestService := new NexusRESTService(streams.value, sonatypeRepository.value, sonatypeProfileName.value, credentials.value, sonatypeCredentialHost.value),
     sonatypeStagingRepositoryProfiles := {
       val rest : NexusRESTService = sonatypeRestService.value
