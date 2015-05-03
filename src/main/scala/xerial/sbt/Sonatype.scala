@@ -68,7 +68,8 @@ object Sonatype extends AutoPlugin {
   lazy val sonatypeSettings : Seq[Def.Setting[_]] = sonatypePublishSettings ++ sonatypeRootSettings
 
   lazy val sonatypeCommonSettings = Seq[Def.Setting[_]](
-    sonatypeProfileName := organization.value
+    sonatypeProfileName := organization.value,
+    commands += listCommand
   )
 
   lazy val sonatypePublishSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
@@ -87,10 +88,31 @@ object Sonatype extends AutoPlugin {
     }
   )
 
+  val listCommand : Command = Command.command("sonatypeList") { state =>
+    val extracted = Project.extract(state)
+    val (st2, c) = extracted.runTask(credentials, state)
+    val rest = new NexusRESTService(
+      state.log,
+      extracted.get(sonatypeRepository),
+      extracted.get(sonatypeProfileName),
+      c,
+      extracted.get(sonatypeCredentialHost))
+
+    val profiles = rest.stagingProfiles
+    if(profiles.isEmpty)
+      state.log.warn(s"No staging profile is found for ${extracted.get(sonatypeProfileName)}")
+    else {
+      state.log.info(s"Staging profiles (profileName:${extracted.get(sonatypeProfileName)}):")
+      state.log.info(profiles.mkString("\n"))
+    }
+    state
+  }
+
   lazy val sonatypeRootSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
-    sonatypeRestService := new NexusRESTService(streams.value, sonatypeRepository.value, sonatypeProfileName.value, credentials.value, sonatypeCredentialHost.value),
+    sonatypeRestService := new NexusRESTService(streams.value.log, sonatypeRepository.value, sonatypeProfileName.value, credentials.value,
+      sonatypeCredentialHost.value),
     sonatypeStagingRepositoryProfiles := {
       val rest : NexusRESTService = sonatypeRestService.value
       val s = streams.value
@@ -114,10 +136,10 @@ object Sonatype extends AutoPlugin {
       }
       profiles
     },
-    sonatypeList := {
-      val rest : NexusRESTService = sonatypeRestService.value
-      sonatypeStagingRepositoryProfiles.value
-    },
+//    sonatypeList := {
+//      val rest : NexusRESTService = sonatypeRestService.value
+//      sonatypeStagingRepositoryProfiles.value
+//    },
     sonatypeClose := {
       val arg = repositoryIdParser.parsed
       val rest : NexusRESTService = sonatypeRestService.value
@@ -158,7 +180,7 @@ object Sonatype extends AutoPlugin {
       for((repo, activities) <- alist) {
         s.log.info(s"Staging activities of $repo:")
         for(a <- activities) {
-          a.log(s)
+          a.log(s.log)
         }
       }
     }
@@ -227,11 +249,11 @@ object Sonatype extends AutoPlugin {
 
     def activityLog = s"Activity $name started:$started, stopped:$stopped"
 
-    def log(s:TaskStreams) {
-      s.log.info(activityLog)
+    def log(log:Logger) {
+      log.info(activityLog)
       val hasError = containsError
       for(e <- suppressEvaluateLog) {
-        e.log(s, hasError)
+        e.log(log, hasError)
       }
     }
 
@@ -257,13 +279,12 @@ object Sonatype extends AutoPlugin {
 
     def containsError = events.exists(_.severity != "0")
 
-    def reportFailure(s:TaskStreams) {
-      s.log.error(activityLog)
+    def reportFailure(log:Logger) {
+      log.error(activityLog)
       val failureReport = suppressEvaluateLog.filter(_.isFailure)
       for(e <- failureReport) {
-        e.log(s, useErrorLog=true)
+        e.log(log, useErrorLog=true)
       }
-
     }
 
     def isReleaseSucceeded(repositoryId:String) : Boolean = {
@@ -293,7 +314,7 @@ object Sonatype extends AutoPlugin {
 
     override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
 
-    def log(s:TaskStreams, useErrorLog:Boolean = false) {
+    def log(s:Logger, useErrorLog:Boolean = false) {
       val props = {
         val front = if(property.contains("typeId"))
           Seq(property("typeId"))
@@ -305,20 +326,20 @@ object Sonatype extends AutoPlugin {
       val name_s = name.replaceAll("rule(s)?","")
       val message = f"$name_s%10s: $messageLine"
       if(useErrorLog)
-        s.log.error(message)
+        s.error(message)
       else
-        s.log.info(message)
+        s.info(message)
     }
   }
 
-  class ActivityMonitor(s:TaskStreams) {
+  class ActivityMonitor(s:Logger) {
     var reportedActivities = Set.empty[String]
     var reportedEvents = Set.empty[ActivityEvent]
 
     def report(stagingActivities:Seq[StagingActivity]) = {
       for(sa <- stagingActivities) {
         if(!reportedActivities.contains(sa.started)) {
-          s.log.info(sa.activityLog)
+          s.info(sa.activityLog)
           reportedActivities += sa.started
         }
         for(ae <- sa.events if !reportedEvents.contains(ae)) {
@@ -331,19 +352,19 @@ object Sonatype extends AutoPlugin {
 
   /**
    * Interface to access the REST API of Nexus
-   * @param s
+   * @param log
    * @param repositoryUrl
    * @param profileName
    * @param cred
    * @param credentialHost
    */
-  class NexusRESTService(s:TaskStreams,
+  class NexusRESTService(log:Logger,
                          repositoryUrl:String,
                          profileName:String,
                          cred:Seq[Credentials],
                          credentialHost:String) {
 
-    val monitor = new ActivityMonitor(s)
+    val monitor = new ActivityMonitor(log)
 
     def findTargetRepository(command:CommandType, arg: Option[String]) : StagingRepositoryProfile = {
       val repos = command match {
@@ -357,16 +378,16 @@ object Sonatype extends AutoPlugin {
 
       def findSpecifiedInArg(target: String) = {
         repos.find(_.repositoryId == target).getOrElse{
-          s.log.error(s"Repository $target is not found")
-          s.log.error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
+          log.error(s"Repository $target is not found")
+          log.error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
           throw new IllegalArgumentException(s"Repository $target is not found")
         }
       }
 
       arg.map(findSpecifiedInArg).getOrElse{
         if(repos.size > 1) {
-          s.log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
-          s.log.error(s"Specify one of the repository ids in the command line")
+          log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
+          log.error(s"Specify one of the repository ids in the command line")
           throw new IllegalStateException("Found multiple staging repositories")
         } else {
           repos.head
@@ -380,7 +401,7 @@ object Sonatype extends AutoPlugin {
     private def repoBase(url:String) = if(url.endsWith("/")) url.dropRight(1) else url
     private val repo = {
       val url = repoBase(repositoryUrl)
-      s.log.info(s"Nexus repository URL: $url")
+      log.info(s"Nexus repository URL: $url")
       url
     }
 
@@ -395,13 +416,13 @@ object Sonatype extends AutoPlugin {
       while(toContinue && retry.hasNext) {
         withHttpClient { client =>
           response = client.execute(req)
-          s.log.debug(s"Status line: ${response.getStatusLine}")
+          log.debug(s"Status line: ${response.getStatusLine}")
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_OK =>
               toContinue = false
               ret = body(response)
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              s.log.warn(s"Received 500 error: ${response.getStatusLine}")
+              log.warn(s"Received 500 error: ${response.getStatusLine}")
               retry.doWait
             case _ =>
               throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
@@ -427,10 +448,10 @@ object Sonatype extends AutoPlugin {
           response = client.execute(req)
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              s.log.warn(s"Received 500 error: ${response.getStatusLine}")
+              log.warn(s"Received 500 error: ${response.getStatusLine}")
               retry.doWait
             case _ =>
-              s.log.debug(s"Status line: ${response.getStatusLine}")
+              log.debug(s"Status line: ${response.getStatusLine}")
               toContinue = false
           }
         }
@@ -463,7 +484,7 @@ object Sonatype extends AutoPlugin {
 
 
     def stagingRepositoryProfiles = {
-      s.log.info("Reading staging repository profiles...")
+      log.info("Reading staging repository profiles...")
       Get("/staging/profile_repositories") { response =>
         val profileRepositoriesXML = XML.load(response.getEntity.getContent)
         val repositoryProfiles = for(p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
@@ -480,7 +501,7 @@ object Sonatype extends AutoPlugin {
     }
 
     def stagingProfiles = {
-      s.log.info("Reading staging profiles...")
+      log.info("Reading staging profiles...")
       Get("/staging/profiles") { response =>
         val profileXML = XML.load(response.getEntity.getContent)
         val profiles = for(p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
@@ -539,14 +560,14 @@ object Sonatype extends AutoPlugin {
     def closeStage(repo:StagingRepositoryProfile) = {
       var toContinue = true
       if(repo.isClosed || repo.isReleased) {
-        s.log.info(s"Repository ${repo.repositoryId} is already closed")
+        log.info(s"Repository ${repo.repositoryId} is already closed")
         toContinue = false
       }
 
       if(toContinue) {
         // Post close request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
-        s.log.info(s"Closing staging repository $repo")
+        log.info(s"Closing staging repository $repo")
         val ret = Post(postURL, promoteRequestXML(repo))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
           throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
@@ -562,16 +583,16 @@ object Sonatype extends AutoPlugin {
           case Some(activity) =>
             if(activity.isCloseSucceeded(repo.repositoryId)) {
               toContinue = false
-              s.log.info("Closed successfully")
+              log.info("Closed successfully")
             }
             else if(activity.containsError) {
-              s.log.error("Failed to close the repository")
-              activity.reportFailure(s)
+              log.error("Failed to close the repository")
+              activity.reportFailure(log)
               throw new Exception("Failed to close the repository")
             }
             else {
               // Activity log exists, but the close phase is not yet terminated
-              s.log.debug("Close process is in progress ...")
+              log.debug("Close process is in progress ...")
               timer.doWait
             }
           case None =>
@@ -585,12 +606,12 @@ object Sonatype extends AutoPlugin {
 
     def dropStage(repo:StagingRepositoryProfile) = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
-      s.log.info(s"Dropping staging repository $repo")
+      log.info(s"Dropping staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo))
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
       }
-      s.log.info(s"Dropped successfully: ${repo.repositoryId}")
+      log.info(s"Dropped successfully: ${repo.repositoryId}")
       true
     }
 
@@ -598,19 +619,19 @@ object Sonatype extends AutoPlugin {
     def promoteStage(repo:StagingRepositoryProfile) = {
       var toContinue = true
       if(repo.isReleased) {
-        s.log.info(s"Repository ${repo.repositoryId} is already released")
+        log.info(s"Repository ${repo.repositoryId} is already released")
         toContinue = false
       }
 
       if(toContinue) {
         // Post promote(release) request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
-        s.log.info(s"Promoting staging repository $repo")
+        log.info(s"Promoting staging repository $repo")
         val ret = Post(postURL, promoteRequestXML(repo))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-          s.log.error(s"${ret.getStatusLine}")
+          log.error(s"${ret.getStatusLine}")
           for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
-            s.log.error(errorLine)
+            log.error(errorLine)
           }
           throw new Exception("Failed to promote the repository")
         }
@@ -624,19 +645,19 @@ object Sonatype extends AutoPlugin {
         activities.filter(_.name == "release").lastOption match {
           case Some(activity) =>
             if(activity.isReleaseSucceeded(repo.repositoryId)) {
-              s.log.info("Promoted successfully")
+              log.info("Promoted successfully")
 
               // Drop after release
               dropStage(repo.toReleased)
               toContinue = false
             }
             else if(activity.containsError) {
-              s.log.error("Failed to promote the repository")
-              activity.reportFailure(s)
+              log.error("Failed to promote the repository")
+              activity.reportFailure(log)
               throw new Exception("Failed to promote the repository")
             }
             else {
-              s.log.debug("Release process is in progress ...")
+              log.debug("Release process is in progress ...")
               timer.doWait
             }
           case None =>
@@ -650,7 +671,7 @@ object Sonatype extends AutoPlugin {
     }
 
     def stagingRepositoryInfo(repositoryId:String) = {
-      s.log.info(s"Seaching for repository $repositoryId ...")
+      log.info(s"Seaching for repository $repositoryId ...")
       val ret = Get(s"/staging/repository/$repositoryId") { response =>
         XML.load(response.getEntity.getContent)
       }
@@ -673,7 +694,7 @@ object Sonatype extends AutoPlugin {
     }
 
     def activitiesOf(r:StagingRepositoryProfile) : Seq[StagingActivity] =  {
-      s.log.debug(s"Checking activity logs of ${r.repositoryId} ...")
+      log.debug(s"Checking activity logs of ${r.repositoryId} ...")
       val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
         val xml = XML.load(response.getEntity.getContent)
         for(sa <- xml \\ "stagingActivity") yield {
