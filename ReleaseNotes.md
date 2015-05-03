@@ -1,4 +1,4 @@
-- Release 0.3.2
+- Release 0.3.3
  - Retry request on 500 error from sonatype REST API
  - Improved log message
 

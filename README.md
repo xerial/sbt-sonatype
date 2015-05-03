@@ -27,7 +27,7 @@ sbt-sonatype is available for sbt-0.13.x.
 
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publish-signed` commands.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.3.2")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.3.3")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 ```
