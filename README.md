@@ -7,6 +7,8 @@ A sbt plugin for publishing your project to the Maven central repository through
  * Next `sonatypeRelease` to perform the close and release steps in the Sonatype Nexus repository. 
  * Done. Your project will be synchoronized to the Maven central in a few hours. No longer need to enter the web interface of [Sonatype Nexus repository](http://oss.sonatype.org/).
 
+- [Release notes](ReleaseNotes.md)
+
 ## Prerequisites
  
  * Create a Sonatype Repository account 
