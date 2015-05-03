@@ -38,7 +38,6 @@ object SonatypeBuild extends Build {
     description := "A sbt plugin for publishing Scala/Java projects to the Maven Central through Sonatype Nexus REST API",
     scalaVersion := SCALA_VERSION,
     publishArtifact in Test := false,
-    pomIncludeRepository := { _ => false },
     sbtPlugin := true,
     parallelExecution := true,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),

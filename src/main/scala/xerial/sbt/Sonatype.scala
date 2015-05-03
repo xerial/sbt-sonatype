@@ -13,7 +13,6 @@ import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.{DefaultHttpClient, BasicCredentialsProvider}
 import org.apache.http.client.methods.{HttpPost, HttpGet}
 import sbt.plugins.JvmPlugin
-import scala.collection.mutable
 import scala.xml.XML
 import org.apache.http.client.HttpClient
 import org.apache.http.{HttpStatus, HttpResponse}
