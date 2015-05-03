@@ -13,6 +13,7 @@ import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.{DefaultHttpClient, BasicCredentialsProvider}
 import org.apache.http.client.methods.{HttpPost, HttpGet}
 import sbt.plugins.JvmPlugin
+import scala.collection.mutable
 import scala.xml.XML
 import org.apache.http.client.HttpClient
 import org.apache.http.{HttpStatus, HttpResponse}
@@ -166,16 +167,16 @@ object Sonatype extends AutoPlugin {
     def errNotFound : String
   }
   private case object Close extends CommandType {
-    def errNotFound = "No open repository is found. Run publish-signed first"
+    def errNotFound = "No open repository is found. Run publishSigned first"
   }
   private case object Promote extends CommandType {
-    def errNotFound = "No closed repository is found. Run publish-signed and close commands"
+    def errNotFound = "No closed repository is found. Run publishSigned and close commands"
   }
   private case object Drop extends CommandType {
-    def errNotFound = "No staging repository is found. Run publish-signed first"
+    def errNotFound = "No staging repository is found. Run publishSigned first"
   }
   private case object CloseAndPromote extends CommandType {
-    def errNotFound = "No staging repository is found. Run publish-signed first"
+    def errNotFound = "No staging repository is found. Run publishSigned first"
   }
 
   /**
@@ -305,6 +306,24 @@ object Sonatype extends AutoPlugin {
     }
   }
 
+  class ActivityMonitor(s:TaskStreams) {
+    var reportedActivities = Set.empty[String]
+    var reportedEvents = Set.empty[ActivityEvent]
+
+    def report(stagingActivities:Seq[StagingActivity]) = {
+      for(sa <- stagingActivities) {
+        if(!reportedActivities.contains(sa.started)) {
+          s.log.info(sa.activityLog)
+          reportedActivities += sa.started
+        }
+        for(ae <- sa.events if !reportedEvents.contains(ae)) {
+          ae.log(s, useErrorLog = false)
+          reportedEvents += ae
+        }
+      }
+    }
+  }
+
   /**
    * Interface to access the REST API of Nexus
    * @param s
@@ -318,6 +337,8 @@ object Sonatype extends AutoPlugin {
                          profileName:String,
                          cred:Seq[Credentials],
                          credentialHost:String) {
+
+    val monitor = new ActivityMonitor(s)
 
     def findTargetRepository(command:CommandType, arg: Option[String]) : StagingRepositoryProfile = {
       val repos = command match {
@@ -361,54 +382,58 @@ object Sonatype extends AutoPlugin {
     def Get[U](path:String)(body: HttpResponse => U) : U = {
       val req = new HttpGet(s"${repo}$path")
       req.addHeader("Content-Type", "application/xml")
-      withHttpClient{ client =>
-        val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
-        var response : HttpResponse = null
-        var toContinue = true
-        while(toContinue && retry.hasNext) {
+
+      val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
+      var toContinue = true
+      var response : HttpResponse = null
+      var ret : Any = null
+      while(toContinue && retry.hasNext) {
+        ret = withHttpClient { client =>
           response = client.execute(req)
           s.log.debug(s"Status line: ${response.getStatusLine}")
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_OK =>
               toContinue = false
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              s.log.debug(s"Received 500 error: ${response.getStatusLine}")
+              s.log.warn(s"Received 500 error: ${response.getStatusLine}")
               retry.doWait
             case _ =>
               throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
           }
+          body(response)
         }
-        if(toContinue) {
-          throw new IOException(s"Failed to retrieve data from $path")
-        }
-        body(response)
       }
+      if(toContinue) {
+        throw new IOException(s"Failed to retrieve data from $path")
+      }
+      ret.asInstanceOf[U]
     }
 
     def Post(path:String, bodyXML:String) = {
       val req = new HttpPost(s"${repo}$path")
       req.setEntity(new StringEntity(bodyXML))
       req.addHeader("Content-Type", "application/xml")
-      withHttpClient{ client =>
-        val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
-        var response : HttpResponse = null
-        var toContinue = true
-        while(toContinue && retry.hasNext) {
+
+      val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
+      var response : HttpResponse = null
+      var toContinue = true
+      while(toContinue && retry.hasNext) {
+        withHttpClient { client =>
           response = client.execute(req)
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              s.log.debug(s"Received 500 error: ${response.getStatusLine}")
+              s.log.warn(s"Received 500 error: ${response.getStatusLine}")
               retry.doWait
             case _ =>
               s.log.debug(s"Status line: ${response.getStatusLine}")
               toContinue = false
           }
         }
-        if(toContinue) {
-          throw new IOException(s"Failed to retrieve data from $path")
-        }
-        response
       }
+      if(toContinue) {
+        throw new IOException(s"Failed to retrieve data from $path")
+      }
+      response
     }
 
     private def withHttpClient[U](body: HttpClient => U) : U = {
@@ -523,9 +548,12 @@ object Sonatype extends AutoPlugin {
         }
       }
 
+      toContinue = true
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
-        activitiesOf(repo).filter(_.name == "close").lastOption match {
+        val activities = activitiesOf(repo)
+        monitor.report(activities)
+        activities.filter(_.name == "close").lastOption match {
           case Some(activity) =>
             if(activity.isCloseSucceeded(repo.repositoryId)) {
               toContinue = false
@@ -538,7 +566,7 @@ object Sonatype extends AutoPlugin {
             }
             else {
               // Activity log exists, but the close phase is not yet terminated
-              s.log.info("Close process is in progress ...")
+              s.log.debug("Close process is in progress ...")
               timer.doWait
             }
           case None =>
@@ -583,9 +611,12 @@ object Sonatype extends AutoPlugin {
         }
       }
 
+      toContinue = true
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
-        activitiesOf(repo).filter(_.name == "release").lastOption match {
+        val activities = activitiesOf(repo)
+        monitor.report(activities)
+        activities.filter(_.name == "release").lastOption match {
           case Some(activity) =>
             if(activity.isReleaseSucceeded(repo.repositoryId)) {
               s.log.info("Promoted successfully")
@@ -600,7 +631,7 @@ object Sonatype extends AutoPlugin {
               throw new Exception("Failed to promote the repository")
             }
             else {
-              s.log.info("Release process is in progress ...")
+              s.log.debug("Release process is in progress ...")
               timer.doWait
             }
           case None =>
@@ -636,8 +667,8 @@ object Sonatype extends AutoPlugin {
         r -> activitiesOf(r)
     }
 
-    def activitiesOf(r:StagingRepositoryProfile) =  {
-      s.log.info(s"Checking activity logs of ${r.repositoryId} ...")
+    def activitiesOf(r:StagingRepositoryProfile) : Seq[StagingActivity] =  {
+      s.log.debug(s"Checking activity logs of ${r.repositoryId} ...")
       val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
         val xml = XML.load(response.getEntity.getContent)
         for(sa <- xml \\ "stagingActivity") yield {
