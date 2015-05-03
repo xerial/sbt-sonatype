@@ -74,7 +74,7 @@ object Sonatype extends AutoPlugin {
   ) ++ sonatypeGlobalSettings
 
   lazy val sonatypeGlobalSettings = Seq[Def.Setting[_]](
-    sonatypeDefaultResolver := { 
+    sonatypeDefaultResolver := {
       if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
       } else {
@@ -387,22 +387,22 @@ object Sonatype extends AutoPlugin {
       var response : HttpResponse = null
       var ret : Any = null
       while(toContinue && retry.hasNext) {
-        ret = withHttpClient { client =>
+        withHttpClient { client =>
           response = client.execute(req)
           s.log.debug(s"Status line: ${response.getStatusLine}")
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_OK =>
               toContinue = false
+              ret = body(response)
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
               s.log.warn(s"Received 500 error: ${response.getStatusLine}")
               retry.doWait
             case _ =>
               throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
           }
-          body(response)
         }
       }
-      if(toContinue) {
+      if(ret == null) {
         throw new IOException(s"Failed to retrieve data from $path")
       }
       ret.asInstanceOf[U]
