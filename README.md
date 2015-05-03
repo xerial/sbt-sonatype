@@ -45,7 +45,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 	    "(Sonatype password)")
 ```
 
-### build.sbt
+### (project root)/sonatype.sbt
 
 sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define yourself. Add `Sonatype.sonatypeSettings` in your root project, and then define the following keys:
 
@@ -58,14 +58,8 @@ sbt-sonatype is an autoplugin, it will automatically configure your build.  Ther
 ```scala
 Sonatype.sonatypeSettings
 
-// Your profile name of the sonatype account. The default is the same with the organization
+// Your profile name of the sonatype account. The default is the same with the organization value
 sonatypeProfileName := "org.xerial"
-
-// Your project orgnization (package name)
-organization := "org.xerial.example" 
-
-// Project version. Only release version (w/o SNAPSHOT suffix) can be promoted.
-version := "0.1" 
 
 // To sync with Maven central, you need to supply the following information:
 pomExtra := {
