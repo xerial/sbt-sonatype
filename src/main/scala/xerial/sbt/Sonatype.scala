@@ -362,10 +362,21 @@ object Sonatype extends AutoPlugin {
       val req = new HttpGet(s"${repo}$path")
       req.addHeader("Content-Type", "application/xml")
       withHttpClient{ client =>
-        val response = client.execute(req)
-        s.log.debug(s"Status line: ${response.getStatusLine}")
-        if(response.getStatusLine.getStatusCode != HttpStatus.SC_OK) {
-          throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
+        val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
+        var response : HttpResponse = null
+        var toContinue = true
+        while(toContinue && retry.hasNext) {
+          response = client.execute(req)
+          s.log.debug(s"Status line: ${response.getStatusLine}")
+          response.getStatusLine.getStatusCode match {
+            case HttpStatus.SC_OK =>
+              toContinue = false
+            case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
+              s.log.debug(s"Received 500 error: ${response.getStatusLine}")
+              retry.doWait
+            case _ =>
+              throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
+          }
         }
         body(response)
       }
@@ -376,12 +387,23 @@ object Sonatype extends AutoPlugin {
       req.setEntity(new StringEntity(bodyXML))
       req.addHeader("Content-Type", "application/xml")
       withHttpClient{ client =>
-        val response = client.execute(req)
-        s.log.debug(s"Status line: ${response.getStatusLine}")
+        val retry = new ExponentialBackOffRetry(initialWaitSeq = 0)
+        var response : HttpResponse = null
+        var toContinue = true
+        while(toContinue && retry.hasNext) {
+          response = client.execute(req)
+          response.getStatusLine.getStatusCode match {
+            case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
+              s.log.debug(s"Received 500 error: ${response.getStatusLine}")
+              retry.doWait
+            case _ =>
+              s.log.debug(s"Status line: ${response.getStatusLine}")
+              toContinue = false
+          }
+        }
         response
       }
     }
-
 
     private def withHttpClient[U](body: HttpClient => U) : U = {
       val credt : DirectCredentials = Credentials.forHost(cred, credentialHost)
