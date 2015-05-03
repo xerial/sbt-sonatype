@@ -1,5 +1,4 @@
-import sbt.Keys._
-import SonatypeKeys._
+Sonatype.sonatypeSettings
 
 organization := "org.xerial.example"
 
