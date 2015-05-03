@@ -1,3 +1,6 @@
+- Release 0.4.0
+ - Simplified the configuration for multi-module build
+
 - Release 0.3.3
  - Retry request on 500 error from sonatype REST API
  - Improved log message

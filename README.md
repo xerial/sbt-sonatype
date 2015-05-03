@@ -47,8 +47,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 
 ### build.sbt
 
-sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define
-yourself. Add `Sonatype.sonatypeSettings` in your root project, and then define the following keys:
+sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define yourself. Add `Sonatype.sonatypeSettings` in your root project, and then define the following keys:
 
   * `sonatypeProfileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
