@@ -24,24 +24,21 @@ import ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleaseStep
 import com.typesafe.sbt.pgp.PgpKeys
+import xerial.sbt.Sonatype.SonatypeKeys._
 
 object SonatypeBuild extends Build {
 
-  val SCALA_VERSION = "2.10.3"
+  val SCALA_VERSION = "2.10.5"
 
-  import xerial.sbt.Sonatype.SonatypeKeys._
-
-  lazy val buildSettings = releaseSettings ++ scriptedSettings ++ xerial.sbt.Sonatype.sonatypeSettings ++ Seq[Setting[_]](
-    profileName := "org.xerial",
+  lazy val buildSettings = releaseSettings ++ scriptedSettings ++ Seq[Setting[_]](
+    sonatypeProfileName := "org.xerial",
     organization := "org.xerial.sbt",
     organizationName := "Xerial project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "A sbt plugin for publishing Scala/Java projects to the Maven Central through Sonatype Nexus REST API",
     scalaVersion := SCALA_VERSION,
     publishArtifact in Test := false,
-    pomIncludeRepository := {
-      _ => false
-    },
+    pomIncludeRepository := { _ => false },
     sbtPlugin := true,
     parallelExecution := true,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),
