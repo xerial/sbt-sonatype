@@ -53,10 +53,10 @@ object SonatypeBuild extends Build {
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      ReleaseStep(action = "publishSigned" :: _),
+      ReleaseStep(action = Command.process("publishSigned", _)),
       setNextVersion,
       commitNextVersion,
-      ReleaseStep(action = "sonatypeReleaseAll" :: _),
+      ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
       pushChanges
     )
   )
