@@ -1,4 +1,3 @@
-Sonatype.sonatypeSettings
 
 organization := "org.xerial.example"
 
