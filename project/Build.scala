@@ -23,8 +23,6 @@ import sbtrelease._
 import ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleaseStep
-import com.typesafe.sbt.pgp.PgpKeys
-import xerial.sbt.Sonatype.SonatypeKeys._
 
 object SonatypeBuild extends Build {
 
@@ -55,18 +53,10 @@ object SonatypeBuild extends Build {
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      ReleaseStep(
-        action = { state =>
-          val extracted = Project extract state
-          extracted.runAggregated(PgpKeys.publishSigned in Global in extracted.get(thisProjectRef), state)
-        }
-      ),
+      ReleaseStep(action = "publishSigned" :: _),
       setNextVersion,
       commitNextVersion,
-      ReleaseStep{ state =>
-        val extracted = Project extract state
-        extracted.runAggregated(sonatypeReleaseAll in Global in extracted.get(thisProjectRef), state)
-      },
+      ReleaseStep(action = "sonatypeReleaseAll" :: _),
       pushChanges
     )
   )
