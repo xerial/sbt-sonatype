@@ -31,11 +31,9 @@ object Sonatype extends AutoPlugin {
     val sonatypeRepository = settingKey[String]("Sonatype repository URL")
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
-    private[Sonatype] val sonatypeRestService = taskKey[NexusRESTService]("REST API")
-    val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
-    val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
   }
+
   object SonatypeKeys extends SonatypeKeys {
   }
 
@@ -48,28 +46,15 @@ object Sonatype extends AutoPlugin {
 
   override def projectSettings = sonatypeSettings
 
-  import complete.DefaultParsers._
-
-  /**
-   * Parsing repository id argument
-   */
-  private val repositoryIdParser: complete.Parser[Option[String]] =
-    (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
-
   import autoImport._
+  import SonatypeCommand._
 
-  lazy val sonatypeSettings : Seq[Def.Setting[_]] = sonatypePublishSettings ++ sonatypeRootSettings
-
-  lazy val sonatypeCommonSettings = Seq[Def.Setting[_]](
+  lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
-    commands ++= Seq(SonatypeCommand.sonatypeList)
-  )
-
-  lazy val sonatypePublishSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
+    sonatypeRepository := "https://oss.sonatype.org/service/local",
+    sonatypeCredentialHost := "oss.sonatype.org",
     // Add sonatype repository settings
-    publishTo := {
-      Some(sonatypeDefaultResolver.value)
-    },
+    publishTo := { Some(sonatypeDefaultResolver.value) },
     publishMavenStyle := true,
     pomIncludeRepository := { _ => false },
     sonatypeDefaultResolver := {
@@ -78,10 +63,18 @@ object Sonatype extends AutoPlugin {
       } else {
         Opts.resolver.sonatypeStaging
       }
-    }
+    },
+    commands ++= Seq(sonatypeList, sonatypeClose, sonatypePromote, sonatypeDrop, sonatypeRelease, sonatypeReleaseAll, sonatypeLog,
+      sonatypeStagingRepositoryProfiles, sonatypeStagingProfiles)
   )
 
   object SonatypeCommand {
+    import complete.DefaultParsers._
+    /**
+     * Parsing repository id argument
+     */
+    private val repositoryIdParser: complete.Parser[Option[String]] =
+      (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
     private def getCredentials(extracted:Extracted, state:State) = {
       val (nextState, credential) = extracted.runTask(credentials, state)
@@ -98,16 +91,15 @@ object Sonatype extends AutoPlugin {
     }
 
     val sonatypeList: Command = Command.command("sonatypeList", "List staging repositories", "List published repository IDs") { state =>
-      val extracted = Project.extract(state)
       val rest = getNexusRestService(state)
       val profiles = rest.stagingProfiles
       val log = state.log
       if (profiles.isEmpty) {
-        log.warn(s"No staging profile is found for ${extracted.get(sonatypeProfileName)}")
+        log.warn(s"No staging profile is found for ${rest.profileName}")
         state.fail
       }
       else {
-        log.info(s"Staging profiles (profileName:${extracted.get(sonatypeProfileName)}):")
+        log.info(s"Staging profiles (profileName:${rest.profileName}):")
         log.info(profiles.mkString("\n"))
         state
       }
@@ -169,37 +161,32 @@ object Sonatype extends AutoPlugin {
       state
     }
 
-  }
-
-  lazy val sonatypeRootSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
-    sonatypeRepository := "https://oss.sonatype.org/service/local",
-    sonatypeCredentialHost := "oss.sonatype.org",
-    sonatypeRestService := new NexusRESTService(streams.value.log, sonatypeRepository.value, sonatypeProfileName.value, credentials.value,
-      sonatypeCredentialHost.value),
-    sonatypeStagingRepositoryProfiles := {
-      val rest : NexusRESTService = sonatypeRestService.value
-      val s = streams.value
+    val sonatypeStagingRepositoryProfiles = Command.command("sonatypeStagingRepositoryProfiles") { state =>
+      val rest = getNexusRestService(state)
       val repos = rest.stagingRepositoryProfiles
-      s.log.info("Staging repository profiles:")
+      val log = state.log
       if(repos.isEmpty)
-        s.log.warn("No staging repository is found.")
-      else
-        s.log.info(repos.mkString("\n"))
-      repos
-    },
-    sonatypeStagingProfiles := {
-      val rest : NexusRESTService = sonatypeRestService.value
-      val s = streams.value
-      val profiles =  rest.stagingProfiles
-      if(profiles.isEmpty)
-        s.log.warn(s"No staging profile is found for ${sonatypeProfileName.value}")
+        log.warn(s"No staging repository is found for ${rest.profileName}")
       else {
-        s.log.info(s"Staging profiles (profileName:${sonatypeProfileName.value}):")
-        s.log.info(profiles.mkString("\n"))
+        log.info(s"Staging repository profiles (sonatypeProfileName:${rest.profileName}):")
+        log.info(repos.mkString("\n"))
       }
-      profiles
+      state
     }
-  )
+
+    val sonatypeStagingProfiles = Command.command("sonatypeStagingProfiles") { state =>
+      val rest = getNexusRestService(state)
+      val profiles =  rest.stagingProfiles
+      val log = state.log
+      if(profiles.isEmpty)
+        log.warn(s"No staging profile is found for ${rest.profileName}")
+      else {
+        log.info(s"Staging profiles (sonatypeProfileName:${rest.profileName}):")
+        log.info(profiles.mkString("\n"))
+      }
+      state
+    }
+  }
 
 
   /**
@@ -376,7 +363,7 @@ object Sonatype extends AutoPlugin {
    */
   class NexusRESTService(log:Logger,
                          repositoryUrl:String,
-                         profileName:String,
+                         val profileName:String,
                          cred:Seq[Credentials],
                          credentialHost:String) {
 
