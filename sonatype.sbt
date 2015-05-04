@@ -1,5 +1,3 @@
-Sonatype.sonatypeSettings
-
 sonatypeProfileName := "org.xerial"
 
 pomExtra := {
