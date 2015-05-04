@@ -22,7 +22,6 @@ import sbt.ScriptedPlugin._
 import sbtrelease._
 import ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin._
-import sbtrelease.ReleaseStep
 
 object SonatypeBuild extends Build {
 

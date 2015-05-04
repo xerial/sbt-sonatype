@@ -1,3 +1,7 @@
+- Release 0.5.0
+ - sonatypeRelease etc. are now sbt Commands. 
+ - No need exists to include `sonatypeSettings`. This will be automcatically loaded
+
 - Release 0.4.0
  - Simplified the configuration for multi-module build
  - Migration guide for 0.3.x, 0.2.x users: Just include `Sonatype.sonatypeSettings` in `(project root)/sonatype.sbt` file.

@@ -29,7 +29,7 @@ sbt-sonatype is available for sbt-0.13.x.
 
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publish-signed` commands.
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.4.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.5.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 ```
@@ -49,7 +49,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 
 ### (project root)/sonatype.sbt
 
-sbt-sonatype is an autoplugin, it will automatically configure your build.  There are a few settings though that you need to define yourself. Add `Sonatype.sonatypeSettings` in your root project, and then define the following keys:
+sbt-sonatype is an auto-plugin, it will automatically configure your build. There are a few settings though that you need to define yourself:
 
   * `sonatypeProfileName` 
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
@@ -58,8 +58,6 @@ sbt-sonatype is an autoplugin, it will automatically configure your build.  Ther
   
 
 ```scala
-Sonatype.sonatypeSettings
-
 // Your profile name of the sonatype account. The default is the same with the organization value
 sonatypeProfileName := "org.xerial"
 
@@ -134,3 +132,24 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 * __sonatypeLog__
   * Show the staging activity logs
 
+## Using with sbt-release plugin
+
+To perform publishSigned and sonatypeReleaseAll with [sbt-release](https://github.com/sbt/sbt-release) plugin, define your custome release process as follows:
+
+```scala
+ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  checkSnapshotDependencies,
+  inquireVersions,
+  runClean,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  tagRelease,
+  ReleaseStep(action = Command.process("publishSigned", _)),
+  setNextVersion,
+  commitNextVersion,
+  ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
+  pushChanges
+)
+
+```
