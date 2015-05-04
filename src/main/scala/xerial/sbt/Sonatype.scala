@@ -30,15 +30,8 @@ object Sonatype extends AutoPlugin {
   trait SonatypeKeys {
     val sonatypeRepository = settingKey[String]("Sonatype repository URL")
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
-    val sonatypeClose = inputKey[Boolean]("Close the stage")
-    val sonatypePromote = inputKey[Boolean]("Close and promoe the repository")
-    val sonatypeDrop = inputKey[Boolean]("Drop the repository")
-    val sonatypeRelease = inputKey[Boolean]("Publish to Maven central via sonatypeClose and sonatypePromote")
-    val sonatypeReleaseAll = taskKey[Boolean]("Publish all staging repositories to Maven central")
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     private[Sonatype] val sonatypeRestService = taskKey[NexusRESTService]("REST API")
-    val sonatypeList = taskKey[Unit]("List staging repositories")
-    val sonatypeLog = taskKey[Unit]("Show repository activities")
     val sonatypeStagingRepositoryProfiles = taskKey[Seq[StagingRepositoryProfile]]("List staging repository profiles")
     val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("List staging profiles")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
@@ -53,7 +46,7 @@ object Sonatype extends AutoPlugin {
 
   override def requires = JvmPlugin
 
-  override def projectSettings = sonatypePublishSettings
+  override def projectSettings = sonatypeSettings
 
   import complete.DefaultParsers._
 
@@ -69,7 +62,7 @@ object Sonatype extends AutoPlugin {
 
   lazy val sonatypeCommonSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
-    commands += listCommand
+    commands ++= Seq(SonatypeCommand.sonatypeList)
   )
 
   lazy val sonatypePublishSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
@@ -88,24 +81,94 @@ object Sonatype extends AutoPlugin {
     }
   )
 
-  val listCommand : Command = Command.command("sonatypeList") { state =>
-    val extracted = Project.extract(state)
-    val (st2, c) = extracted.runTask(credentials, state)
-    val rest = new NexusRESTService(
-      state.log,
-      extracted.get(sonatypeRepository),
-      extracted.get(sonatypeProfileName),
-      c,
-      extracted.get(sonatypeCredentialHost))
+  object SonatypeCommand {
 
-    val profiles = rest.stagingProfiles
-    if(profiles.isEmpty)
-      state.log.warn(s"No staging profile is found for ${extracted.get(sonatypeProfileName)}")
-    else {
-      state.log.info(s"Staging profiles (profileName:${extracted.get(sonatypeProfileName)}):")
-      state.log.info(profiles.mkString("\n"))
+    private def getCredentials(extracted:Extracted, state:State) = {
+      val (nextState, credential) = extracted.runTask(credentials, state)
+      credential
     }
-    state
+
+    private def getNexusRestService(state:State) = {
+      val extracted = Project.extract(state)
+      new NexusRESTService(state.log,
+          extracted.get(sonatypeRepository),
+          extracted.get(sonatypeProfileName),
+          getCredentials(extracted, state),
+          extracted.get(sonatypeCredentialHost))
+    }
+
+    val sonatypeList: Command = Command.command("sonatypeList", "List staging repositories", "List published repository IDs") { state =>
+      val extracted = Project.extract(state)
+      val rest = getNexusRestService(state)
+      val profiles = rest.stagingProfiles
+      val log = state.log
+      if (profiles.isEmpty) {
+        log.warn(s"No staging profile is found for ${extracted.get(sonatypeProfileName)}")
+        state.fail
+      }
+      else {
+        log.info(s"Staging profiles (profileName:${extracted.get(sonatypeProfileName)}):")
+        log.info(profiles.mkString("\n"))
+        state
+      }
+    }
+
+    private def single(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
+
+    val sonatypeClose: Command = single("sonatypeClose", "Close a stage") { (state, parsed) =>
+      val rest = getNexusRestService(state)
+      val repo = rest.findTargetRepository(Close, parsed)
+      rest.closeStage(repo)
+      state
+    }
+
+    val sonatypePromote: Command = single("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
+      val rest = getNexusRestService(state)
+      val repo = rest.findTargetRepository(Promote, parsed)
+      rest.promoteStage(repo)
+      state
+    }
+
+    val sonatypeDrop: Command = single("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
+      val rest = getNexusRestService(state)
+      val repo = rest.findTargetRepository(Drop, parsed)
+      rest.dropStage(repo)
+      state
+    }
+
+    val sonatypeRelease: Command = single("sonatypeRelease", "Publish to Maven central with sonatypeClose and sonatypePromote"){ (state, parsed) =>
+      val rest = getNexusRestService(state)
+      val repo = rest.findTargetRepository(CloseAndPromote, parsed)
+      rest.closeAndPromote(repo)
+      state
+    }
+
+    val sonatypeReleaseAll: Command = Command.command("sonatypeReleaseAll",
+      "Publish all staging repositories to Maven central",
+      "Publish all staging repositories to Maven central") { state =>
+      val rest = getNexusRestService(state)
+      val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
+        rest.closeAndPromote(repo)
+      }
+      state
+    }
+
+    val sonatypeLog: Command = Command.command("sonatypeLog", "Show repository activities", "Show staging activity logs at Sonatype") {
+      state =>
+      val rest = getNexusRestService(state)
+      val alist = rest.activities
+      val log = state.log
+      if(alist.isEmpty)
+        log.warn("No staging log is found")
+      for((repo, activities) <- alist) {
+        log.info(s"Staging activities of $repo:")
+        for(a <- activities) {
+          a.log(log)
+        }
+      }
+      state
+    }
+
   }
 
   lazy val sonatypeRootSettings = sonatypeCommonSettings ++ Seq[Def.Setting[_]](
@@ -135,54 +198,6 @@ object Sonatype extends AutoPlugin {
         s.log.info(profiles.mkString("\n"))
       }
       profiles
-    },
-//    sonatypeList := {
-//      val rest : NexusRESTService = sonatypeRestService.value
-//      sonatypeStagingRepositoryProfiles.value
-//    },
-    sonatypeClose := {
-      val arg = repositoryIdParser.parsed
-      val rest : NexusRESTService = sonatypeRestService.value
-      val repo = rest.findTargetRepository(Close, arg)
-      rest.closeStage(repo)
-    },
-    sonatypePromote := {
-      val arg = repositoryIdParser.parsed
-      val rest : NexusRESTService = sonatypeRestService.value
-      val repo = rest.findTargetRepository(Promote, arg)
-      rest.promoteStage(repo)
-    },
-    sonatypeDrop := {
-      val arg = repositoryIdParser.parsed
-      val rest : NexusRESTService = sonatypeRestService.value
-      val repo = rest.findTargetRepository(Drop, arg)
-      rest.dropStage(repo)
-    },
-    sonatypeRelease := {
-      val arg = repositoryIdParser.parsed
-      val rest : NexusRESTService = sonatypeRestService.value
-      val repo = rest.findTargetRepository(CloseAndPromote, arg)
-      rest.closeAndPromote(repo)
-    },
-    sonatypeReleaseAll := {
-      val rest : NexusRESTService = sonatypeRestService.value
-      val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
-        rest.closeAndPromote(repo)
-      }
-      ret.forall(_ == true)
-    },
-    sonatypeLog := {
-      val s = streams.value
-      val rest : NexusRESTService = sonatypeRestService.value
-      val alist = rest.activities
-      if(alist.isEmpty)
-        s.log.warn("No staging log is found")
-      for((repo, activities) <- alist) {
-        s.log.info(s"Staging activities of $repo:")
-        for(a <- activities) {
-          a.log(s.log)
-        }
-      }
     }
   )
 
@@ -350,6 +365,7 @@ object Sonatype extends AutoPlugin {
     }
   }
 
+
   /**
    * Interface to access the REST API of Nexus
    * @param log
@@ -422,7 +438,7 @@ object Sonatype extends AutoPlugin {
               toContinue = false
               ret = body(response)
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              log.warn(s"Received 500 error: ${response.getStatusLine}")
+              log.warn(s"Received 500 error: ${response.getStatusLine}. Retrying...")
               retry.doWait
             case _ =>
               throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
@@ -448,7 +464,7 @@ object Sonatype extends AutoPlugin {
           response = client.execute(req)
           response.getStatusLine.getStatusCode match {
             case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-              log.warn(s"Received 500 error: ${response.getStatusLine}")
+              log.warn(s"Received 500 error: ${response.getStatusLine}. Retrying...")
               retry.doWait
             case _ =>
               log.debug(s"Status line: ${response.getStatusLine}")
