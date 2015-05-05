@@ -10,6 +10,7 @@ A sbt plugin for publishing your project to the Maven central repository through
  Nexus repository](http://oss.sonatype.org/).
 
 - [Release notes](ReleaseNotes.md)
+- sbt-sonatype is available for sbt-0.13.5 or later. 
 
 ## Prerequisites
  
@@ -23,9 +24,7 @@ A sbt plugin for publishing your project to the Maven central repository through
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
     * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/)
 
-## Usage
-
-sbt-sonatype is available for sbt-0.13.x.
+## Configurations
 
 ### project/plugins.sbt
 
@@ -34,7 +33,7 @@ commands:
 ```scala
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.5.0")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0") // fot sbt-0.13.5 or higher
 ```
 
  * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.10_0.13>. It will be synchronized every ~2 hours.
