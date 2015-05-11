@@ -141,7 +141,9 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 To perform publishSigned and sonatypeReleaseAll with [sbt-release](https://github.com/sbt/sbt-release) plugin, define your custom release process as follows:
 
 ```scala
-ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+import ReleaseTransformations._
+
+releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
   inquireVersions,
   runClean,
