@@ -64,7 +64,7 @@ sbt-sonatype is an auto-plugin, it will automatically configure your build. Ther
 sonatypeProfileName := "org.xerial"
 
 // To sync with Maven central, you need to supply the following information:
-pomExtra := {
+pomExtra in Global := {
   <url>(your project URL)</url>
   <!-- License of your choice -->
   <licenses>
