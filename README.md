@@ -159,3 +159,9 @@ releaseProcess := Seq[ReleaseStep](
 )
 
 ```
+To enable cross building, set `enableCrossBuild = true` in publishSigned and sonatypeReleaseAll release steps:
+```
+  ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true)
+  ...
+  ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true)
+```
