@@ -1,16 +1,17 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requiremnt for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of Scala/Java projects.
+A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of Scala/Java projects.
 
  * First `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
  * Next `sonatypeRelease` to perform the close and release steps in the Sonatype Nexus repository. 
- * Done. Your project will be synchoronized to the Maven central within tens of minutes. No longer need to enter the web interface of
- [Sonatype
- Nexus repository](http://oss.sonatype.org/).
+ * Done. Your project will be synchronized to the Maven central within tens of minutes. No longer need to enter the web interface of
+ [Sonatype Nexus repository](http://oss.sonatype.org/).
 
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt-0.13.5 or later. 
+- You can also use sbt-sonatype for [publishing Java projects](#publishing-maven-projects).
+
 
 ## Prerequisites
  
@@ -129,7 +130,7 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Drop a staging repository.
 * __sonatypeRelease__ (repositoryId)?
   * Close and promote a staging repository.
-* __sonatypeReleaseAll__
+* __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __sonatypeStagingProfiles__
   * Show the list of staging profiles, which include profileName information.
@@ -165,3 +166,30 @@ To enable cross building, set `enableCrossBuild = true` in publishSigned and son
   ...
   ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true)
 ```
+
+## Publishing Maven Projects
+
+If your Maven project is already deployed to the staging repository of Sonatype, you can use `sbt sonatypeReleaseAll (sonatypeProfileName)` command
+for the synchronization to the Maven central (Since version 0.5.1).
+
+Prepare the following two files:
+
+### $HOME/.sbt/0.13/plugins/plugins.sbt
+
+```scala
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.5.1")
+```
+
+### $HOME/.sbt/0.13/sonatype.sbt
+```scala
+credentials += Credentials("Sonatype Nexus Repository Manager",
+	    "oss.sonatype.org",
+	    "(Sonatype user name)",
+	    "(Sonatype password)")
+```
+
+Then, run `sonatypeReleaseAll` command by specifying your `sonatypeProfileName`:
+```
+$ sbt sonatypeReleaseAll org.xerial
+```
+
