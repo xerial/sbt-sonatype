@@ -10,7 +10,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt-0.13.5 or later. 
-- You can also use sbt-sonatype for [publishing Java projects](#publishing-maven-projects).
+- You can also use sbt-sonatype for [publishing Java projects](README.md#publishing-maven-projects).
 
 
 ## Prerequisites
