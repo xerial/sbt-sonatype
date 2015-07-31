@@ -2,6 +2,8 @@ language: scala
 
 script: sbt compile scripted
 
+sudo: false
+
 jdk:
  - openjdk7
  - oraclejdk7
