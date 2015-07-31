@@ -73,19 +73,16 @@ object Sonatype extends AutoPlugin {
     /**
      * Parsing repository id argument
      */
-    private val repositoryIdParser: complete.Parser[Option[String]] =
-      (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
-
     private def getCredentials(extracted:Extracted, state:State) = {
       val (nextState, credential) = extracted.runTask(credentials, state)
       credential
     }
 
-    private def getNexusRestService(state:State) = {
+    private def getNexusRestService(state:State, profileName:Option[String]=None) = {
       val extracted = Project.extract(state)
       new NexusRESTService(state.log,
           extracted.get(sonatypeRepository),
-          extracted.get(sonatypeProfileName),
+          profileName.getOrElse(extracted.get(sonatypeProfileName)),
           getCredentials(extracted, state),
           extracted.get(sonatypeCredentialHost))
     }
@@ -105,40 +102,47 @@ object Sonatype extends AutoPlugin {
       }
     }
 
-    private def single(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
+    private val repositoryIdParser: complete.Parser[Option[String]] =
+      (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
-    val sonatypeClose: Command = single("sonatypeClose", "Close a stage") { (state, parsed) =>
+    private val sonatypeProfileParser: complete.Parser[Option[String]] =
+      (Space ~> token(StringBasic, "(sonatypeProfile)")).?.!!!("invalid input. please input sonatypeProfile (e.g., org.xerial)")
+
+    private def commandWithRepositoryId(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
+
+    private def commandWithSonatypeProfile(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileParser)(_)
+
+    val sonatypeClose: Command = commandWithRepositoryId("sonatypeClose", "Close a stage") { (state, parsed) =>
       val rest = getNexusRestService(state)
       val repo = rest.findTargetRepository(Close, parsed)
       rest.closeStage(repo)
       state
     }
 
-    val sonatypePromote: Command = single("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
+    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
       val repo = rest.findTargetRepository(Promote, parsed)
       rest.promoteStage(repo)
       state
     }
 
-    val sonatypeDrop: Command = single("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
+    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
       val repo = rest.findTargetRepository(Drop, parsed)
       rest.dropStage(repo)
       state
     }
 
-    val sonatypeRelease: Command = single("sonatypeRelease", "Publish to Maven central with sonatypeClose and sonatypePromote"){ (state, parsed) =>
+    val sonatypeRelease: Command = commandWithRepositoryId("sonatypeRelease", "Publish to Maven central with sonatypeClose and sonatypePromote"){ (state, parsed) =>
       val rest = getNexusRestService(state)
       val repo = rest.findTargetRepository(CloseAndPromote, parsed)
       rest.closeAndPromote(repo)
       state
     }
 
-    val sonatypeReleaseAll: Command = Command.command("sonatypeReleaseAll",
-      "Publish all staging repositories to Maven central",
-      "Publish all staging repositories to Maven central") { state =>
-      val rest = getNexusRestService(state)
+    val sonatypeReleaseAll: Command = commandWithSonatypeProfile("sonatypeReleaseAll",
+      "Publish all staging repositories to Maven central") { (state, profileName) =>
+      val rest = getNexusRestService(state, profileName)
       val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
         rest.closeAndPromote(repo)
       }
@@ -352,7 +356,6 @@ object Sonatype extends AutoPlugin {
     }
   }
 
-
   /**
    * Interface to access the REST API of Nexus
    * @param log
@@ -405,6 +408,7 @@ object Sonatype extends AutoPlugin {
     private val repo = {
       val url = repoBase(repositoryUrl)
       log.info(s"Nexus repository URL: $url")
+      log.info(s"sonatypeProfileName = ${profileName}")
       url
     }
 
@@ -498,7 +502,9 @@ object Sonatype extends AutoPlugin {
             (p \ "repositoryId").text)
         }
         val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
-        //s.log.info(s"Staging repository profiles:\n${myProfiles.mkString("\n")}")
+        if(myProfiles.isEmpty) {
+          log.warn(s"No staging repository is found. Do publishSigned first.")
+        }
         myProfiles
       }
     }
@@ -514,7 +520,6 @@ object Sonatype extends AutoPlugin {
             (p \ "repositoryTargetId").text
           )
         }
-        //s.log.info(s"Staging profiles:\n${profiles.mkString("\n")}")
         profiles
       }
     }
@@ -712,10 +717,6 @@ object Sonatype extends AutoPlugin {
       }
       a
     }
-
-
   }
-
-
 }
 

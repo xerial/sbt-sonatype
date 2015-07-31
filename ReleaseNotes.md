@@ -1,3 +1,6 @@
+- Release 0.5.1
+ - `sonatypeReleaseAll (sonatypeProfileName)` command can be used standalone without preparing sbt project files.
+
 - Release 0.5.0
  - sonatypeRelease etc. are now sbt Commands. 
  - No need exists to include `sonatypeSettings`. This will be automcatically loaded
