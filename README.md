@@ -10,7 +10,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt-0.13.5 or later. 
-- You can also use sbt-sonatype for [publishing Java projects](README.md#publishing-maven-projects).
+- You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
 
 
 ## Prerequisites
@@ -169,7 +169,7 @@ To enable cross building, set `enableCrossBuild = true` in publishSigned and son
 
 ## Publishing Maven Projects
 
-If your Maven project is already deployed to the staging repository of Sonatype, you can use `sbt sonatypeReleaseAll (sonatypeProfileName)` command
+If your Maven project (including Gradle, etc.) is already deployed to the staging repository of Sonatype, you can use `sbt sonatypeReleaseAll (sonatypeProfileName)` command
 for the synchronization to the Maven central (Since version 0.5.1).
 
 Prepare the following two files:
