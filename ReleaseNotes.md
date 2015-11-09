@@ -1,3 +1,6 @@
+- Release 1.0
+ - The first major release (stable)
+
 - Release 0.5.1
  - `sonatypeReleaseAll (sonatypeProfileName)` command can be used standalone without preparing sbt project files.
 
