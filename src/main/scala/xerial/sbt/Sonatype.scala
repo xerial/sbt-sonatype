@@ -64,7 +64,7 @@ object Sonatype extends AutoPlugin {
         Opts.resolver.sonatypeStaging
       }
     },
-    commands ++= Seq(sonatypeList, sonatypeClose, sonatypePromote, sonatypeDrop, sonatypeRelease, sonatypeReleaseAll, sonatypeLog,
+    commands ++= Seq(sonatypeList, sonatypeOpen, sonatypeClose, sonatypePromote, sonatypeDrop, sonatypeRelease, sonatypeReleaseAll, sonatypeLog,
       sonatypeStagingRepositoryProfiles, sonatypeStagingProfiles)
   )
 
@@ -111,6 +111,12 @@ object Sonatype extends AutoPlugin {
     private def commandWithRepositoryId(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
 
     private def commandWithSonatypeProfile(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileParser)(_)
+
+    val sonatypeOpen: Command = commandWithSonatypeProfile("sonatypeOpen", "Open a stage") { (state, profileName) =>
+      val rest = getNexusRestService(state, profileName)
+      rest.createStage()
+      state
+    }
 
     val sonatypeClose: Command = commandWithRepositoryId("sonatypeClose", "Close a stage") { (state, parsed) =>
       val rest = getNexusRestService(state)
@@ -442,7 +448,7 @@ object Sonatype extends AutoPlugin {
       ret.asInstanceOf[U]
     }
 
-    def Post(path:String, bodyXML:String) = {
+    def Post(path:String, bodyXML:String, handler: Option[java.io.InputStream => Unit] = None) = {
       val req = new HttpPost(s"${repo}$path")
       req.setEntity(new StringEntity(bodyXML))
       req.addHeader("Content-Type", "application/xml")
@@ -460,6 +466,13 @@ object Sonatype extends AutoPlugin {
             case _ =>
               log.debug(s"Status line: ${response.getStatusLine}")
               toContinue = false
+              // read the entity content before `withHttpClient` closes the connection!
+              handler match {
+                case None =>
+                  ()
+                case Some(callback) =>
+                  callback(response.getEntity.getContent)
+              }
           }
         }
       }
@@ -532,6 +545,15 @@ object Sonatype extends AutoPlugin {
       profiles.head
     }
 
+    private def createRequestXML() =
+      s"""|<?xml version="1.0" encoding="UTF-8"?>
+          |<promoteRequest>
+          |  <data>
+          |    <description>Requested by sbt-sonatype plugin</description>
+          |  </data>
+          |</promoteRequest>
+         """.stripMargin
+
     private def promoteRequestXML(repo:StagingRepositoryProfile) =
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
@@ -564,6 +586,28 @@ object Sonatype extends AutoPlugin {
 
     }
 
+    def createStage(): StagingRepositoryProfile = {
+      val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
+      log.info(s"Creating staging repository in profile: ${currentProfile.profileName}")
+      var repo: StagingRepositoryProfile = null
+      val ret = Post(postURL, createRequestXML(), Some((in: java.io.InputStream) => {
+        val xml = XML.load(in)
+        val ids = xml \\ "data" \ "stagedRepositoryId"
+        if (1 != ids.size)
+          throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}")
+        repo = StagingRepositoryProfile(
+          currentProfile.profileId,
+          currentProfile.profileName,
+          "open",
+          ids.head.text)
+        log.info(s"Created successfully: ${repo.repositoryId}")
+      }))
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+        throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}: ${ret.getStatusLine}")
+      }
+      require(null != repo)
+      repo
+    }
 
     def closeStage(repo:StagingRepositoryProfile) = {
       var toContinue = true
