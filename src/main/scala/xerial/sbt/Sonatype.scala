@@ -448,7 +448,9 @@ object Sonatype extends AutoPlugin {
       ret.asInstanceOf[U]
     }
 
-    def Post(path:String, bodyXML:String, handler: Option[java.io.InputStream => Unit] = None) = {
+    def IgnoreEntityContent(in: java.io.InputStream): Unit = ()
+
+    def Post(path:String, bodyXML:String, contentHandler: java.io.InputStream => Unit = IgnoreEntityContent) = {
       val req = new HttpPost(s"${repo}$path")
       req.setEntity(new StringEntity(bodyXML))
       req.addHeader("Content-Type", "application/xml")
@@ -466,13 +468,7 @@ object Sonatype extends AutoPlugin {
             case _ =>
               log.debug(s"Status line: ${response.getStatusLine}")
               toContinue = false
-              // read the entity content before `withHttpClient` closes the connection!
-              handler match {
-                case None =>
-                  ()
-                case Some(callback) =>
-                  callback(response.getEntity.getContent)
-              }
+              contentHandler(response.getEntity.getContent)
           }
         }
       }
@@ -545,22 +541,22 @@ object Sonatype extends AutoPlugin {
       profiles.head
     }
 
-    private def createRequestXML() =
+    private def createRequestXML(description: String) =
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
           |  <data>
-          |    <description>Requested by sbt-sonatype plugin</description>
+          |    <description>$description</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
 
-    private def promoteRequestXML(repo:StagingRepositoryProfile) =
+    private def promoteRequestXML(repo:StagingRepositoryProfile, description: String) =
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
           |  <data>
           |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
           |    <targetRepositoryId>${currentProfile.repositoryTargetId}</targetRepositoryId>
-          |    <description>Requested by sbt-sonatype plugin</description>
+          |    <description>$description</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
@@ -586,11 +582,11 @@ object Sonatype extends AutoPlugin {
 
     }
 
-    def createStage(): StagingRepositoryProfile = {
+    def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
       log.info(s"Creating staging repository in profile: ${currentProfile.profileName}")
       var repo: StagingRepositoryProfile = null
-      val ret = Post(postURL, createRequestXML(), Some((in: java.io.InputStream) => {
+      val ret = Post(postURL, createRequestXML(description), (in: java.io.InputStream) => {
         val xml = XML.load(in)
         val ids = xml \\ "data" \ "stagedRepositoryId"
         if (1 != ids.size)
@@ -601,15 +597,14 @@ object Sonatype extends AutoPlugin {
           "open",
           ids.head.text)
         log.info(s"Created successfully: ${repo.repositoryId}")
-      }))
-      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
+      })
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED || null != repo) {
         throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}: ${ret.getStatusLine}")
       }
-      require(null != repo)
       repo
     }
 
-    def closeStage(repo:StagingRepositoryProfile) = {
+    def closeStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
       var toContinue = true
       if(repo.isClosed || repo.isReleased) {
         log.info(s"Repository ${repo.repositoryId} is already closed")
@@ -620,7 +615,7 @@ object Sonatype extends AutoPlugin {
         // Post close request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
         log.info(s"Closing staging repository $repo")
-        val ret = Post(postURL, promoteRequestXML(repo))
+        val ret = Post(postURL, promoteRequestXML(repo, description))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
           throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
         }
@@ -656,10 +651,10 @@ object Sonatype extends AutoPlugin {
       true
     }
 
-    def dropStage(repo:StagingRepositoryProfile) = {
+    def dropStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
       log.info(s"Dropping staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo))
+      val ret = Post(postURL, promoteRequestXML(repo, description))
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
       }
@@ -668,7 +663,7 @@ object Sonatype extends AutoPlugin {
     }
 
 
-    def promoteStage(repo:StagingRepositoryProfile) = {
+    def promoteStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
       var toContinue = true
       if(repo.isReleased) {
         log.info(s"Repository ${repo.repositoryId} is already released")
@@ -679,7 +674,7 @@ object Sonatype extends AutoPlugin {
         // Post promote(release) request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
         log.info(s"Promoting staging repository $repo")
-        val ret = Post(postURL, promoteRequestXML(repo))
+        val ret = Post(postURL, promoteRequestXML(repo, description))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
           log.error(s"${ret.getStatusLine}")
           for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
@@ -727,6 +722,7 @@ object Sonatype extends AutoPlugin {
       val ret = Get(s"/staging/repository/$repositoryId") { response =>
         XML.load(response.getEntity.getContent)
       }
+      ret
     }
 
     def closeAndPromote(repo:StagingRepositoryProfile) : Boolean = {
