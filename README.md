@@ -24,6 +24,7 @@ A sbt plugin for publishing your project to the Maven central repository through
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
     * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/)
+    * [Uploading to a Staging Repository via REST API](https://support.sonatype.com/hc/en-us/articles/213465868-Uploading-to-a-Staging-Repository-via-REST-API)
 
 ## Configurations
 
@@ -45,9 +46,9 @@ Set Sonatype account information (user name and password) in the global sbt sett
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
-	    "oss.sonatype.org",
-	    "(Sonatype user name)",
-	    "(Sonatype password)")
+        "oss.sonatype.org",
+        "(Sonatype user name)",
+        "(Sonatype password)")
 ```
 
 ### (project root)/sonatype.sbt
@@ -117,21 +118,22 @@ $ sbt sonatypeRelease
 ```
 This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
 
+### [Example workflow for creating & publishing to a staging repository](workflow.md)
 
 ## Available Commands
 
 * __sonatypeList__
   * Show the list of staging repositories.
 * __sonatypeOpen__ (description | sonatypeProfileName description)
-  * Create a staging repository and set `sonatypeStagingRepositoryProfile`.
+  * Create a staging repository and set `sonatypeStagingRepositoryProfile` and `publishTo`.
 * __sonatypeClose__ (repositoryId)?
-  * Close a staging repository and set `sonatypeStagingRepositoryProfile`.
+  * Close a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
 * __sonatypePromote__ (repositoryId)?
-  * Promote a staging repository and set `sonatypeStagingRepositoryProfile`.
+  * Promote a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
 * __sonatypeDrop__ (repositoryId)?
-  * Drop a staging repository and set `sonatypeStagingRepositoryProfile`.
+  * Drop a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
 * __sonatypeRelease__ (repositoryId)?
-  * Close and promote a staging repository and set `sonatypeStagingRepositoryProfile`.
+  * Close and promote a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __sonatypeStagingProfiles__
@@ -185,9 +187,9 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.0")
 ### $HOME/.sbt/0.13/sonatype.sbt
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
-	    "oss.sonatype.org",
-	    "(Sonatype user name)",
-	    "(Sonatype password)")
+        "oss.sonatype.org",
+        "(Sonatype user name)",
+        "(Sonatype password)")
 ```
 
 Then, run `sonatypeReleaseAll` command by specifying your `sonatypeProfileName`. If this is `org.xerial`, run:

@@ -13,7 +13,7 @@ import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.{DefaultHttpClient, BasicCredentialsProvider}
 import org.apache.http.client.methods.{HttpPost, HttpGet}
 import sbt.plugins.JvmPlugin
-import scala.xml.XML
+import scala.xml.{Utility,XML}
 import org.apache.http.client.HttpClient
 import org.apache.http.{HttpStatus, HttpResponse}
 import org.apache.http.entity.StringEntity
@@ -28,7 +28,7 @@ import java.io.IOException
 object Sonatype extends AutoPlugin {
 
   trait SonatypeKeys {
-    val sonatypeRepository = settingKey[String]("Sonatype repository URL")
+    val sonatypeRepository = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
@@ -121,7 +121,17 @@ object Sonatype extends AutoPlugin {
 
     private def commandWithSonatypeProfileDescription(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileDescriptionParser)(_)
 
-    val sonatypeOpen: Command = commandWithSonatypeProfileDescription("sonatypeOpen", "Open a stage") {
+    def getUpdatedPublishTo(profileName: String, current: Option[Option[Resolver]]): Seq[Setting[_]] = {
+      val result = for {
+        currentIfSet <- current
+        currentPublishTo <- currentIfSet
+        if profileName == currentPublishTo.name
+        setting = publishTo := None
+      } yield setting
+      result.toSeq
+    }
+
+    val sonatypeOpen: Command = commandWithSonatypeProfileDescription("sonatypeOpen", "Create a staging repository and set publishTo") {
       (state, profileNameDescription) =>
       val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
         case Left(d) =>
@@ -131,53 +141,82 @@ object Sonatype extends AutoPlugin {
       }
       val rest = getNexusRestService(state, profileName)
       val repo = rest.createStage(profileDescription)
+      val path = "/staging/deployByRepositoryId/"+repo.repositoryId
       val extracted = Project.extract(state)
-      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo), state)
+      val next = extracted.append(Seq(
+        sonatypeStagingRepositoryProfile := repo,
+        publishTo := Some(new MavenRepository(repo.profileName, sonatypeRepository.value + path))),
+        state)
       next
     }
 
-    val sonatypeClose: Command = commandWithRepositoryId("sonatypeClose", "Close a stage") { (state, parsed) =>
+    val sonatypeClose: Command = commandWithRepositoryId("sonatypeClose", "Close a stage and clear publishTo if it was set by sonatypeOpen") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo1 = rest.findTargetRepository(Close, parsed)
+      val extracted = Project.extract(state)
+      val currentRepoID = for {
+        repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
+      } yield repo.repositoryId
+      val repoID = parsed.orElse(currentRepoID)
+      val repo1 = rest.findTargetRepository(Close, repoID)
       val repo2 = rest.closeStage(repo1)
-      val extracted = Project.extract(state)
-      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      val next = extracted.append(
+        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        state)
       next
     }
 
-    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
+    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository and clear publishTo if it was set by sonatypeOpen") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo1 = rest.findTargetRepository(Promote, parsed)
+      val extracted = Project.extract(state)
+      val currentRepoID = for {
+        repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
+      } yield repo.repositoryId
+      val repoID = parsed.orElse(currentRepoID)
+      val repo1 = rest.findTargetRepository(Promote, repoID)
       val repo2 = rest.promoteStage(repo1)
-      val extracted = Project.extract(state)
-      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      val next = extracted.append(
+        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        state)
       next
     }
 
-    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
+    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository and clear publishTo if it was set by sonatypeOpen") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo1 = rest.findTargetRepository(Drop, parsed)
+      val extracted = Project.extract(state)
+      val currentRepoID = for {
+        repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
+      } yield repo.repositoryId
+      val repoID = parsed.orElse(currentRepoID)
+      val repo1 = rest.findTargetRepository(Drop, repoID)
       val repo2 = rest.dropStage(repo1)
-      val extracted = Project.extract(state)
-      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      val next = extracted.append(
+        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        state)
       next
     }
 
-    val sonatypeRelease: Command = commandWithRepositoryId("sonatypeRelease", "Publish to Maven central with sonatypeClose and sonatypePromote"){ (state, parsed) =>
+    val sonatypeRelease: Command = commandWithRepositoryId("sonatypeRelease", "Publish with sonatypeClose and sonatypePromote"){ (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo1 = rest.findTargetRepository(CloseAndPromote, parsed)
-      val repo2 = rest.closeAndPromote(repo1)
       val extracted = Project.extract(state)
-      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      val currentRepoID = for {
+        repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
+      } yield repo.repositoryId
+      val repoID = parsed.orElse(currentRepoID)
+      val repo1 = rest.findTargetRepository(CloseAndPromote, repoID)
+      val repo2 = rest.closeAndPromote(repo1)
+      val next = extracted.append(
+        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        state)
       next
     }
 
     val sonatypeReleaseAll: Command = commandWithSonatypeProfile("sonatypeReleaseAll",
       "Publish all staging repositories to Maven central") { (state, profileName) =>
       val rest = getNexusRestService(state, profileName)
-      val ret = for(repo <- rest.stagingRepositoryProfiles) yield {
-        rest.closeAndPromote(repo)
-      }
+      for {
+        repo <- rest.stagingRepositoryProfiles
+        _ = rest.closeAndPromote(repo)
+      } ()
       state
     }
 
@@ -572,7 +611,7 @@ object Sonatype extends AutoPlugin {
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
           |  <data>
-          |    <description>$description</description>
+          |    <description>${Utility.escape(description)}</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
@@ -583,7 +622,7 @@ object Sonatype extends AutoPlugin {
           |  <data>
           |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
           |    <targetRepositoryId>${currentProfile.repositoryTargetId}</targetRepositoryId>
-          |    <description>$description</description>
+          |    <description>${Utility.escape(description)}</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
