@@ -122,14 +122,16 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 * __sonatypeList__
   * Show the list of staging repositories.
+* __sonatypeOpen__ (description | sonatypeProfileName description)
+  * Create a staging repository and set `sonatypeStagingRepositoryProfile`.
 * __sonatypeClose__ (repositoryId)?
-  * Close a staging repository.
+  * Close a staging repository and set `sonatypeStagingRepositoryProfile`.
 * __sonatypePromote__ (repositoryId)?
-  * Promote a staging repository.
+  * Promote a staging repository and set `sonatypeStagingRepositoryProfile`.
 * __sonatypeDrop__ (repositoryId)?
-  * Drop a staging repository.
+  * Drop a staging repository and set `sonatypeStagingRepositoryProfile`.
 * __sonatypeRelease__ (repositoryId)?
-  * Close and promote a staging repository.
+  * Close and promote a staging repository and set `sonatypeStagingRepositoryProfile`.
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __sonatypeStagingProfiles__

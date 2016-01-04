@@ -32,6 +32,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
+    val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
   }
 
   object SonatypeKeys extends SonatypeKeys {
@@ -108,42 +109,67 @@ object Sonatype extends AutoPlugin {
     private val sonatypeProfileParser: complete.Parser[Option[String]] =
       (Space ~> token(StringBasic, "(sonatypeProfile)")).?.!!!("invalid input. please input sonatypeProfile (e.g., org.xerial)")
 
+    private val sonatypeProfileDescriptionParser: complete.Parser[Either[String, (String, String)]] =
+      Space ~>
+      ( token(StringBasic, "description") ||
+        ( token(StringBasic <~ Space, "sonatypeProfile") ~ token(StringBasic, "description") )
+      )
+
     private def commandWithRepositoryId(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
 
     private def commandWithSonatypeProfile(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileParser)(_)
 
-    val sonatypeOpen: Command = commandWithSonatypeProfile("sonatypeOpen", "Open a stage") { (state, profileName) =>
+    private def commandWithSonatypeProfileDescription(name:String, briefHelp:String) = Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileDescriptionParser)(_)
+
+    val sonatypeOpen: Command = commandWithSonatypeProfileDescription("sonatypeOpen", "Open a stage") {
+      (state, profileNameDescription) =>
+      val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
+        case Left(d) =>
+          (None, d)
+        case Right((n, d)) =>
+          (Some(n), d)
+      }
       val rest = getNexusRestService(state, profileName)
-      rest.createStage()
-      state
+      val repo = rest.createStage(profileDescription)
+      val extracted = Project.extract(state)
+      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo), state)
+      next
     }
 
     val sonatypeClose: Command = commandWithRepositoryId("sonatypeClose", "Close a stage") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo = rest.findTargetRepository(Close, parsed)
-      rest.closeStage(repo)
-      state
+      val repo1 = rest.findTargetRepository(Close, parsed)
+      val repo2 = rest.closeStage(repo1)
+      val extracted = Project.extract(state)
+      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      next
     }
 
     val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo = rest.findTargetRepository(Promote, parsed)
-      rest.promoteStage(repo)
-      state
+      val repo1 = rest.findTargetRepository(Promote, parsed)
+      val repo2 = rest.promoteStage(repo1)
+      val extracted = Project.extract(state)
+      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      next
     }
 
     val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo = rest.findTargetRepository(Drop, parsed)
-      rest.dropStage(repo)
-      state
+      val repo1 = rest.findTargetRepository(Drop, parsed)
+      val repo2 = rest.dropStage(repo1)
+      val extracted = Project.extract(state)
+      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      next
     }
 
     val sonatypeRelease: Command = commandWithRepositoryId("sonatypeRelease", "Publish to Maven central with sonatypeClose and sonatypePromote"){ (state, parsed) =>
       val rest = getNexusRestService(state)
-      val repo = rest.findTargetRepository(CloseAndPromote, parsed)
-      rest.closeAndPromote(repo)
-      state
+      val repo1 = rest.findTargetRepository(CloseAndPromote, parsed)
+      val repo2 = rest.closeAndPromote(repo1)
+      val extracted = Project.extract(state)
+      val next = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo2), state)
+      next
     }
 
     val sonatypeReleaseAll: Command = commandWithSonatypeProfile("sonatypeReleaseAll",
@@ -232,6 +258,7 @@ object Sonatype extends AutoPlugin {
     def isReleased = stagingType == "released"
 
     def toClosed = StagingRepositoryProfile(profileId, profileName, "closed", repositoryId)
+    def toDropped = StagingRepositoryProfile(profileId, profileName, "dropped", repositoryId)
     def toReleased = StagingRepositoryProfile(profileId, profileName, "released", repositoryId)
   }
 
@@ -582,7 +609,8 @@ object Sonatype extends AutoPlugin {
 
     }
 
-    def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
+    def createStage(description: String = "Requested by sbt-sonatype plugin")
+    : StagingRepositoryProfile = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
       log.info(s"Creating staging repository in profile: ${currentProfile.profileName}")
       var repo: StagingRepositoryProfile = null
@@ -598,13 +626,17 @@ object Sonatype extends AutoPlugin {
           ids.head.text)
         log.info(s"Created successfully: ${repo.repositoryId}")
       })
-      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED || null != repo) {
+      if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}: ${ret.getStatusLine}")
+      }
+      if (null == repo) {
+        throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}: no stagedRepositoryId")
       }
       repo
     }
 
-    def closeStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
+    def closeStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    : StagingRepositoryProfile = {
       var toContinue = true
       if(repo.isClosed || repo.isReleased) {
         log.info(s"Repository ${repo.repositoryId} is already closed")
@@ -648,10 +680,12 @@ object Sonatype extends AutoPlugin {
       }
       if(toContinue)
         throw new IOException("Timed out")
-      true
+
+      repo.toClosed
     }
 
-    def dropStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
+    def dropStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    : StagingRepositoryProfile = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
       log.info(s"Dropping staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo, description))
@@ -659,11 +693,12 @@ object Sonatype extends AutoPlugin {
         throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
       }
       log.info(s"Dropped successfully: ${repo.repositoryId}")
-      true
+      repo.toDropped
     }
 
 
-    def promoteStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin") = {
+    def promoteStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    : StagingRepositoryProfile = {
       var toContinue = true
       if(repo.isReleased) {
         log.info(s"Repository ${repo.repositoryId} is already released")
@@ -685,6 +720,7 @@ object Sonatype extends AutoPlugin {
       }
 
       toContinue = true
+      var result: StagingRepositoryProfile = null
       val timer = new ExponentialBackOffRetry()
       while(toContinue && timer.hasNext) {
         val activities = activitiesOf(repo)
@@ -695,7 +731,7 @@ object Sonatype extends AutoPlugin {
               log.info("Promoted successfully")
 
               // Drop after release
-              dropStage(repo.toReleased)
+              result = dropStage(repo.toReleased)
               toContinue = false
             }
             else if(activity.containsError) {
@@ -713,8 +749,8 @@ object Sonatype extends AutoPlugin {
       }
       if(toContinue)
         throw new IOException("Timed out")
-      true
-
+      require(null != result)
+      result
     }
 
     def stagingRepositoryInfo(repositoryId:String) = {
@@ -725,15 +761,14 @@ object Sonatype extends AutoPlugin {
       ret
     }
 
-    def closeAndPromote(repo:StagingRepositoryProfile) : Boolean = {
+    def closeAndPromote(repo:StagingRepositoryProfile) : StagingRepositoryProfile = {
       if(repo.isReleased) {
         dropStage(repo)
       }
       else {
-        closeStage(repo)
-        promoteStage(repo.toClosed)
+        val closed = closeStage(repo)
+        promoteStage(closed)
       }
-      true
     }
 
     def activities : Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
