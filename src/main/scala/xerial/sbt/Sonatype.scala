@@ -289,16 +289,22 @@ object Sonatype extends AutoPlugin {
    * @param profileName
    * @param stagingType
    * @param repositoryId
+   * @param description
    */
-  case class StagingRepositoryProfile(profileId:String, profileName:String, stagingType:String, repositoryId:String) {
-    override def toString = s"[$repositoryId] status:$stagingType, profile:$profileName($profileId)"
+  case class StagingRepositoryProfile
+  (profileId:String,
+   profileName:String,
+   stagingType:String,
+   repositoryId:String,
+   description: String) {
+    override def toString = s"[$repositoryId] status:$stagingType, profile:$profileName($profileId) description: $description"
     def isOpen = stagingType == "open"
     def isClosed = stagingType == "closed"
     def isReleased = stagingType == "released"
 
-    def toClosed = StagingRepositoryProfile(profileId, profileName, "closed", repositoryId)
-    def toDropped = StagingRepositoryProfile(profileId, profileName, "dropped", repositoryId)
-    def toReleased = StagingRepositoryProfile(profileId, profileName, "released", repositoryId)
+    def toClosed = copy(stagingType = "closed")
+    def toDropped = copy(stagingType = "dropped")
+    def toReleased = copy(stagingType = "released")
   }
 
   /**
@@ -574,7 +580,8 @@ object Sonatype extends AutoPlugin {
             (p \ "profileId").text,
             (p \ "profileName").text,
             (p \ "type").text,
-            (p \ "repositoryId").text)
+            (p \ "repositoryId").text,
+            (p \ "description").text)
         }
         val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
         if(myProfiles.isEmpty) {
@@ -616,13 +623,13 @@ object Sonatype extends AutoPlugin {
           |</promoteRequest>
          """.stripMargin
 
-    private def promoteRequestXML(repo:StagingRepositoryProfile, description: String) =
+    private def promoteRequestXML(repo:StagingRepositoryProfile) =
       s"""|<?xml version="1.0" encoding="UTF-8"?>
           |<promoteRequest>
           |  <data>
           |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
           |    <targetRepositoryId>${currentProfile.repositoryTargetId}</targetRepositoryId>
-          |    <description>${Utility.escape(description)}</description>
+          |    <description>${repo.description}</description>
           |  </data>
           |</promoteRequest>
          """.stripMargin
@@ -662,7 +669,8 @@ object Sonatype extends AutoPlugin {
           currentProfile.profileId,
           currentProfile.profileName,
           "open",
-          ids.head.text)
+          ids.head.text,
+          description)
         log.info(s"Created successfully: ${repo.repositoryId}")
       })
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
@@ -674,7 +682,7 @@ object Sonatype extends AutoPlugin {
       repo
     }
 
-    def closeStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    def closeStage(repo:StagingRepositoryProfile)
     : StagingRepositoryProfile = {
       var toContinue = true
       if(repo.isClosed || repo.isReleased) {
@@ -686,7 +694,7 @@ object Sonatype extends AutoPlugin {
         // Post close request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
         log.info(s"Closing staging repository $repo")
-        val ret = Post(postURL, promoteRequestXML(repo, description))
+        val ret = Post(postURL, promoteRequestXML(repo))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
           throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
         }
@@ -723,11 +731,11 @@ object Sonatype extends AutoPlugin {
       repo.toClosed
     }
 
-    def dropStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    def dropStage(repo:StagingRepositoryProfile)
     : StagingRepositoryProfile = {
       val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
       log.info(s"Dropping staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo, description))
+      val ret = Post(postURL, promoteRequestXML(repo))
       if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
         throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
       }
@@ -736,7 +744,7 @@ object Sonatype extends AutoPlugin {
     }
 
 
-    def promoteStage(repo:StagingRepositoryProfile, description: String = "Requested by sbt-sonatype plugin")
+    def promoteStage(repo:StagingRepositoryProfile)
     : StagingRepositoryProfile = {
       var toContinue = true
       if(repo.isReleased) {
@@ -748,7 +756,7 @@ object Sonatype extends AutoPlugin {
         // Post promote(release) request
         val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
         log.info(s"Promoting staging repository $repo")
-        val ret = Post(postURL, promoteRequestXML(repo, description))
+        val ret = Post(postURL, promoteRequestXML(repo))
         if(ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
           log.error(s"${ret.getStatusLine}")
           for(errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {

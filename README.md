@@ -126,14 +126,28 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Show the list of staging repositories.
 * __sonatypeOpen__ (description | sonatypeProfileName description)
   * Create a staging repository and set `sonatypeStagingRepositoryProfile` and `publishTo`.
+  * Although creating a staging repository does not result in email notifications,
+    the description will be reused for across lifecycle operations (Close, Promote, Drop)
+    to facilitate distinguishing email notifications sent by the repository by description.
 * __sonatypeClose__ (repositoryId)?
-  * Close a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
+  * Close an open staging repository and set `sonatypeStagingRepositoryProfile` and
+    clear `publishTo` if it was set by __sonatypeOpen__.
+  * The `Staging Completed` email notification sent by the repository only includes the description
+    (if created with __sonatypeOpen__); it does not include the staging repository ID.
 * __sonatypePromote__ (repositoryId)?
-  * Promote a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
+  * Promote a closed staging repository and set `sonatypeStagingRepositoryProfile` and
+    clear `publishTo` if it was set by __sonatypeOpen__.
+  * The `Promotion Completed` email notification sent by the repository only includes the description
+    (if created with __sonatypeOpen__); it does not include the staging repository ID.
 * __sonatypeDrop__ (repositoryId)?
-  * Drop a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
+  * Drop an open or closed staging repository and set `sonatypeStagingRepositoryProfile` and
+    clear `publishTo` if it was set by __sonatypeOpen__.
+  * The email notification sent by the repository includes both the description
+    (if created with __sonatypeOpen__) and the staging repository ID.
 * __sonatypeRelease__ (repositoryId)?
-  * Close and promote a staging repository and set `sonatypeStagingRepositoryProfile` and clear `publishTo` if it was set by __sonatypeOpen__.
+  * Close (if needed) and promote a staging repository and set `sonatypeStagingRepositoryProfile` and
+    clear `publishTo` if it was set by __sonatypeOpen__.
+  * The email notifications are those of __sonatypeClose__ (if applicable) and __sonatypePromote__.
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 * __sonatypeStagingProfiles__
