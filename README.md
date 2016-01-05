@@ -33,7 +33,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
 commands:
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0") // fot sbt-0.13.5 or higher
 ```
@@ -122,7 +122,7 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 * __sonatypeList__
   * Show the list of staging repositories.
-* __sonatypeOpen__ (description | sonatypeProfileName description)
+* __sonatypeOpen__ (description | sonatypeProfileName description)   (since sbt-sonatype-1.1)
   * Create a staging repository and set `sonatypeStagingRepositoryProfile` and `publishTo`.
   * Although creating a staging repository does not result in email notifications,
     the description will be reused for across lifecycle operations (Close, Promote, Drop)
@@ -197,7 +197,7 @@ Prepare the following two files:
 ### $HOME/.sbt/0.13/plugins/plugins.sbt
 
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.0")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 ```
 
 ### $HOME/.sbt/0.13/sonatype.sbt
