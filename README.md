@@ -118,8 +118,6 @@ $ sbt sonatypeRelease
 ```
 This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
 
-### [Example workflow for creating & publishing to a staging repository](workflow.md)
-
 ## Available Commands
 
 * __sonatypeList__
@@ -154,6 +152,10 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
   * Show the list of staging profiles, which include profileName information.
 * __sonatypeLog__
   * Show the staging activity logs
+
+### Advanced Usage
+
+* [Example workflow for creating & publishing to a staging repository](workflow.md)
 
 ## Using with sbt-release plugin
 
