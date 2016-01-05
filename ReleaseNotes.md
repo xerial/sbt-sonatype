@@ -1,3 +1,6 @@
+- Release 1.1
+ - Add sonatypeOpen command for supporting more complex workflows (see the usage example in [workflow.md](workflow.md))
+
 - Release 1.0
  - The first major release (stable)
 
