@@ -45,7 +45,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0") // fot sbt-0.13.5 or higher
 Set Sonatype account information (user name and password) in the global sbt settings. To protect your password, never include this file within your project.
 
 ```scala
-credentials += Credentials("Sonatype Nexus Repository Manager",
+credentials += Credentials("Nexus Repository Manager",
         "oss.sonatype.org",
         "(Sonatype user name)",
         "(Sonatype password)")
