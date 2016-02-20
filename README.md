@@ -75,7 +75,7 @@ pomExtra in Global := {
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
-  <!-- SCM information. Modify the follwing URLs -->
+  <!-- SCM information. Modify the following URLs -->
   <scm>
     <connection>scm:git:github.com/(your repository URL)</connection>
     <developerConnection>scm:git:git@github.com:(your repository URL)</developerConnection>
