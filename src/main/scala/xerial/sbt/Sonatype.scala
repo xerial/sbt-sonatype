@@ -33,7 +33,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
-    val sonatypeMaxRetries = settingKey[Int](20)
+    val sonatypeMaxRetries = settingKey[String]("20")
   }
 
   object SonatypeKeys extends SonatypeKeys {
@@ -55,7 +55,7 @@ object Sonatype extends AutoPlugin {
     sonatypeProfileName := organization.value,
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
-    sonatypeMaxRetries := 20,
+    sonatypeMaxRetries := "20",
     // Add sonatype repository settings
     publishTo := { Some(sonatypeDefaultResolver.value) },
     publishMavenStyle := true,
@@ -637,7 +637,7 @@ object Sonatype extends AutoPlugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=sonatypeMaxRetries) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=sonatypeMaxRetries.toInt) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
 
