@@ -637,7 +637,7 @@ object Sonatype extends AutoPlugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=sonatypeMaxRetries.value.toInt) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=sonatypeMaxRetries) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
 
