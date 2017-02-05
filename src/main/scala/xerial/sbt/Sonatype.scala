@@ -459,9 +459,9 @@ object Sonatype extends AutoPlugin {
       }
       if(repos.isEmpty) {
         if(stagingProfiles.isEmpty) {
-          log.error(s"No staging profile found for $profileName.")
+          log.error(s"No staging profile found for $profileName")
           log.error("Have you requested a staging profile and successfully published your signed artifact there?")
-          throw new IllegalStateException(s"No staging profile found for $profileName.")
+          throw new IllegalStateException(s"No staging profile found for $profileName")
         } else {
           throw new IllegalStateException(command.errNotFound)
         }
