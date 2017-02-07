@@ -457,8 +457,15 @@ object Sonatype extends AutoPlugin {
         case Drop => stagingRepositoryProfiles
         case CloseAndPromote => stagingRepositoryProfiles
       }
-      if(repos.isEmpty)
-        throw new IllegalStateException(command.errNotFound)
+      if(repos.isEmpty) {
+        if(stagingProfiles.isEmpty) {
+          log.error(s"No staging profile found for $profileName")
+          log.error("Have you requested a staging profile and successfully published your signed artifact there?")
+          throw new IllegalStateException(s"No staging profile found for $profileName")
+        } else {
+          throw new IllegalStateException(command.errNotFound)
+        }
+      }
 
       def findSpecifiedInArg(target: String) = {
         repos.find(_.repositoryId == target).getOrElse{
