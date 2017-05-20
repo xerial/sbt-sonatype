@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-//import sbtrelease._
-//import ReleaseStateTransformations._
-//import sbtrelease.ReleasePlugin._
+import ReleaseTransformations._
 import sbt.ScriptedPlugin._
 
 lazy val buildSettings = Seq(
@@ -37,10 +35,9 @@ lazy val buildSettings = Seq(
   // ^ publishSigned should be used for cross build
   crossSbtVersions := Vector("1.0.0-M5", "0.13.16-M1"),
   scalaCompilerBridgeSource :=
-  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources
-/*
-  ReleaseKeys.tagName := { (version in ThisBuild).value },
-  ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources,
+  releaseTagName := { (version in ThisBuild).value },
+  releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
     runClean,
@@ -49,13 +46,12 @@ lazy val buildSettings = Seq(
     commitReleaseVersion,
     tagRelease,
     // TODO run sbt cross build
-    ReleaseStep(action = Command.process("publishSigned", _)),
+    ReleaseStep(action = Command.process("^publishSigned", _)),
     setNextVersion,
     commitNextVersion,
     ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
     pushChanges
   )
-*/
 )
 
 // Project modules
