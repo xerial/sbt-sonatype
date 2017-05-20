@@ -33,10 +33,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
 commands:
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1") // sbt-0.13.x
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0") // fot sbt-0.13.5 or higher
-
-// For sbt-1.0.0
+// For sbt 0.13.x, 1.0.0-M15
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0.0-M1") 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0-M1")
 ```

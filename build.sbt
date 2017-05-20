@@ -27,13 +27,17 @@ lazy val buildSettings = Seq(
   publishArtifact in Test := false,
   sbtPlugin := true,
   parallelExecution := true,
-  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.8"),
+  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts ++= {
    import scala.collection.JavaConverters._
    val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
    memOpt ++ Seq(s"-Dplugin.version=${version.value}")
-  }
+  },
+  // ^ publishSigned should be used for cross build
+  crossSbtVersions := Vector("1.0.0-M5", "0.13.16-M1"),
+  scalaCompilerBridgeSource :=
+  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources
 /*
   ReleaseKeys.tagName := { (version in ThisBuild).value },
   ReleaseKeys.releaseProcess := Seq[ReleaseStep](
@@ -44,6 +48,7 @@ lazy val buildSettings = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
+    // TODO run sbt cross build
     ReleaseStep(action = Command.process("publishSigned", _)),
     setNextVersion,
     commitNextVersion,
@@ -58,6 +63,7 @@ lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
  )
+  .settings(scriptedSettings:_*)
   .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
