@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+//import sbtrelease._
+//import ReleaseStateTransformations._
+//import sbtrelease.ReleasePlugin._
 import sbt.ScriptedPlugin._
-import sbtrelease._
-import ReleaseStateTransformations._
-import sbtrelease.ReleasePlugin._
 
-lazy val buildSettings = releaseSettings ++ scriptedSettings ++ Seq[Setting[_]](
+lazy val buildSettings = Seq(
   organization := "org.xerial.sbt",
   organizationName := "Xerial project",
   organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -27,13 +27,14 @@ lazy val buildSettings = releaseSettings ++ scriptedSettings ++ Seq[Setting[_]](
   publishArtifact in Test := false,
   sbtPlugin := true,
   parallelExecution := true,
-  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),
+  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.8"),
   scriptedBufferLog := false,
   scriptedLaunchOpts ++= {
-    import scala.collection.JavaConverters._
-    val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
-    memOpt ++ Seq(s"-Dplugin.version=${version.value}")
-  },
+   import scala.collection.JavaConverters._
+   val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
+   memOpt ++ Seq(s"-Dplugin.version=${version.value}")
+  }
+/*
   ReleaseKeys.tagName := { (version in ThisBuild).value },
   ReleaseKeys.releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
@@ -49,16 +50,18 @@ lazy val buildSettings = releaseSettings ++ scriptedSettings ++ Seq[Setting[_]](
     ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
     pushChanges
   )
+*/
 )
 
 // Project modules
 lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
-).settings(buildSettings: _*)
+ )
+  .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
       "org.apache.httpcomponents" % "httpclient" % "4.2.6",
-      "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   )

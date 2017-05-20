@@ -33,12 +33,27 @@ A sbt plugin for publishing your project to the Maven central repository through
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
 commands:
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
-
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1") // sbt-0.13.x
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0") // fot sbt-0.13.5 or higher
+
+// For sbt-1.0.0
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0.0-M1") 
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0-M1")
 ```
 
  * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.10_0.13>. It will be synchronized every ~2 hours.
+
+### build.sbt
+
+```scala
+// Add sonatype repository settings
+publishTo := Some(
+  if (isSnapshot.value)
+    Opts.resolver.sonatypeSnapshots
+  else
+    Opts.resolver.sonatypeStaging
+)
+```
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
 
@@ -66,30 +81,20 @@ sbt-sonatype is an auto-plugin, it will automatically configure your build. Ther
 sonatypeProfileName := "org.xerial"
 
 // To sync with Maven central, you need to supply the following information:
-pomExtra in Global := {
-  <url>(your project URL)</url>
-  <!-- License of your choice -->
-  <licenses>
-    <license>
-      <name>Apache 2</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-    </license>
-  </licenses>
-  <!-- SCM information. Modify the following URLs -->
-  <scm>
-    <connection>scm:git:github.com/(your repository URL)</connection>
-    <developerConnection>scm:git:git@github.com:(your repository URL)</developerConnection>
-    <url>github.com/(your repository url)</url>
-  </scm>
-  <!-- Developer contact information -->
-  <developers>
-    <developer>
-      <id>(your favorite id)</id>
-      <name>(your name)</name>
-      <url>(your web page)</url>
-    </developer>
-  </developers>
-}
+publishMavenStyle := true
+
+// License of your choice
+licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+homepage := Some(url("https://(your project url)"))
+scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/(account)/(project)"),
+    "scm:git@github.com:(account)/(project).git"
+  )
+)
+developers := List(
+  Developer(id="(your id)", name="(your name)", email="(your e-mail)", url=url("(your home page)"))
+)
 ```
 
 ## Publishing Your Artifact

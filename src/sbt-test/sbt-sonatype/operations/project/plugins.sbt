@@ -6,5 +6,3 @@
   else
     addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % pluginVersion)
 }
-
-
