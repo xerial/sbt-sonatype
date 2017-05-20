@@ -54,8 +54,6 @@ object Sonatype extends AutoPlugin {
     sonatypeProfileName := organization.value,
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
-    // Add sonatype repository settings
-    publishTo := { Some(sonatypeDefaultResolver.value) },
     publishMavenStyle := true,
     pomIncludeRepository := { _ => false },
     sonatypeDefaultResolver := {
@@ -144,8 +142,7 @@ object Sonatype extends AutoPlugin {
       val path = "/staging/deployByRepositoryId/"+repo.repositoryId
       val extracted = Project.extract(state)
       val next = extracted.append(Seq(
-        sonatypeStagingRepositoryProfile := repo,
-        publishTo := Some(new MavenRepository(repo.profileName, sonatypeRepository.value + path))),
+        sonatypeStagingRepositoryProfile := repo),
         state)
       next
     }
@@ -160,12 +157,12 @@ object Sonatype extends AutoPlugin {
       val repo1 = rest.findTargetRepository(Close, repoID)
       val repo2 = rest.closeStage(repo1)
       val next = extracted.append(
-        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        Seq(sonatypeStagingRepositoryProfile := repo2),
         state)
       next
     }
 
-    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository and clear publishTo if it was set by sonatypeOpen") { (state, parsed) =>
+    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
       val extracted = Project.extract(state)
       val currentRepoID = for {
@@ -175,12 +172,12 @@ object Sonatype extends AutoPlugin {
       val repo1 = rest.findTargetRepository(Promote, repoID)
       val repo2 = rest.promoteStage(repo1)
       val next = extracted.append(
-        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        Seq(sonatypeStagingRepositoryProfile := repo2),
         state)
       next
     }
 
-    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository and clear publishTo if it was set by sonatypeOpen") { (state, parsed) =>
+    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository") { (state, parsed) =>
       val rest = getNexusRestService(state)
       val extracted = Project.extract(state)
       val currentRepoID = for {
@@ -190,7 +187,7 @@ object Sonatype extends AutoPlugin {
       val repo1 = rest.findTargetRepository(Drop, repoID)
       val repo2 = rest.dropStage(repo1)
       val next = extracted.append(
-        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        Seq(sonatypeStagingRepositoryProfile := repo2),
         state)
       next
     }
@@ -205,7 +202,7 @@ object Sonatype extends AutoPlugin {
       val repo1 = rest.findTargetRepository(CloseAndPromote, repoID)
       val repo2 = rest.closeAndPromote(repo1)
       val next = extracted.append(
-        Seq(sonatypeStagingRepositoryProfile := repo2) ++ getUpdatedPublishTo(repo1.profileName, extracted.getOpt(publishTo)),
+        Seq(sonatypeStagingRepositoryProfile := repo2),
         state)
       next
     }
