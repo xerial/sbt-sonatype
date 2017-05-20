@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-//import sbtrelease._
-//import ReleaseStateTransformations._
-//import sbtrelease.ReleasePlugin._
+import ReleaseTransformations._
 import sbt.ScriptedPlugin._
 
 lazy val buildSettings = Seq(
@@ -27,16 +25,19 @@ lazy val buildSettings = Seq(
   publishArtifact in Test := false,
   sbtPlugin := true,
   parallelExecution := true,
-  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.8"),
+  scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts ++= {
    import scala.collection.JavaConverters._
    val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
    memOpt ++ Seq(s"-Dplugin.version=${version.value}")
-  }
-/*
-  ReleaseKeys.tagName := { (version in ThisBuild).value },
-  ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  },
+  // ^ publishSigned should be used for cross build
+  crossSbtVersions := Vector("1.0.0-M5", "0.13.16-M1"),
+  scalaCompilerBridgeSource :=
+  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources,
+  releaseTagName := { (version in ThisBuild).value },
+  releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
     runClean,
@@ -44,13 +45,13 @@ lazy val buildSettings = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    ReleaseStep(action = Command.process("publishSigned", _)),
+    // TODO run sbt cross build
+    ReleaseStep(action = Command.process("^publishSigned", _)),
     setNextVersion,
     commitNextVersion,
     ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
     pushChanges
   )
-*/
 )
 
 // Project modules
@@ -58,6 +59,7 @@ lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
  )
+  .settings(scriptedSettings:_*)
   .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
