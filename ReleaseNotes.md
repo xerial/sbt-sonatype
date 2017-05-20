@@ -1,6 +1,9 @@
 Release Notes
 ===
 
+# 2.0.0 (planned)
+- After sbt-1.0.0 release
+
 # 2.0.0-M1
 - sbt-1.0.0-M5 (for Scala 2.12) support
 - **IMPORTANT** sbt-sonatype no longer modifies `publishTo` settings. You need to manually set the Sonatype repository name as below:
