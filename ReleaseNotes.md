@@ -1,7 +1,7 @@
 Release Notes
 ===
 
-# 2.0.0 (planned)
+# 2.0 (planned)
 - After sbt-1.0.0 release
 
 # 2.0.0-M1
