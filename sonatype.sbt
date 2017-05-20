@@ -1,4 +1,4 @@
-//sonatypeProfileName := "org.xerial"
+sonatypeProfileName := "org.xerial"
 
 publishMavenStyle := true
 
@@ -17,10 +17,9 @@ developers := List(
   Developer(id="leo", name="Taro L. Saito", email="leo@xerial.org", url=url("http://xerial.org/leo"))
 )
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
+publishTo := Some(
   if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
+    Opts.resolver.sonatypeSnapshots
   else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
+    Opts.resolver.sonatypeStaging
+)
