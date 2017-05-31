@@ -36,7 +36,9 @@ lazy val buildSettings = Seq(
   crossSbtVersions := Vector("1.0.0-M6", "1.0.0-M5", "0.13.16-M1"),
   scalaCompilerBridgeSource :=
   ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources,
+  releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
+  releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
@@ -46,7 +48,7 @@ lazy val buildSettings = Seq(
     commitReleaseVersion,
     tagRelease,
     // TODO run sbt cross build
-    ReleaseStep(action = Command.process("^publishSigned", _)),
+    publishArtifacts,
     setNextVersion,
     commitNextVersion,
     ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
