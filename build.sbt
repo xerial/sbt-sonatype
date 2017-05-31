@@ -33,7 +33,7 @@ lazy val buildSettings = Seq(
    memOpt ++ Seq(s"-Dplugin.version=${version.value}")
   },
   // ^ publishSigned should be used for cross build
-  crossSbtVersions := Vector("1.0.0-M5", "0.13.16-M1"),
+  crossSbtVersions := Vector("1.0.0-M6", "1.0.0-M5", "0.13.16-M1"),
   scalaCompilerBridgeSource :=
   ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources,
   releaseTagName := { (version in ThisBuild).value },
