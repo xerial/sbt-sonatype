@@ -79,7 +79,7 @@ sbt-sonatype is an auto-plugin, it will automatically configure your build. Ther
 
 ```scala
 // Your profile name of the sonatype account. The default is the same with the organization value
-sonatypeProfileName := "org.xerial"
+sonatypeProfileName := "(your organization. e.g., org.xerial)"
 
 // To sync with Maven central, you need to supply the following information:
 publishMavenStyle := true
