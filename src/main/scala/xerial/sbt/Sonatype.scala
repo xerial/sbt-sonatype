@@ -639,10 +639,10 @@ object Sonatype extends AutoPlugin {
          """.stripMargin
 
 
-    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=10) {
+    class ExponentialBackOffRetry(initialWaitSeq:Int= 5, intervalSeq:Int=3, maxRetries:Int=20) {
       private var numTrial = 0
       private var currentInterval = intervalSeq
-
+      
       def hasNext = numTrial < maxRetries
 
       def nextWait = {
