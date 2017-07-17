@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import ReleaseTransformations._
-import sbt.ScriptedPlugin._
+//import ReleaseTransformations._
+//import sbt.ScriptedPlugin._
 
 lazy val buildSettings = Seq(
   organization := "org.xerial.sbt",
@@ -26,16 +26,28 @@ lazy val buildSettings = Seq(
   sbtPlugin := true,
   parallelExecution := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
+  scalaVersion := "2.12.2",
+  publishTo := Some(
+  if (isSnapshot.value)
+    Opts.resolver.sonatypeSnapshots
+  else
+    Opts.resolver.sonatypeStaging
+  ),
+/*
   scriptedBufferLog := false,
   scriptedLaunchOpts ++= {
    import scala.collection.JavaConverters._
    val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
    memOpt ++ Seq(s"-Dplugin.version=${version.value}")
   },
+*/
   // ^ publishSigned should be used for cross build
-  crossSbtVersions := Vector("1.0.0-M6", "1.0.0-M5", "0.13.16-M1"),
+  crossSbtVersions := Vector("1.0.0-RC2"), //, "1.0.0-M6", "1.0.0-M5", "0.13.16-M1"),
+/*
   scalaCompilerBridgeSource :=
-  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources,
+  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources
+*/
+/*,
   releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -54,6 +66,7 @@ lazy val buildSettings = Seq(
     ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
     pushChanges
   )
+*/
 )
 
 // Project modules
@@ -61,7 +74,7 @@ lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
  )
-  .settings(scriptedSettings:_*)
+//  .settings(scriptedSettings:_*)
   .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
