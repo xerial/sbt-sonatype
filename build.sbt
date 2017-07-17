@@ -26,7 +26,6 @@ lazy val buildSettings = Seq(
   sbtPlugin := true,
   parallelExecution := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-  scalaVersion := "2.12.2",
   publishTo := Some(
   if (isSnapshot.value)
     Opts.resolver.sonatypeSnapshots
