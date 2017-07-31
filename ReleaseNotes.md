@@ -2,7 +2,7 @@ Release Notes
 ===
 
 # 2.0 
-- Support sbt-0.13, 1.0.0-M5 and 1.0.0-M6
+- Support sbt-0.13, 1.0.0-M5, 1.0.0-M6, and 1.0.0-RC3
 
 # 2.0.0-M1
 - Add sbt-1.0.0-M5 (for Scala 2.12), sbt-0.13.x support
