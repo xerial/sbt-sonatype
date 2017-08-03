@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-//import ReleaseTransformations._
-//import sbt.ScriptedPlugin._
+import ReleaseTransformations._
 
 lazy val buildSettings = Seq(
   organization := "org.xerial.sbt",
@@ -26,27 +25,11 @@ lazy val buildSettings = Seq(
   sbtPlugin := true,
   parallelExecution := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-  publishTo := Some(
-  if (isSnapshot.value)
-    Opts.resolver.sonatypeSnapshots
-  else
-    Opts.resolver.sonatypeStaging
-  ),
-/*
-  scriptedBufferLog := false,
-  scriptedLaunchOpts ++= {
-   import scala.collection.JavaConverters._
-   val memOpt : Seq[String] = management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
-   memOpt ++ Seq(s"-Dplugin.version=${version.value}")
-  },
-*/
-  // ^ publishSigned should be used for cross build
-  crossSbtVersions := Vector("1.0.0-RC2"), //, "1.0.0-M6", "1.0.0-M5", "0.13.16-M1"),
-/*
-  scalaCompilerBridgeSource :=
-  ("org.scala-sbt" % "compiler-interface" % "0.13.16-M1" % "component").sources
-*/
-/*,
+  //scriptedBufferLog := false,
+  //scriptedLaunchOpts := {
+  //  scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
+  //},
+  crossSbtVersions := Vector("1.0.0-RC3", "0.13.16"),
   releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -54,18 +37,16 @@ lazy val buildSettings = Seq(
     checkSnapshotDependencies,
     inquireVersions,
     runClean,
-    runTest,
+    releaseStepCommandAndRemaining("^ test"),
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    // TODO run sbt cross build
-    publishArtifacts,
+    releaseStepCommandAndRemaining("^ publishSigned"),
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
+    releaseStepCommand("sonatypeReleaseAll"),
     pushChanges
   )
-*/
 )
 
 // Project modules

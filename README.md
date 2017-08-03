@@ -37,7 +37,7 @@ commands:
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
-// For sbt 0.13.x, 1.0.0-M5, 1.0.0-M6, 1.0.0-RC3
+// For sbt 1.0.0-RC3, 1.0.0-M6, 1.0.0-M5, and 0.13.x
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0") 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0-M1")
 ```
@@ -170,6 +170,7 @@ To perform publishSigned and sonatypeReleaseAll with [sbt-release](https://githu
 ```scala
 import ReleaseTransformations._
 
+releaseCrossBuild := true // true if you cross-build the project for multiple Scala versions
 releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
   inquireVersions,
@@ -178,20 +179,12 @@ releaseProcess := Seq[ReleaseStep](
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,
-  ReleaseStep(action = Command.process("publishSigned", _)),
+  releaseCommand("publishSigned"),
   setNextVersion,
   commitNextVersion,
-  ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
+  releaseCommand("sonatypeReleaseAll"),
   pushChanges
 )
-
-```
-To enable cross building, set `enableCrossBuild = true` in publishSigned and sonatypeReleaseAll release steps:
-```
-  ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true)
-  ...
-  ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true)
-```
 
 ## Publishing Maven Projects
 
@@ -200,13 +193,13 @@ for the synchronization to the Maven central (Since version 0.5.1).
 
 Prepare the following two files:
 
-### $HOME/.sbt/0.13/plugins/plugins.sbt
+### $HOME/.sbt/(sbt-version 0.13 or 1.0)/plugins/plugins.sbt
 
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
 ```
 
-### $HOME/.sbt/0.13/sonatype.sbt
+### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
         "oss.sonatype.org",
