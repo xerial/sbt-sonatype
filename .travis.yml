@@ -1,6 +1,9 @@
 language: scala
 
-script: sbt compile scripted
+matrix:
+  include:
+  - script: sbt "^^ 0.13.16" compile scripted
+  - script: sbt compile scripted
 
 sudo: false
 

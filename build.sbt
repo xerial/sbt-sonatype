@@ -25,10 +25,10 @@ lazy val buildSettings = Seq(
   sbtPlugin := true,
   parallelExecution := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-  //scriptedBufferLog := false,
-  //scriptedLaunchOpts := {
-  //  scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
-  //},
+  scriptedBufferLog := false,
+  scriptedLaunchOpts := {
+    scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
+  },
   crossSbtVersions := Vector("1.0.0-RC3", "0.13.16"),
   releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
@@ -53,8 +53,7 @@ lazy val buildSettings = Seq(
 lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
- )
-//  .settings(scriptedSettings:_*)
+ ).enablePlugins(ScriptedPlugin)
   .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
