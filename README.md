@@ -185,6 +185,7 @@ releaseProcess := Seq[ReleaseStep](
   releaseStepCommand("sonatypeReleaseAll"),
   pushChanges
 )
+```
 
 ## Publishing Maven Projects
 
