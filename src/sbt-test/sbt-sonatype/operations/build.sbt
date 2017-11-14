@@ -24,4 +24,3 @@ pomExtra := {
     </developer>
   </developers>
 }
-

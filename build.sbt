@@ -29,7 +29,7 @@ lazy val buildSettings = Seq(
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
   },
-  crossSbtVersions := Vector("1.0.0-RC3", "0.13.16"),
+  crossSbtVersions := Vector("1.0.3", "0.13.16"),
   releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -53,11 +53,11 @@ lazy val buildSettings = Seq(
 lazy val sbtSonatype = Project(
   id = "sbt-sonatype",
   base = file(".")
- ).enablePlugins(ScriptedPlugin)
+).enablePlugins(ScriptedPlugin)
   .settings(buildSettings)
   .settings(
     libraryDependencies ++= Seq(
       "org.apache.httpcomponents" % "httpclient" % "4.2.6",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+      "org.scalatest"             %% "scalatest" % "3.0.1" % "test"
     )
   )

@@ -14,7 +14,7 @@ scmInfo := Some(
 )
 
 developers := List(
-  Developer(id="leo", name="Taro L. Saito", email="leo@xerial.org", url=url("http://xerial.org/leo"))
+  Developer(id = "leo", name = "Taro L. Saito", email = "leo@xerial.org", url = url("http://xerial.org/leo"))
 )
 
 publishTo := Some(
