@@ -32,6 +32,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeCredentialHost           = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver          = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
+    val sonatypeProjectHosting           = settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -51,10 +52,14 @@ object Sonatype extends AutoPlugin {
     sonatypeProfileName := organization.value,
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
+    sonatypeProjectHosting := None,
     publishMavenStyle := true,
     pomIncludeRepository := { _ =>
       false
     },
+    homepage := sonatypeProjectHosting.value.map(h => url(h.homepage)).orElse(homepage.value),
+    scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
+    developers := sonatypeProjectHosting.value.map(_.developers).orElse(Some(developers.value)).getOrElse(List.empty),
     sonatypeDefaultResolver := {
       if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
@@ -75,6 +80,20 @@ object Sonatype extends AutoPlugin {
       sonatypeStagingProfiles
     )
   )
+
+  sealed trait ProjectHosting {
+    def homepage: String
+    def scmUrl: String
+    def scmInfo                     = ScmInfo(url(homepage), scmUrl)
+    def developers: List[Developer] = List(developer)
+    def developer: Developer
+  }
+
+  case class GithubHosting(user: String, repository: String) extends ProjectHosting {
+    def homepage  = s"https://github.com/$user/$repository"
+    def scmUrl    = s"git@github.com:$user/$repository.git"
+    def developer = Developer(user, user, s"$user@notadomain.com", url(s"https://github.com/$user"))
+  }
 
   object SonatypeCommand {
     import complete.DefaultParsers._
