@@ -84,16 +84,22 @@ object Sonatype extends AutoPlugin {
   sealed trait ProjectHosting {
     def homepage: String
     def scmUrl: String
+    def developer: Developer
     def scmInfo                     = ScmInfo(url(homepage), scmUrl)
     def developers: List[Developer] = List(developer)
-    def developer: Developer
   }
 
-  case class GithubHosting(user: String, repository: String) extends ProjectHosting {
-    def homepage  = s"https://github.com/$user/$repository"
-    def scmUrl    = s"git@github.com:$user/$repository.git"
-    def developer = Developer(user, user, s"$user@notadomain.com", url(s"https://github.com/$user"))
+  abstract class BaseHosting(domain: String) extends ProjectHosting {
+    def user: String
+    def email: String
+    def repository: String
+    def homepage  = s"https://$domain/$user/$repository"
+    def scmUrl    = s"git@$domain:$user/$repository.git"
+    def developer = Developer(user, user, email, url(s"https://$domain/$user"))
   }
+
+  case class GithubHosting(user: String, repository: String, email: String) extends BaseHosting("github.com")
+  case class GitlabHosting(user: String, repository: String, email: String) extends BaseHosting("gitlab.com")
 
   object SonatypeCommand {
     import complete.DefaultParsers._
