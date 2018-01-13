@@ -98,8 +98,8 @@ object Sonatype extends AutoPlugin {
     def developer = Developer(user, user, email, url(s"https://$domain/$user"))
   }
 
-  case class GithubHosting(user: String, repository: String, email: String) extends BaseHosting("github.com")
-  case class GitlabHosting(user: String, repository: String, email: String) extends BaseHosting("gitlab.com")
+  case class GitHubHosting(user: String, repository: String, email: String) extends BaseHosting("github.com")
+  case class GitLabHosting(user: String, repository: String, email: String) extends BaseHosting("gitlab.com")
 
   object SonatypeCommand {
     import complete.DefaultParsers._
