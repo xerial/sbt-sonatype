@@ -59,7 +59,11 @@ object Sonatype extends AutoPlugin {
     },
     homepage := sonatypeProjectHosting.value.map(h => url(h.homepage)).orElse(homepage.value),
     scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
-    developers := sonatypeProjectHosting.value.map(_.developers).orElse(Some(developers.value)).getOrElse(List.empty),
+    developers := {
+      val derived = sonatypeProjectHosting.value.map(_.developers).getOrElse(List.empty)
+      if (developers.value.isEmpty) derived
+      else developers.value
+    },
     sonatypeDefaultResolver := {
       if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
