@@ -57,7 +57,7 @@ object Sonatype extends AutoPlugin {
     pomIncludeRepository := { _ =>
       false
     },
-    homepage := sonatypeProjectHosting.value.map(h => url(h.homepage)).orElse(homepage.value),
+    homepage := homepage.value.orElse(sonatypeProjectHosting.value.map(h => url(h.homepage))),
     scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
     developers := {
       val derived = sonatypeProjectHosting.value.map(h => List(h.developer)).getOrElse(List.empty)
