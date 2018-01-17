@@ -1,5 +1,7 @@
 Release Notes
 ===
+# 2.1
+- Add shortcut `sonatypeProjectHosting` for quickly setting `homepage`, `scmInfo` and `developers`
 
 # 2.0 
 - Support sbt-0.13, 1.0.0-M5, 1.0.0-M6, and 1.0.0-RC3

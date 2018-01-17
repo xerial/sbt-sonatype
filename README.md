@@ -86,6 +86,14 @@ publishMavenStyle := true
 
 // License of your choice
 licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+
+// Where is the source code hosted
+import xerial.sbt.Sonatype._
+sonatypeProjectHosting := Some(GitHubHosting("username", "projectName", "user@example.com"))
+// or
+sonatypeProjectHosting := Some(GitLabHosting("username", "projectName", "user@example.com"))
+
+// or if you want to set these fields manually
 homepage := Some(url("https://(your project url)"))
 scmInfo := Some(
   ScmInfo(
