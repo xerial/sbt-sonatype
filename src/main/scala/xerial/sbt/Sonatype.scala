@@ -31,6 +31,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeProfileName              = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost           = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver          = settingKey[Resolver]("Default Sonatype Resolver")
+    val sonatypePublishTo                = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting           = settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
   }
@@ -64,11 +65,20 @@ object Sonatype extends AutoPlugin {
       if (developers.value.isEmpty) derived
       else developers.value
     },
+    sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeDefaultResolver := {
+      val sonatypeRepo = "https://oss.sonatype.org/"
+      val profileM     = sonatypeStagingRepositoryProfile.?.value
+
       if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
       } else {
-        Opts.resolver.sonatypeStaging
+        val staged = profileM.map { stagingRepoProfile =>
+          "releases" at sonatypeRepo +
+            "service/local/staging/deployByRepositoryId/" +
+            stagingRepoProfile.repositoryId
+        }
+        staged.getOrElse(Opts.resolver.sonatypeStaging)
       }
     },
     commands ++= Seq(

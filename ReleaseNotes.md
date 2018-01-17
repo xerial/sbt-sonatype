@@ -1,7 +1,12 @@
 Release Notes
 ===
 # 2.1
+- Fixes [#55](https://github.com/xerial/sbt-sonatype/issues/55) with `sonatypePublishTo` setting:  
+```scala
+publishTo := sonatypePublishTo
+``` 
 - Add shortcut `sonatypeProjectHosting` for quickly setting `homepage`, `scmInfo` and `developers`
+
 
 # 2.0 
 - Support sbt-0.13, 1.0.0-M5, 1.0.0-M6, and 1.0.0-RC3
