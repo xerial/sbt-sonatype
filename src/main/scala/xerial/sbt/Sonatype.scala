@@ -60,7 +60,7 @@ object Sonatype extends AutoPlugin {
     homepage := sonatypeProjectHosting.value.map(h => url(h.homepage)).orElse(homepage.value),
     scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
     developers := {
-      val derived = sonatypeProjectHosting.value.map(_.developers).getOrElse(List.empty)
+      val derived = sonatypeProjectHosting.value.map(h => List(h.developer)).getOrElse(List.empty)
       if (developers.value.isEmpty) derived
       else developers.value
     },
@@ -85,25 +85,30 @@ object Sonatype extends AutoPlugin {
     )
   )
 
-  sealed trait ProjectHosting {
-    def homepage: String
-    def scmUrl: String
-    def developer: Developer
-    def scmInfo                     = ScmInfo(url(homepage), scmUrl)
-    def developers: List[Developer] = List(developer)
-  }
-
-  abstract class BaseHosting(domain: String) extends ProjectHosting {
-    def user: String
-    def email: String
-    def repository: String
+  case class ProjectHosting(
+      domain: String,
+      user: String,
+      fullName: Option[String],
+      email: String,
+      repository: String
+  ) {
     def homepage  = s"https://$domain/$user/$repository"
     def scmUrl    = s"git@$domain:$user/$repository.git"
-    def developer = Developer(user, user, email, url(s"https://$domain/$user"))
+    def scmInfo   = ScmInfo(url(homepage), scmUrl)
+    def developer = Developer(user, fullName.getOrElse(user), email, url(s"https://$domain/$user"))
   }
 
-  case class GitHubHosting(user: String, repository: String, email: String) extends BaseHosting("github.com")
-  case class GitLabHosting(user: String, repository: String, email: String) extends BaseHosting("gitlab.com")
+  object GithubHosting {
+    private val domain                                                           = "github.com"
+    def apply(user: String, repository: String, email: String)                   = ProjectHosting(domain, user, None, email, repository)
+    def apply(user: String, repository: String, fullName: String, email: String) = ProjectHosting(domain, user, Some(fullName), email, repository)
+  }
+
+  object GitlabHosting {
+    private val domain                                                           = "gitlab.com"
+    def apply(user: String, repository: String, email: String)                   = ProjectHosting(domain, user, None, email, repository)
+    def apply(user: String, repository: String, fullName: String, email: String) = ProjectHosting(domain, user, Some(fullName), email, repository)
+  }
 
   object SonatypeCommand {
     import complete.DefaultParsers._
