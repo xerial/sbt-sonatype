@@ -48,7 +48,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 
 ```scala
 // Add the default sonatype repository setting
-publishTo := sonatypePublishTo
+publishTo := sonatypePublishTo.value
 ```
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
