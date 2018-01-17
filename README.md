@@ -34,7 +34,7 @@ Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/s
 commands:
 ```scala
 // For sbt 0.13.x
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.1")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 // For sbt 1.1.x, and 0.13.x
@@ -47,8 +47,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 ### build.sbt
 
 ```scala
-// Add sonatype repository settings
-publishTo := Some(sonatypeDefaultResolver)
+// Add the default sonatype repository setting
+publishTo := sonatypePublishTo
 ```
 
 ### $HOME/.sbt/(sbt-version)/sonatype.sbt
