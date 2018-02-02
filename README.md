@@ -51,7 +51,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 publishTo := sonatypePublishTo.value
 ```
 
-### $HOME/.sbt/(sbt-version)/sonatype.sbt
+### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
 
 Set Sonatype account information (user name and password) in the global sbt settings. To protect your password, never include this file within your project.
 
