@@ -108,17 +108,23 @@ object Sonatype extends AutoPlugin {
     def developer = Developer(user, fullName.getOrElse(user), email, url(s"https://$domain/$user"))
   }
 
-  object GithubHosting {
+  object GitHubHosting {
     private val domain                                                           = "github.com"
     def apply(user: String, repository: String, email: String)                   = ProjectHosting(domain, user, None, email, repository)
     def apply(user: String, repository: String, fullName: String, email: String) = ProjectHosting(domain, user, Some(fullName), email, repository)
   }
 
-  object GitlabHosting {
+  object GitLabHosting {
     private val domain                                                           = "gitlab.com"
     def apply(user: String, repository: String, email: String)                   = ProjectHosting(domain, user, None, email, repository)
     def apply(user: String, repository: String, fullName: String, email: String) = ProjectHosting(domain, user, Some(fullName), email, repository)
   }
+
+  // aliases
+  @deprecated("Use GitHubHosting (capital H) instead", "2.2")
+  val GithubHosting = GitHubHosting
+  @deprecated("Use GitLabHosting (capital L) instead", "2.2")
+  val GitlabHosting = GitLabHosting
 
   object SonatypeCommand {
     import complete.DefaultParsers._
