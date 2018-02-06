@@ -28,17 +28,19 @@ A sbt plugin for publishing your project to the Maven central repository through
 
 ## Configurations
 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-sonatype/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-sonatype)
+
 ### project/plugins.sbt
 
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
 commands:
 ```scala
 // For sbt 0.13.x
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 // For sbt 1.1.x, and 0.13.x
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 ```
 
@@ -200,7 +202,7 @@ Prepare the following two files:
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/plugins/plugins.sbt
 
 ```scala
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt

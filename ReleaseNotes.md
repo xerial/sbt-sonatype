@@ -1,5 +1,9 @@
 Release Notes
 ===
+# 2.2
+- Fixes typo [#61](https://github.com/xerial/sbt-sonatype/pull/61) in GitHubHosting and GitLabHosting capitilization
+- If you are not using these keys, no need to upgrade to this version.
+
 # 2.1
 - Fixes [#55](https://github.com/xerial/sbt-sonatype/issues/55) with `sonatypePublishTo` setting:  
 ```scala
