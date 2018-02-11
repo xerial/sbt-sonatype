@@ -184,7 +184,8 @@ releaseProcess := Seq[ReleaseStep](
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,
-  releaseStepCommand("publishSigned"),
+  // For non cross-build projects, use releaseStepCommand("publishSigned")
+  releaseStepCommandAndRemaining("+publishSigned"),
   setNextVersion,
   commitNextVersion,
   releaseStepCommand("sonatypeReleaseAll"),
