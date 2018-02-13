@@ -58,6 +58,22 @@ object Sonatype extends AutoPlugin {
     pomIncludeRepository := { _ =>
       false
     },
+    credentials ++= {
+      val alreadyContainsSonatypeCredentials = credentials.value.collect { case d: DirectCredentials => d.host == sonatypeCredentialHost.value }.nonEmpty
+      if (!alreadyContainsSonatypeCredentials) {
+        val env = sys.env.get(_)
+        (for {
+          username <- env("SONATYPE_USERNAME").orElse(env("SONATYPE_USER"))
+          password <- env("SONATYPE_PASSWORD").orElse(env("SONATYPE_PASS"))
+        } yield
+          Credentials(
+            "Sonatype Nexus Repository Manager",
+            sonatypeCredentialHost.value,
+            username,
+            password
+          )).toSeq
+      } else Seq.empty
+    },
     homepage := homepage.value.orElse(sonatypeProjectHosting.value.map(h => url(h.homepage))),
     scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
     developers := {
