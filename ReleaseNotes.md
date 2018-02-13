@@ -1,5 +1,8 @@
 Release Notes
 ===
+# 2.3
+- Allow setting the credentials with the environment variables `SONATYPE_USERNAME` and `SONATYPE_PASSWORD`
+
 # 2.2
 - Fixes typo [#61](https://github.com/xerial/sbt-sonatype/pull/61) in GitHubHosting and GitLabHosting capitilization
 - If you are not using these keys, no need to upgrade to this version.
