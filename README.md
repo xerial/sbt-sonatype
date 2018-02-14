@@ -214,6 +214,8 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
         "(Sonatype password)")
 ```
 
+Alternatively, the credentials can also be set with the environment variables `SONATYPE_USERNAME` and `SONATYPE_PASSWORD`.
+
 Then, run `sonatypeReleaseAll` command by specifying your `sonatypeProfileName`. If this is `org.xerial`, run:
 ```
 $ sbt "sonatypeReleaseAll org.xerial"
