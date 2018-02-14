@@ -63,8 +63,8 @@ object Sonatype extends AutoPlugin {
       if (!alreadyContainsSonatypeCredentials) {
         val env = sys.env.get(_)
         (for {
-          username <- env("SONATYPE_USERNAME").orElse(env("SONATYPE_USER"))
-          password <- env("SONATYPE_PASSWORD").orElse(env("SONATYPE_PASS"))
+          username <- env("SONATYPE_USERNAME")
+          password <- env("SONATYPE_PASSWORD")
         } yield
           Credentials(
             "Sonatype Nexus Repository Manager",
