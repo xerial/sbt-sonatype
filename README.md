@@ -41,7 +41,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 // For sbt 1.1.x, and 0.13.x
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.3")
 ```
 
  * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.12_1.0>. It will be usually synced within 10 minutes.
