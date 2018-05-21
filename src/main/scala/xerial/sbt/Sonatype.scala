@@ -387,7 +387,7 @@ object Sonatype extends AutoPlugin {
 
     def activityLog = s"Activity $name started:$started, stopped:$stopped"
 
-    def log(log: Logger) {
+    def log(log: Logger): Unit = {
       log.info(activityLog)
       val hasError = containsError
       for (e <- suppressEvaluateLog) {
@@ -416,7 +416,7 @@ object Sonatype extends AutoPlugin {
 
     def containsError = events.exists(_.severity != "0")
 
-    def reportFailure(log: Logger) {
+    def reportFailure(log: Logger): Unit = {
       log.error(activityLog)
       val failureReport = suppressEvaluateLog.filter(_.isFailure)
       for (e <- failureReport) {
@@ -451,7 +451,7 @@ object Sonatype extends AutoPlugin {
 
     override def toString = s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
 
-    def log(s: Logger, useErrorLog: Boolean = false) {
+    def log(s: Logger, useErrorLog: Boolean = false): Unit = {
       val props = {
         val front =
           if (property.contains("typeId"))
@@ -697,7 +697,7 @@ object Sonatype extends AutoPlugin {
         interval
       }
 
-      def doWait {
+      def doWait: Unit = {
         val w = nextWait
         Thread.sleep(w * 1000)
       }
