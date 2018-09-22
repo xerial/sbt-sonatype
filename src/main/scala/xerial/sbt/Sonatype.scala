@@ -216,7 +216,19 @@ object Sonatype extends AutoPlugin {
       val repo      = rest.createStage(profileDescription)
       val path      = "/staging/deployByRepositoryId/" + repo.repositoryId
       val extracted = Project.extract(state)
-      val next      = extracted.append(Seq(sonatypeStagingRepositoryProfile := repo), state)
+
+      // accumulate changes for settings for current project and all aggregates 
+      val newSettings : Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
+        Seq(
+          ref / sonatypeStagingRepositoryProfile := repo,
+          ref / publishTo := Some(sonatypeDefaultResolver.value)
+        )
+      } ++ Seq(
+        sonatypeStagingRepositoryProfile := repo,
+        publishTo := Some(sonatypeDefaultResolver.value)
+      )
+
+      val next      = extracted.appendWithSession(newSettings, state)
       next
     }
 
