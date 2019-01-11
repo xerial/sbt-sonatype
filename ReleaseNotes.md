@@ -1,5 +1,9 @@
 Release Notes
 ===
+# 2.4
+- Fixes a bug in propagating publishTo setting to sub projects [#76](https://github.com/xerial/sbt-sonatype/issues/76)
+- Drop sbt 0.13.x support
+
 # 2.3
 - Allow setting the credentials with the environment variables `SONATYPE_USERNAME` and `SONATYPE_PASSWORD`
 
