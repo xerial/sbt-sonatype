@@ -2,10 +2,9 @@ language: scala
 
 matrix:
   include:
-  - script: sbt "^^ 0.13.17" compile scripted
   - script: sbt compile scripted
 
 sudo: false
 
 jdk:
- - oraclejdk8
+ - openjdk8
