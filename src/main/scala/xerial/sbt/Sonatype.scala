@@ -86,16 +86,16 @@ object Sonatype extends AutoPlugin {
       val sonatypeRepo = "https://oss.sonatype.org/"
       val profileM     = sonatypeStagingRepositoryProfile.?.value
 
-      if (isSnapshot.value) {
+      val staged = profileM.map { stagingRepoProfile =>
+        "releases" at sonatypeRepo +
+          "service/local/staging/deployByRepositoryId/" +
+          stagingRepoProfile.repositoryId
+      }
+      staged.getOrElse(if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
       } else {
-        val staged = profileM.map { stagingRepoProfile =>
-          "releases" at sonatypeRepo +
-            "service/local/staging/deployByRepositoryId/" +
-            stagingRepoProfile.repositoryId
-        }
-        staged.getOrElse(Opts.resolver.sonatypeStaging)
-      }
+        Opts.resolver.sonatypeStaging
+      })
     },
     commands ++= Seq(
       sonatypeList,
