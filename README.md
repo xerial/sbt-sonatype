@@ -153,6 +153,8 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
     clear `publishTo` if it was set by __sonatypeOpen__.
   * The email notification sent by the repository includes both the description
     (if created with __sonatypeOpen__) and the staging repository ID.
+* __sonatypeDropAll__
+   * Drop all staging repositories.
 * __sonatypeRelease__ (repositoryId)?
   * Close (if needed) and promote a staging repository and set `sonatypeStagingRepositoryProfile` and
     clear `publishTo` if it was set by __sonatypeOpen__.

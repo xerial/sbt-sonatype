@@ -103,6 +103,7 @@ object Sonatype extends AutoPlugin {
       sonatypeClose,
       sonatypePromote,
       sonatypeDrop,
+      sonatypeDropAll,
       sonatypeRelease,
       sonatypeReleaseAll,
       sonatypeLog,
@@ -217,7 +218,7 @@ object Sonatype extends AutoPlugin {
       val path      = "/staging/deployByRepositoryId/" + repo.repositoryId
       val extracted = Project.extract(state)
 
-      // accumulate changes for settings for current project and all aggregates 
+      // accumulate changes for settings for current project and all aggregates
       val newSettings : Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
         Seq(
           ref / sonatypeStagingRepositoryProfile := repo,
@@ -291,6 +292,16 @@ object Sonatype extends AutoPlugin {
         _ = rest.closeAndPromote(repo)
       } ()
       state
+    }
+
+    val sonatypeDropAll: Command = commandWithSonatypeProfile("sonatypeDropAll", "Drop all staging repositories") {
+      (state, profileName) =>
+        val rest = getNexusRestService(state, profileName)
+        for {
+          repo <- rest.stagingRepositoryProfiles
+          _ = rest.dropStage(repo)
+        }()
+        state
     }
 
     val sonatypeLog: Command = Command.command("sonatypeLog", "Show repository activities", "Show staging activity logs at Sonatype") { state =>
