@@ -37,8 +37,8 @@ class NexusRESTService(
     val repos = command match {
       case Close           => openRepositories
       case Promote         => closedRepositories
-      case Drop            => stagingRepositoryProfiles
-      case CloseAndPromote => stagingRepositoryProfiles
+      case Drop            => stagingRepositoryProfiles()
+      case CloseAndPromote => stagingRepositoryProfiles()
     }
     if (repos.isEmpty) {
       if (stagingProfiles.isEmpty) {
@@ -69,8 +69,8 @@ class NexusRESTService(
     }
   }
 
-  def openRepositories   = stagingRepositoryProfiles.filter(_.isOpen).sortBy(_.repositoryId)
-  def closedRepositories = stagingRepositoryProfiles.filter(_.isClosed).sortBy(_.repositoryId)
+  def openRepositories   = stagingRepositoryProfiles().filter(_.isOpen).sortBy(_.repositoryId)
+  def closedRepositories = stagingRepositoryProfiles().filter(_.isClosed).sortBy(_.repositoryId)
 
   private def repoBase(url: String) = if (url.endsWith("/")) url.dropRight(1) else url
   private val repo = {
@@ -161,7 +161,7 @@ class NexusRESTService(
     } finally client.getConnectionManager.shutdown()
   }
 
-  def stagingRepositoryProfiles = {
+  def stagingRepositoryProfiles(warnIfMissing:Boolean = true) = {
     log.info("Reading staging repository profiles...")
     Get("/staging/profile_repositories") { response =>
       val profileRepositoriesXML = XML.load(response.getEntity.getContent)
@@ -175,7 +175,7 @@ class NexusRESTService(
         )
       }
       val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
-      if (myProfiles.isEmpty) {
+      if (myProfiles.isEmpty && warnIfMissing) {
         log.warn(s"No staging repository is found. Do publishSigned first.")
       }
       myProfiles
@@ -408,7 +408,7 @@ class NexusRESTService(
   }
 
   def activities: Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
-    for (r <- stagingRepositoryProfiles) yield r -> activitiesOf(r)
+    for (r <- stagingRepositoryProfiles()) yield r -> activitiesOf(r)
   }
 
   def activitiesOf(r: StagingRepositoryProfile): Seq[StagingActivity] = {
