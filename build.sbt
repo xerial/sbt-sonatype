@@ -41,11 +41,11 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    releaseStepCommandAndRemaining(s"sonatypePrepare 'sbt-sonatype ${version.value}'"),
-    releaseStepCommandAndRemaining("publishSigned"),
+    releaseStepTask(sonatypePrepare),
+    releaseStepCommandAndRemaining("^ publishSigned"),
     setNextVersion,
     commitNextVersion,
-    releaseStepCommand("sonatypeRelease"),
+    releaseStepInputTask(sonatypeRelease),
     pushChanges
   )
 )
