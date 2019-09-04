@@ -161,9 +161,35 @@ class NexusRESTService(
     } finally client.getConnectionManager.shutdown()
   }
 
-  def stagingRepositoryProfiles(warnIfMissing:Boolean = true) = {
+  def openOrCreate(descriptionKey: String): StagingRepositoryProfile = {
+    // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
+    def create = createStage(descriptionKey)
+
+    // Find the already opened profile or create a new one
+    findStagingRepositoryProfileWithKey(descriptionKey)
+      .getOrElse(createStage(descriptionKey))
+  }
+
+  def dropIfExistsByKey(descriptionKey: String): Unit = {
+    // Drop the staging repository if exists
+    findStagingRepositoryProfileWithKey(descriptionKey)
+      .map { repo =>
+        log.info(s"Found a staging repository for ${descriptionKey}")
+        dropStage(repo)
+      }
+      .getOrElse {
+        log.info(s"No staging repository for ${descriptionKey} is found")
+      }
+  }
+
+  def findStagingRepositoryProfileWithKey(descriptionKey: String): Option[StagingRepositoryProfile] = {
+    stagingRepositoryProfiles(warnIfMissing = false).find(_.description == descriptionKey)
+  }
+
+  def stagingRepositoryProfiles(warnIfMissing: Boolean = true) = {
+    val profileId = currentProfile.profileId
     log.info("Reading staging repository profiles...")
-    Get("/staging/profile_repositories") { response =>
+    Get(s"/staging/profile_repositories/${profileId}") { response =>
       val profileRepositoriesXML = XML.load(response.getEntity.getContent)
       val repositoryProfiles = for (p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
         StagingRepositoryProfile(
@@ -200,7 +226,7 @@ class NexusRESTService(
   lazy val currentProfile = {
     val profiles = stagingProfiles
     if (profiles.isEmpty) {
-      throw new IllegalArgumentException(s"Profile ${profileName} is not found")
+      throw new IllegalArgumentException(s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt")
     }
     profiles.head
   }
@@ -247,7 +273,8 @@ class NexusRESTService(
 
   def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
     val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
-    log.info(s"Creating a staging repository in profile ${currentProfile.profileName} with a description key: ${description}")
+    log.info(
+      s"Creating a staging repository in profile ${currentProfile.profileName} with a description key: ${description}")
     var repo: StagingRepositoryProfile = null
     val ret = Post(
       postURL,
