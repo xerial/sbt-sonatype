@@ -16,7 +16,7 @@
 
 import ReleaseTransformations._
 
-lazy val buildSettings = Seq(
+lazy val buildSettings: Seq[Setting[_]] = Seq(
   organization := "org.xerial.sbt",
   organizationName := "Xerial project",
   organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -29,7 +29,7 @@ lazy val buildSettings = Seq(
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
   },
-  crossSbtVersions := Vector("1.2.7"),
+  crossSbtVersions := Vector("1.2.8"),
   releaseCrossBuild := true,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -49,15 +49,20 @@ lazy val buildSettings = Seq(
   )
 )
 
+val AIRFRAME_VERSION = "19.9.2"
+
 // Project modules
-lazy val sbtSonatype = Project(
-  id = "sbt-sonatype",
-  base = file(".")
-).enablePlugins(ScriptedPlugin)
-  .settings(buildSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.apache.httpcomponents" % "httpclient" % "4.2.6",
-      "org.scalatest"             %% "scalatest" % "3.0.1" % "test"
+lazy val sbtSonatype =
+  project
+    .withId("sbt-sonatype")
+    .in(file("."))
+    .enablePlugins(ScriptedPlugin)
+    .settings(
+      buildSettings,
+      testFrameworks += new TestFramework("wvlet.airspec.Framework"),
+      libraryDependencies ++= Seq(
+        "org.apache.httpcomponents" % "httpclient"             % "4.2.6",
+        "org.wvlet.airframe"        %% "airframe-http-finagle" % AIRFRAME_VERSION,
+        "org.wvlet.airframe"        %% "airspec"               % AIRFRAME_VERSION % "test"
+      )
     )
-  )
