@@ -60,7 +60,8 @@ class NexusRESTService(
     arg.map(findSpecifiedInArg).getOrElse {
       if (repos.size > 1) {
         log.error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
-        log.error(s"Specify one of the repository ids in the command line")
+        log.error(
+          s"Specify one of the repository ids in the command line or run sonatypeDropAll to cleanup repositories")
         throw new IllegalStateException("Found multiple staging repositories")
       } else {
         repos.head

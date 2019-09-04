@@ -155,7 +155,7 @@ object Sonatype extends AutoPlugin {
       val repo1  = rest.findTargetRepository(Close, repoID)
       val repo2  = rest.closeStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypePromote := {
@@ -165,7 +165,7 @@ object Sonatype extends AutoPlugin {
       val repo1  = rest.findTargetRepository(Promote, repoID)
       val repo2  = rest.promoteStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypeDrop := {
@@ -175,7 +175,7 @@ object Sonatype extends AutoPlugin {
       val repo1  = rest.findTargetRepository(Drop, repoID)
       val repo2  = rest.dropStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypeRelease := {
@@ -268,7 +268,7 @@ object Sonatype extends AutoPlugin {
       publishTo := Some(sonatypeDefaultResolver.value)
     )
 
-    val next = extracted.appendWithSession(newSettings, state)
+    val next = extracted.appendWithoutSession(newSettings, state)
     next
   }
 
