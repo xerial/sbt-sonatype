@@ -58,12 +58,13 @@ object Sonatype extends AutoPlugin {
         (for {
           username <- env("SONATYPE_USERNAME")
           password <- env("SONATYPE_PASSWORD")
-        } yield Credentials(
-          "Sonatype Nexus Repository Manager",
-          sonatypeCredentialHost.value,
-          username,
-          password
-        )).toSeq
+        } yield
+          Credentials(
+            "Sonatype Nexus Repository Manager",
+            sonatypeCredentialHost.value,
+            username,
+            password
+          )).toSeq
       } else Seq.empty
     },
     homepage := homepage.value.orElse(sonatypeProjectHosting.value.map(h => url(h.homepage))),
@@ -91,6 +92,7 @@ object Sonatype extends AutoPlugin {
     },
     commands ++= Seq(
       sonatypeList,
+      sonatypeClean,
       sonatypeOpen,
       sonatypeClose,
       sonatypePromote,
@@ -208,6 +210,8 @@ object Sonatype extends AutoPlugin {
       result.toSeq
     }
 
+    private def descriptionKeyOf(profileDescription: String) = s"[sbt-sonatype] ${profileDescription}"
+
     val sonatypeOpen: Command =
       commandWithSonatypeProfileDescription("sonatypeOpen", "Create a staging repository and set publishTo") {
         (state, profileNameDescription) =>
@@ -217,16 +221,17 @@ object Sonatype extends AutoPlugin {
             case Right((n, d)) =>
               (Some(n), d)
           }
-          val rest      = getNexusRestService(state, profileName)
+          val rest = getNexusRestService(state, profileName)
           val repo = {
-            val descriptionKey = s"[sbt-sonatype] ${profileDescription}"
+            val descriptionKey = descriptionKeyOf(profileDescription)
             // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
             def create = rest.createStage(descriptionKey)
 
             // Find the already opened profile or create a new one
-            rest.stagingRepositoryProfiles
-                    .find(_.description == descriptionKey)
-                    .getOrElse(create)
+            rest
+              .stagingRepositoryProfiles(warnIfMissing = false)
+              .find(_.description == descriptionKey)
+              .getOrElse(create)
           }
           val extracted = Project.extract(state)
 
@@ -244,6 +249,32 @@ object Sonatype extends AutoPlugin {
           val next = extracted.appendWithSession(newSettings, state)
           next
       }
+
+    val sonatypeClean: Command = {
+      commandWithSonatypeProfileDescription("sonatypeClean", "Clean a staging repository using a given description") {
+        (state, profileNameDescription) =>
+          val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
+            case Left(d) =>
+              (None, d)
+            case Right((n, d)) =>
+              (Some(n), d)
+          }
+          val rest = getNexusRestService(state, profileName)
+
+          val descriptionKey = descriptionKeyOf(profileDescription)
+          rest
+            .stagingRepositoryProfiles(warnIfMissing = false)
+            .find(_.description == descriptionKey)
+            .map { repo =>
+              state.log.info(s"Found a staging repository for ${descriptionKey}")
+              rest.dropStage(repo)
+            }
+            .getOrElse {
+              state.log.info(s"No staging repository for ${descriptionKey} is found")
+            }
+          state
+      }
+    }
 
     val sonatypeClose: Command =
       commandWithRepositoryId("sonatypeClose", "Close a stage and clear publishTo if it was set by sonatypeOpen") {
@@ -306,7 +337,7 @@ object Sonatype extends AutoPlugin {
       commandWithSonatypeProfile("sonatypeReleaseAll", "Publish all staging repositories to Maven central") {
         (state, profileName) =>
           val rest = getNexusRestService(state, profileName)
-          val tasks = rest.stagingRepositoryProfiles.map { repo =>
+          val tasks = rest.stagingRepositoryProfiles().map { repo =>
             Future.apply(rest.closeAndPromote(repo))
           }
           val merged = Future.sequence(tasks)
@@ -317,7 +348,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeDropAll: Command = commandWithSonatypeProfile("sonatypeDropAll", "Drop all staging repositories") {
       (state, profileName) =>
         val rest = getNexusRestService(state, profileName)
-        val dropTasks = rest.stagingRepositoryProfiles.map { repo =>
+        val dropTasks = rest.stagingRepositoryProfiles().map { repo =>
           Future.apply(rest.dropStage(repo))
         }
         val merged = Future.sequence(dropTasks)
@@ -343,7 +374,7 @@ object Sonatype extends AutoPlugin {
 
     val sonatypeStagingRepositoryProfiles = Command.command("sonatypeStagingRepositoryProfiles") { state =>
       val rest  = getNexusRestService(state)
-      val repos = rest.stagingRepositoryProfiles
+      val repos = rest.stagingRepositoryProfiles()
       val log   = state.log
       if (repos.isEmpty)
         log.warn(s"No staging repository is found for ${rest.profileName}")
