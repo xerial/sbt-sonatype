@@ -28,13 +28,13 @@ object Sonatype extends AutoPlugin {
     val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
-    val sonatypeList = taskKey[Unit]("list staging repositories")
     val sonatypePrepare = taskKey[StagingRepositoryProfile](
-      "Clean (if exists) and create a staging repository using a given description, then update publishTo")
+      "Clean (if exists) and create a staging repository for releaing the current version, then update publishTo")
     val sonatypeClean =
-      taskKey[Option[StagingRepositoryProfile]]("Clean a staging repository using a given description")
+      taskKey[Option[StagingRepositoryProfile]]("Clean a staging repository for the current version if it exists")
     val sonatypeOpen =
-      taskKey[StagingRepositoryProfile]("Open (or create if not exists) to a staging repository, then update publishTo")
+      taskKey[StagingRepositoryProfile](
+        "Open (or create if not exists) to a staging repository for the current version, then update publishTo")
     val sonatypeClose =
       inputKey[StagingRepositoryProfile]("Close a stage and clear publishTo if it was set by sonatypeOpen")
     val sonatypePromote =
@@ -45,6 +45,15 @@ object Sonatype extends AutoPlugin {
       inputKey[StagingRepositoryProfile]("Publish with sonatypeClose and sonatypePromote")
     val sonatypeService     = taskKey[NexusRESTService]("Sonatype REST API client")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
+
+    val sonatypeReleaseAll =
+      inputKey[Seq[StagingRepositoryProfile]]("Publish all staging repositories to Maven central")
+    val sonatypeDropAll = inputKey[Seq[StagingRepositoryProfile]]("Drop all staging repositories")
+    val sonatypeLog     = taskKey[Unit]("Show staging activity logs at Sonatype")
+
+    val sonatypeStagingRepositoryProfiles =
+      taskKey[Seq[StagingRepositoryProfile]]("show the list of staging repository profiles")
+    val sonatypeStagingProfiles = taskKey[Seq[StagingProfile]]("show the list of staging profiles")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -54,7 +63,6 @@ object Sonatype extends AutoPlugin {
   override def trigger         = noTrigger
   override def projectSettings = sonatypeSettings
 
-  import SonatypeCommand._
   import autoImport._
   import complete.DefaultParsers._
 
@@ -114,29 +122,16 @@ object Sonatype extends AutoPlugin {
     sonatypeService := {
       getNexusRestService(state.value, Some(sonatypeProfileName.value))
     },
-    sonatypeList := {
-      val rest     = sonatypeService.value
-      val profiles = rest.stagingProfiles
-      val s        = state.value
-      val log      = s.log
-      if (profiles.isEmpty) {
-        log.warn(s"No staging profile is found for ${rest.profileName}")
-        s.fail
-      } else {
-        log.info(s"Staging profiles (profileName:${rest.profileName}):")
-        log.info(profiles.mkString("\n"))
-      }
-    },
     sonatypePrepare := {
       val descriptionKey = sonatypeSessionName.value
       state.value.log.info(s"Preparing a new staging repository for ${descriptionKey}")
-      val rest           = sonatypeService.value
+      val rest = sonatypeService.value
       // Drop a previous staging repository if exists
       val dropTask = Future.apply(rest.dropIfExistsByKey(descriptionKey))
       // Create a new one
       val createTask = Future.apply(rest.createStage(descriptionKey))
       // Run two tasks in parallel
-      val merged = dropTask.zip(createTask)
+      val merged                     = dropTask.zip(createTask)
       val (droppedRepo, createdRepo) = Await.result(merged, Duration.Inf)
       updatePublishTo(state.value, createdRepo)
       createdRepo
@@ -154,52 +149,109 @@ object Sonatype extends AutoPlugin {
       repo
     },
     sonatypeClose := {
-      val args           = spaceDelimited("<arg>").parsed.headOption
+      val args   = repositoryIdParser.parsed
       val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
-      val rest           = sonatypeService.value
-      val repo1          = rest.findTargetRepository(Close, repoID)
-      val repo2          = rest.closeStage(repo1)
-      val s              = state.value
+      val rest   = sonatypeService.value
+      val repo1  = rest.findTargetRepository(Close, repoID)
+      val repo2  = rest.closeStage(repo1)
+      val s      = state.value
       Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypePromote := {
-      val args           = spaceDelimited("<arg>").parsed.headOption
+      val args   = repositoryIdParser.parsed
       val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
-      val rest  = sonatypeService.value
-      val repo1 = rest.findTargetRepository(Promote, repoID)
-      val repo2 = rest.promoteStage(repo1)
-      val s     = state.value
+      val rest   = sonatypeService.value
+      val repo1  = rest.findTargetRepository(Promote, repoID)
+      val repo2  = rest.promoteStage(repo1)
+      val s      = state.value
       Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypeDrop := {
-      val args           = spaceDelimited("<arg>").parsed.headOption
+      val args   = repositoryIdParser.parsed
       val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
-      val rest  = sonatypeService.value
-      val repo1 = rest.findTargetRepository(Drop, repoID)
-      val repo2 = rest.dropStage(repo1)
-      val s     = state.value
+      val rest   = sonatypeService.value
+      val repo1  = rest.findTargetRepository(Drop, repoID)
+      val repo2  = rest.dropStage(repo1)
+      val s      = state.value
       Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
     sonatypeRelease := {
-      val args           = spaceDelimited("<arg>").parsed.headOption
+      val args   = repositoryIdParser.parsed
       val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
-      val rest  = sonatypeService.value
-      val repo1 = rest.findTargetRepository(CloseAndPromote, repoID)
-      val repo2 = rest.closeAndPromote(repo1)
-      val s     = state.value
+      val rest   = sonatypeService.value
+      val repo1  = rest.findTargetRepository(CloseAndPromote, repoID)
+      val repo2  = rest.closeAndPromote(repo1)
+      val s      = state.value
       Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
       repo2
     },
-    commands ++= Seq(
-      sonatypeDropAll,
-      sonatypeReleaseAll,
-      sonatypeLog,
-      sonatypeStagingRepositoryProfiles,
-      sonatypeStagingProfiles
-    )
+    sonatypeReleaseAll := {
+      val rest = sonatypeProfileParser.parsed match {
+        case Some(profileName) =>
+          getNexusRestService(state.value, Some(profileName))
+        case None =>
+          sonatypeService.value
+      }
+
+      val tasks = rest.stagingRepositoryProfiles().map { repo =>
+        Future.apply(rest.closeAndPromote(repo))
+      }
+      val merged = Future.sequence(tasks)
+      Await.result(merged, Duration.Inf)
+    },
+    sonatypeDropAll := {
+      val rest = sonatypeProfileParser.parsed match {
+        case Some(profileName) =>
+          getNexusRestService(state.value, Some(profileName))
+        case None =>
+          sonatypeService.value
+      }
+      val dropTasks = rest.stagingRepositoryProfiles().map { repo =>
+        Future.apply(rest.dropStage(repo))
+      }
+      val merged = Future.sequence(dropTasks)
+      Await.result(merged, Duration.Inf)
+    },
+    sonatypeLog := {
+      val rest  = sonatypeService.value
+      val alist = rest.activities
+      val log   = state.value.log
+      if (alist.isEmpty)
+        log.warn("No staging log is found")
+      for ((repo, activities) <- alist) {
+        log.info(s"Staging activities of $repo:")
+        for (a <- activities) {
+          a.log(log)
+        }
+      }
+    },
+    sonatypeStagingRepositoryProfiles := {
+      val rest  = sonatypeService.value
+      val repos = rest.stagingRepositoryProfiles()
+      val log   = state.value.log
+      if (repos.isEmpty)
+        log.warn(s"No staging repository is found for ${rest.profileName}")
+      else {
+        log.info(s"Staging repository profiles (sonatypeProfileName:${rest.profileName}):")
+        log.info(repos.mkString("\n"))
+      }
+      repos
+    },
+    sonatypeStagingProfiles := {
+      val rest     = sonatypeService.value
+      val profiles = rest.stagingProfiles
+      val log      = state.value.log
+      if (profiles.isEmpty)
+        log.warn(s"No staging profile is found for ${rest.profileName}")
+      else {
+        log.info(s"Staging profiles (sonatypeProfileName:${rest.profileName}):")
+        log.info(profiles.mkString("\n"))
+      }
+      profiles
+    }
   )
 
   private def updatePublishTo(state: State, repo: StagingRepositoryProfile): State = {
@@ -253,126 +305,31 @@ object Sonatype extends AutoPlugin {
   @deprecated("Use GitLabHosting (capital L) instead", "2.2")
   val GitlabHosting = GitLabHosting
 
-  object SonatypeCommand {
-    import complete.DefaultParsers._
+  private val repositoryIdParser: complete.Parser[Option[String]] =
+    (Space ~> token(StringBasic, "(sonatype staging repository id)")).?.!!!(
+      "invalid input. please input a repository id")
 
+  private val sonatypeProfileParser: complete.Parser[Option[String]] =
+    (Space ~> token(StringBasic, "(sonatypeProfileName)")).?.!!!(
+      "invalid input. please input sonatypeProfileName (e.g., org.xerial)"
+    )
 
-
-    /**
-      * Parsing repository id argument
-      */
-    private def getCredentials(extracted: Extracted, state: State) = {
-      val (nextState, credential) = extracted.runTask(credentials, state)
-      credential
-    }
-
-    def getNexusRestService(state: State, profileName: Option[String] = None) = {
-      val extracted = Project.extract(state)
-      new NexusRESTService(
-        state.log,
-        extracted.get(sonatypeRepository),
-        profileName.getOrElse(extracted.get(sonatypeProfileName)),
-        getCredentials(extracted, state),
-        extracted.get(sonatypeCredentialHost)
-      )
-    }
-
-    private val repositoryIdParser: complete.Parser[Option[String]] =
-      (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
-
-    private val sonatypeProfileParser: complete.Parser[Option[String]] =
-      (Space ~> token(StringBasic, "(sonatypeProfile)")).?.!!!(
-        "invalid input. please input sonatypeProfile (e.g., org.xerial)"
-      )
-
-    val sonatypeProfileDescriptionParser: complete.Parser[Either[String, (String, String)]] =
-      Space ~>
-        (token(StringBasic, "description") ||
-          (token(StringBasic <~ Space, "sonatypeProfile") ~ token(StringBasic, "description")))
-
-    private def commandWithRepositoryId(name: String, briefHelp: String) =
-      Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
-
-    private def commandWithSonatypeProfile(name: String, briefHelp: String) =
-      Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileParser)(_)
-
-    private def commandWithSonatypeProfileDescription(name: String, briefHelp: String) =
-      Command(name, (name, briefHelp), briefHelp)(_ => sonatypeProfileDescriptionParser)(_)
-
-    def getUpdatedPublishTo(profileName: String, current: Option[Option[Resolver]]): Seq[Setting[_]] = {
-      val result = for {
-        currentIfSet     <- current
-        currentPublishTo <- currentIfSet
-        if profileName == currentPublishTo.name
-        setting = publishTo := None
-      } yield setting
-      result.toSeq
-    }
-
-    val sonatypeReleaseAll: Command =
-      commandWithSonatypeProfile("sonatypeReleaseAll", "Publish all staging repositories to Maven central") {
-        (state, profileName) =>
-          val rest = getNexusRestService(state, profileName)
-          val tasks = rest.stagingRepositoryProfiles().map { repo =>
-            Future.apply(rest.closeAndPromote(repo))
-          }
-          val merged = Future.sequence(tasks)
-          Await.result(merged, Duration.Inf)
-          state
-      }
-
-    val sonatypeDropAll: Command = commandWithSonatypeProfile("sonatypeDropAll", "Drop all staging repositories") {
-      (state, profileName) =>
-        val rest = getNexusRestService(state, profileName)
-        val dropTasks = rest.stagingRepositoryProfiles().map { repo =>
-          Future.apply(rest.dropStage(repo))
-        }
-        val merged = Future.sequence(dropTasks)
-        Await.result(merged, Duration.Inf)
-        state
-    }
-
-    val sonatypeLog: Command =
-      Command.command("sonatypeLog", "Show repository activities", "Show staging activity logs at Sonatype") { state =>
-        val rest  = getNexusRestService(state)
-        val alist = rest.activities
-        val log   = state.log
-        if (alist.isEmpty)
-          log.warn("No staging log is found")
-        for ((repo, activities) <- alist) {
-          log.info(s"Staging activities of $repo:")
-          for (a <- activities) {
-            a.log(log)
-          }
-        }
-        state
-      }
-
-    val sonatypeStagingRepositoryProfiles = Command.command("sonatypeStagingRepositoryProfiles") { state =>
-      val rest  = getNexusRestService(state)
-      val repos = rest.stagingRepositoryProfiles()
-      val log   = state.log
-      if (repos.isEmpty)
-        log.warn(s"No staging repository is found for ${rest.profileName}")
-      else {
-        log.info(s"Staging repository profiles (sonatypeProfileName:${rest.profileName}):")
-        log.info(repos.mkString("\n"))
-      }
-      state
-    }
-
-    val sonatypeStagingProfiles = Command.command("sonatypeStagingProfiles") { state =>
-      val rest     = getNexusRestService(state)
-      val profiles = rest.stagingProfiles
-      val log      = state.log
-      if (profiles.isEmpty)
-        log.warn(s"No staging profile is found for ${rest.profileName}")
-      else {
-        log.info(s"Staging profiles (sonatypeProfileName:${rest.profileName}):")
-        log.info(profiles.mkString("\n"))
-      }
-      state
-    }
+  /**
+    * Parsing repository id argument
+    */
+  private def getCredentials(extracted: Extracted, state: State) = {
+    val (nextState, credential) = extracted.runTask(credentials, state)
+    credential
   }
 
+  private def getNexusRestService(state: State, profileName: Option[String] = None) = {
+    val extracted = Project.extract(state)
+    new NexusRESTService(
+      state.log,
+      extracted.get(sonatypeRepository),
+      profileName.getOrElse(extracted.get(sonatypeProfileName)),
+      getCredentials(extracted, state),
+      extracted.get(sonatypeCredentialHost)
+    )
+  }
 }
