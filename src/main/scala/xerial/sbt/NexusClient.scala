@@ -187,9 +187,10 @@ class NexusRESTService(
   }
 
   def stagingRepositoryProfiles(warnIfMissing: Boolean = true) = {
-    val profileId = currentProfile.profileId
     log.info("Reading staging repository profiles...")
-    Get(s"/staging/profile_repositories/${profileId}") { response =>
+    // Note: using /stging/profile_repositories/(profile id) is preferred to reduce the response size,
+    // but Sonatype API is quite slow (as of Sep 2019) so using a single request was much better.
+    Get(s"/staging/profile_repositories") { response =>
       val profileRepositoriesXML = XML.load(response.getEntity.getContent)
       val repositoryProfiles = for (p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
         StagingRepositoryProfile(
