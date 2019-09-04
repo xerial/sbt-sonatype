@@ -9,7 +9,18 @@ import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.{HttpResponse, HttpStatus}
 import sbt.{Credentials, DirectCredentials, Logger}
-import xerial.sbt.NexusRESTService.{ActivityEvent, ActivityMonitor, Close, CloseAndPromote, CommandType, Drop, Promote, StagingActivity, StagingProfile, StagingRepositoryProfile}
+import xerial.sbt.NexusRESTService.{
+  ActivityEvent,
+  ActivityMonitor,
+  Close,
+  CloseAndPromote,
+  CommandType,
+  Drop,
+  Promote,
+  StagingActivity,
+  StagingProfile,
+  StagingRepositoryProfile
+}
 
 import scala.io.Source
 import scala.xml.{Utility, XML}
@@ -162,12 +173,15 @@ class NexusRESTService(
   def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
     // Find the already opened profile or create a new one
     findStagingRepositoryProfileWithKey(descriptionKey)
-            .map { repo =>
-              log.info(s"Found a staging repository ${repo}")
-              repo
-            }
+      .map { repo =>
+        log.info(s"Found a staging repository ${repo}")
+        repo
+      }
       // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
-      .getOrElse(createStage(descriptionKey))
+      .getOrElse {
+        log.info(s"No staging repository for ${descriptionKey} is found. Create a new one.")
+        createStage(descriptionKey)
+      }
   }
 
   def dropIfExistsByKey(descriptionKey: String): Option[StagingRepositoryProfile] = {
