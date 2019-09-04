@@ -247,7 +247,7 @@ class NexusRESTService(
 
   def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
     val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
-    log.info(s"Creating staging repository in profile: ${currentProfile.profileName}")
+    log.info(s"Creating a staging repository in profile ${currentProfile.profileName} with a description key: ${description}")
     var repo: StagingRepositoryProfile = null
     val ret = Post(
       postURL,
