@@ -28,6 +28,23 @@ object Sonatype extends AutoPlugin {
     val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
+    val sonatypeList = taskKey[Unit]("list staging repositories")
+    val sonatypePrepare = taskKey[StagingRepositoryProfile](
+      "Clean (if exists) and create a staging repository using a given description, then update publishTo")
+    val sonatypeClean =
+      taskKey[Option[StagingRepositoryProfile]]("Clean a staging repository using a given description")
+    val sonatypeOpen =
+      taskKey[StagingRepositoryProfile]("Open (or create if not exists) to a staging repository, then update publishTo")
+    val sonatypeClose =
+      inputKey[StagingRepositoryProfile]("Close a stage and clear publishTo if it was set by sonatypeOpen")
+    val sonatypePromote =
+      inputKey[StagingRepositoryProfile]("Promote a staging repository")
+    val sonatypeDrop =
+      inputKey[StagingRepositoryProfile]("Drop a staging repository")
+    val sonatypeRelease =
+      inputKey[StagingRepositoryProfile]("Publish with sonatypeClose and sonatypePromote")
+    val sonatypeService     = taskKey[NexusRESTService]("Sonatype REST API client")
+    val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -39,6 +56,7 @@ object Sonatype extends AutoPlugin {
 
   import SonatypeCommand._
   import autoImport._
+  import complete.DefaultParsers._
 
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
@@ -90,22 +108,111 @@ object Sonatype extends AutoPlugin {
         Opts.resolver.sonatypeStaging
       })
     },
+    sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
+    sonatypeService := {
+      getNexusRestService(state.value, Some(sonatypeProfileName.value))
+    },
+    sonatypeList := {
+      val rest     = sonatypeService.value
+      val profiles = rest.stagingProfiles
+      val s        = state.value
+      val log      = s.log
+      if (profiles.isEmpty) {
+        log.warn(s"No staging profile is found for ${rest.profileName}")
+        s.fail
+      } else {
+        log.info(s"Staging profiles (profileName:${rest.profileName}):")
+        log.info(profiles.mkString("\n"))
+      }
+    },
+    sonatypePrepare := {
+      val rest           = sonatypeService.value
+      val descriptionKey = sonatypeSessionName.value
+      // Drop a previous staging repository if exists
+      rest.dropIfExistsByKey(descriptionKey)
+      // Create a new one
+      val repo = rest.createStage(descriptionKey)
+      updatePublishTo(state.value, repo)
+      repo
+    },
+    sonatypeClean := {
+      val rest           = sonatypeService.value
+      val descriptionKey = sonatypeSessionName.value
+      rest.dropIfExistsByKey(descriptionKey)
+    },
+    sonatypeOpen := {
+      val rest = sonatypeService.value
+      // Re-open or create a staging repository
+      val repo = rest.openOrCreateByKey(sonatypeSessionName.value)
+      updatePublishTo(state.value, repo)
+      repo
+    },
+    sonatypeClose := {
+      val args           = spaceDelimited("<arg>").parsed.headOption
+      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val rest           = sonatypeService.value
+      val repo1          = rest.findTargetRepository(Close, repoID)
+      val repo2          = rest.closeStage(repo1)
+      val s              = state.value
+      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      repo2
+    },
+    sonatypePromote := {
+      val args           = spaceDelimited("<arg>").parsed.headOption
+      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val rest  = sonatypeService.value
+      val repo1 = rest.findTargetRepository(Promote, repoID)
+      val repo2 = rest.promoteStage(repo1)
+      val s     = state.value
+      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      repo2
+    },
+    sonatypeDrop := {
+      val args           = spaceDelimited("<arg>").parsed.headOption
+      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val rest  = sonatypeService.value
+      val repo1 = rest.findTargetRepository(Drop, repoID)
+      val repo2 = rest.dropStage(repo1)
+      val s     = state.value
+      Project.extract(s).appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      repo2
+    },
+    sonatypeRelease := {
+      val args           = spaceDelimited("<arg>").parsed.headOption
+      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val rest  = sonatypeService.value
+      val repo1 = rest.findTargetRepository(CloseAndPromote, repoID)
+      val repo2 = rest.closeAndPromote(repo1)
+      val s     = state.value
+      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      repo2
+    },
     commands ++= Seq(
-      sonatypeList,
-      sonatypePrepare,
-      sonatypeClean,
-      sonatypeOpen,
-      sonatypeClose,
-      sonatypePromote,
-      sonatypeDrop,
       sonatypeDropAll,
-      sonatypeRelease,
       sonatypeReleaseAll,
       sonatypeLog,
       sonatypeStagingRepositoryProfiles,
       sonatypeStagingProfiles
     )
   )
+
+  private def updatePublishTo(state: State, repo: StagingRepositoryProfile): State = {
+    state.log.info(s"Updating publishTo settings ...")
+    val extracted = Project.extract(state)
+    // accumulate changes for settings for current project and all aggregates
+    val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
+      Seq(
+        ref / sonatypeStagingRepositoryProfile := repo,
+        ref / publishTo := Some(sonatypeDefaultResolver.value)
+      )
+    } ++ Seq(
+      sonatypeStagingRepositoryProfile := repo,
+      publishTo := Some(sonatypeDefaultResolver.value)
+    )
+
+    val next = extracted.appendWithSession(newSettings, state)
+    next
+  }
 
   case class ProjectHosting(
       domain: String,
@@ -153,7 +260,7 @@ object Sonatype extends AutoPlugin {
       credential
     }
 
-    private def getNexusRestService(state: State, profileName: Option[String] = None) = {
+    def getNexusRestService(state: State, profileName: Option[String] = None) = {
       val extracted = Project.extract(state)
       new NexusRESTService(
         state.log,
@@ -164,21 +271,6 @@ object Sonatype extends AutoPlugin {
       )
     }
 
-    val sonatypeList: Command =
-      Command.command("sonatypeList", "List staging repositories", "List published repository IDs") { state =>
-        val rest     = getNexusRestService(state)
-        val profiles = rest.stagingProfiles
-        val log      = state.log
-        if (profiles.isEmpty) {
-          log.warn(s"No staging profile is found for ${rest.profileName}")
-          state.fail
-        } else {
-          log.info(s"Staging profiles (profileName:${rest.profileName}):")
-          log.info(profiles.mkString("\n"))
-          state
-        }
-      }
-
     private val repositoryIdParser: complete.Parser[Option[String]] =
       (Space ~> token(StringBasic, "(repositoryId)")).?.!!!("invalid input. please input repository name")
 
@@ -187,7 +279,7 @@ object Sonatype extends AutoPlugin {
         "invalid input. please input sonatypeProfile (e.g., org.xerial)"
       )
 
-    private val sonatypeProfileDescriptionParser: complete.Parser[Either[String, (String, String)]] =
+    val sonatypeProfileDescriptionParser: complete.Parser[Either[String, (String, String)]] =
       Space ~>
         (token(StringBasic, "description") ||
           (token(StringBasic <~ Space, "sonatypeProfile") ~ token(StringBasic, "description")))
@@ -210,138 +302,6 @@ object Sonatype extends AutoPlugin {
       } yield setting
       result.toSeq
     }
-
-    private def descriptionKeyOf(profileDescription: String) = s"[sbt-sonatype] ${profileDescription}"
-
-    private def updatePublishTo(state: State, repo: StagingRepositoryProfile): State = {
-      state.log.info(s"Updating publishTo settings ...")
-      val extracted = Project.extract(state)
-      // accumulate changes for settings for current project and all aggregates
-      val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
-        Seq(
-          ref / sonatypeStagingRepositoryProfile := repo,
-          ref / publishTo := Some(sonatypeDefaultResolver.value)
-        )
-      } ++ Seq(
-        sonatypeStagingRepositoryProfile := repo,
-        publishTo := Some(sonatypeDefaultResolver.value)
-      )
-
-      val next = extracted.appendWithSession(newSettings, state)
-      next
-    }
-
-    val sonatypePrepare: Command = {
-      commandWithSonatypeProfileDescription(
-        "sonatypePrepare",
-        "Clean (if exists) and create a staging repository using a given description, then update publishTo") {
-        (state, profileNameDescription) =>
-          val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
-            case Left(d) =>
-              (None, d)
-            case Right((n, d)) =>
-              (Some(n), d)
-          }
-          val rest           = getNexusRestService(state, profileName)
-          val descriptionKey = descriptionKeyOf(profileDescription)
-
-          // Drop a previous one
-          rest.dropIfExistsByKey(descriptionKey)
-          // Create a new one
-          val repo = rest.createStage(descriptionKey)
-          updatePublishTo(state, repo)
-      }
-    }
-
-    val sonatypeOpen: Command =
-      commandWithSonatypeProfileDescription(
-        "sonatypeOpen",
-        "Open (or create if not exists) to a staging repository, then update publishTo") { (state, profileNameDescription) =>
-        val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
-          case Left(d) =>
-            (None, d)
-          case Right((n, d)) =>
-            (Some(n), d)
-        }
-        val rest = getNexusRestService(state, profileName)
-
-        // Re-open or create a staging repository
-        val repo = rest.openOrCreate(descriptionKeyOf(profileDescription))
-        updatePublishTo(state, repo)
-      }
-
-    val sonatypeClean: Command = {
-      commandWithSonatypeProfileDescription("sonatypeClean", "Clean a staging repository using a given description") {
-        (state, profileNameDescription) =>
-          val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
-            case Left(d) =>
-              (None, d)
-            case Right((n, d)) =>
-              (Some(n), d)
-          }
-          val rest           = getNexusRestService(state, profileName)
-          val descriptionKey = descriptionKeyOf(profileDescription)
-          rest.dropIfExistsByKey(descriptionKey)
-          state
-      }
-    }
-
-    val sonatypeClose: Command =
-      commandWithRepositoryId("sonatypeClose", "Close a stage and clear publishTo if it was set by sonatypeOpen") {
-        (state, parsed) =>
-          val rest      = getNexusRestService(state)
-          val extracted = Project.extract(state)
-          val currentRepoID = for {
-            repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
-          } yield repo.repositoryId
-          val repoID = parsed.orElse(currentRepoID)
-          val repo1  = rest.findTargetRepository(Close, repoID)
-          val repo2  = rest.closeStage(repo1)
-          val next   = extracted.appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), state)
-          next
-      }
-
-    val sonatypePromote: Command = commandWithRepositoryId("sonatypePromote", "Promote a staged repository") {
-      (state, parsed) =>
-        val rest      = getNexusRestService(state)
-        val extracted = Project.extract(state)
-        val currentRepoID = for {
-          repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
-        } yield repo.repositoryId
-        val repoID = parsed.orElse(currentRepoID)
-        val repo1  = rest.findTargetRepository(Promote, repoID)
-        val repo2  = rest.promoteStage(repo1)
-        val next   = extracted.appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), state)
-        next
-    }
-
-    val sonatypeDrop: Command = commandWithRepositoryId("sonatypeDrop", "Drop a staging repository") {
-      (state, parsed) =>
-        val rest      = getNexusRestService(state)
-        val extracted = Project.extract(state)
-        val currentRepoID = for {
-          repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
-        } yield repo.repositoryId
-        val repoID = parsed.orElse(currentRepoID)
-        val repo1  = rest.findTargetRepository(Drop, repoID)
-        val repo2  = rest.dropStage(repo1)
-        val next   = extracted.appendWithSession(Seq(sonatypeStagingRepositoryProfile := repo2), state)
-        next
-    }
-
-    val sonatypeRelease: Command =
-      commandWithRepositoryId("sonatypeRelease", "Publish with sonatypeClose and sonatypePromote") { (state, parsed) =>
-        val rest      = getNexusRestService(state)
-        val extracted = Project.extract(state)
-        val currentRepoID = for {
-          repo <- extracted.getOpt(sonatypeStagingRepositoryProfile)
-        } yield repo.repositoryId
-        val repoID = parsed.orElse(currentRepoID)
-        val repo1  = rest.findTargetRepository(CloseAndPromote, repoID)
-        val repo2  = rest.closeAndPromote(repo1)
-        val next   = extracted.appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), state)
-        next
-      }
 
     val sonatypeReleaseAll: Command =
       commandWithSonatypeProfile("sonatypeReleaseAll", "Publish all staging repositories to Maven central") {
