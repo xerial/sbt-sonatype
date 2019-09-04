@@ -218,8 +218,16 @@ object Sonatype extends AutoPlugin {
               (Some(n), d)
           }
           val rest      = getNexusRestService(state, profileName)
-          val repo      = rest.createStage(profileDescription)
-          val path      = "/staging/deployByRepositoryId/" + repo.repositoryId
+          val repo = {
+            val descriptionKey = s"[sbt-sonatype] ${profileDescription}"
+            // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
+            def create = rest.createStage(descriptionKey)
+
+            // Find the already opened profile or create a new one
+            rest.stagingRepositoryProfiles
+                    .find(_.description == descriptionKey)
+                    .getOrElse(create)
+          }
           val extracted = Project.extract(state)
 
           // accumulate changes for settings for current project and all aggregates
