@@ -159,7 +159,7 @@ class NexusRESTService(
     } finally client.getConnectionManager.shutdown()
   }
 
-  def openOrCreate(descriptionKey: String): StagingRepositoryProfile = {
+  def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
     // Find the already opened profile or create a new one
     findStagingRepositoryProfileWithKey(descriptionKey)
             .map { repo =>
