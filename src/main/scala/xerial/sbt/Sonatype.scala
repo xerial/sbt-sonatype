@@ -20,12 +20,12 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 object Sonatype extends AutoPlugin {
 
   trait SonatypeKeys {
-    val sonatypeRepository               = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
-    val sonatypeProfileName              = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
-    val sonatypeCredentialHost           = settingKey[String]("Credential host. Default is oss.sonatype.org")
-    val sonatypeDefaultResolver          = settingKey[Resolver]("Default Sonatype Resolver")
-    val sonatypePublishTo                = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
-    val sonatypeStagingRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
+    val sonatypeRepository           = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
+    val sonatypeProfileName          = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
+    val sonatypeCredentialHost       = settingKey[String]("Credential host. Default is oss.sonatype.org")
+    val sonatypeDefaultResolver      = settingKey[Resolver]("Default Sonatype Resolver")
+    val sonatypePublishTo            = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
+    val sonatypeTargetStagingProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypePrepare = taskKey[StagingRepositoryProfile](
@@ -105,7 +105,7 @@ object Sonatype extends AutoPlugin {
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeDefaultResolver := {
       val sonatypeRepo = "https://oss.sonatype.org/"
-      val profileM     = sonatypeStagingRepositoryProfile.?.value
+      val profileM     = sonatypeTargetStagingProfile.?.value
 
       val staged = profileM.map { stagingRepoProfile =>
         "releases" at sonatypeRepo +
@@ -145,47 +145,48 @@ object Sonatype extends AutoPlugin {
       val rest = sonatypeService.value
       // Re-open or create a staging repository
       val repo = rest.openOrCreateByKey(sonatypeSessionName.value)
-      updatePublishTo(state.value, repo)
+      val next = updatePublishTo(state.value, repo)
+      state.value.setNext(next)
       repo
     },
     sonatypeClose := {
       val args   = repositoryIdParser.parsed
-      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val repoID = args.headOption.orElse(sonatypeTargetStagingProfile.?.value.map(_.repositoryId))
       val rest   = sonatypeService.value
       val repo1  = rest.findTargetRepository(Close, repoID)
       val repo2  = rest.closeStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeTargetStagingProfile := repo2), s)
       repo2
     },
     sonatypePromote := {
       val args   = repositoryIdParser.parsed
-      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val repoID = args.headOption.orElse(sonatypeTargetStagingProfile.?.value.map(_.repositoryId))
       val rest   = sonatypeService.value
       val repo1  = rest.findTargetRepository(Promote, repoID)
       val repo2  = rest.promoteStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeTargetStagingProfile := repo2), s)
       repo2
     },
     sonatypeDrop := {
       val args   = repositoryIdParser.parsed
-      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val repoID = args.headOption.orElse(sonatypeTargetStagingProfile.?.value.map(_.repositoryId))
       val rest   = sonatypeService.value
       val repo1  = rest.findTargetRepository(Drop, repoID)
       val repo2  = rest.dropStage(repo1)
       val s      = state.value
-      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeTargetStagingProfile := repo2), s)
       repo2
     },
     sonatypeRelease := {
       val args   = repositoryIdParser.parsed
-      val repoID = args.headOption.orElse(sonatypeStagingRepositoryProfile.?.value.map(_.repositoryId))
+      val repoID = args.headOption.orElse(sonatypeTargetStagingProfile.?.value.map(_.repositoryId))
       val rest   = sonatypeService.value
       val repo1  = rest.findTargetRepository(CloseAndPromote, repoID)
       val repo2  = rest.closeAndPromote(repo1)
       val s      = state.value
-      Project.extract(s).appendWithoutSession(Seq(sonatypeStagingRepositoryProfile := repo2), s)
+      Project.extract(s).appendWithoutSession(Seq(sonatypeTargetStagingProfile := repo2), s)
       repo2
     },
     sonatypeReleaseAll := {
@@ -255,17 +256,19 @@ object Sonatype extends AutoPlugin {
   )
 
   private def updatePublishTo(state: State, repo: StagingRepositoryProfile): State = {
-    state.log.info(s"Updating publishTo settings ...")
+
     val extracted = Project.extract(state)
     // accumulate changes for settings for current project and all aggregates
+    val resolver = "releases" at s"https://oss.sonatype.org/service/local/staging/deployByRepositoryId/${repo.repositoryId}"
+    state.log.info(s"Updating publishTo settings to ${resolver}")
     val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
       Seq(
-        ref / sonatypeStagingRepositoryProfile := repo,
-        ref / publishTo := Some(sonatypeDefaultResolver.value)
+        ref / sonatypeTargetStagingProfile := repo,
+        ref / publishTo := Some(resolver)
       )
     } ++ Seq(
-      sonatypeStagingRepositoryProfile := repo,
-      publishTo := Some(sonatypeDefaultResolver.value)
+      sonatypeTargetStagingProfile := repo,
+      publishTo := Some(resolver)
     )
 
     val next = extracted.appendWithoutSession(newSettings, state)
