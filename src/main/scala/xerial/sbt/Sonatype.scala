@@ -58,6 +58,8 @@ object Sonatype extends AutoPlugin {
   import autoImport._
   import complete.DefaultParsers._
 
+  private implicit val ec = ExecutionContext.global
+
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
     sonatypeRepository := "https://oss.sonatype.org/service/local",
@@ -126,14 +128,18 @@ object Sonatype extends AutoPlugin {
       }
     },
     sonatypePrepare := {
-      val rest           = sonatypeService.value
       val descriptionKey = sonatypeSessionName.value
+      state.value.log.info(s"Preparing a new staging repository for ${descriptionKey}")
+      val rest           = sonatypeService.value
       // Drop a previous staging repository if exists
-      rest.dropIfExistsByKey(descriptionKey)
+      val dropTask = Future.apply(rest.dropIfExistsByKey(descriptionKey))
       // Create a new one
-      val repo = rest.createStage(descriptionKey)
-      updatePublishTo(state.value, repo)
-      repo
+      val createTask = Future.apply(rest.createStage(descriptionKey))
+      // Run two tasks in parallel
+      val merged = dropTask.zip(createTask)
+      val (droppedRepo, createdRepo) = Await.result(merged, Duration.Inf)
+      updatePublishTo(state.value, createdRepo)
+      createdRepo
     },
     sonatypeClean := {
       val rest           = sonatypeService.value
@@ -250,7 +256,7 @@ object Sonatype extends AutoPlugin {
   object SonatypeCommand {
     import complete.DefaultParsers._
 
-    private implicit val ec = ExecutionContext.global
+
 
     /**
       * Parsing repository id argument
