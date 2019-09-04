@@ -92,6 +92,7 @@ object Sonatype extends AutoPlugin {
     },
     commands ++= Seq(
       sonatypeList,
+      sonatypePrepare,
       sonatypeClean,
       sonatypeOpen,
       sonatypeClose,
@@ -212,6 +213,23 @@ object Sonatype extends AutoPlugin {
 
     private def descriptionKeyOf(profileDescription: String) = s"[sbt-sonatype] ${profileDescription}"
 
+    private def updatePublishTo(state:State, repo:StagingRepositoryProfile): State = {
+      val extracted = Project.extract(state)
+      // accumulate changes for settings for current project and all aggregates
+      val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
+        Seq(
+          ref / sonatypeStagingRepositoryProfile := repo,
+          ref / publishTo := Some(sonatypeDefaultResolver.value)
+        )
+      } ++ Seq(
+        sonatypeStagingRepositoryProfile := repo,
+        publishTo := Some(sonatypeDefaultResolver.value)
+      )
+
+      val next = extracted.appendWithSession(newSettings, state)
+      next
+    }
+
     val sonatypeOpen: Command =
       commandWithSonatypeProfileDescription("sonatypeOpen", "Create a staging repository and set publishTo") {
         (state, profileNameDescription) =>
@@ -222,33 +240,35 @@ object Sonatype extends AutoPlugin {
               (Some(n), d)
           }
           val rest = getNexusRestService(state, profileName)
-          val repo = {
-            val descriptionKey = descriptionKeyOf(profileDescription)
-            // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
-            def create = rest.createStage(descriptionKey)
 
-            // Find the already opened profile or create a new one
-            rest
-              .stagingRepositoryProfiles(warnIfMissing = false)
-              .find(_.description == descriptionKey)
-              .getOrElse(create)
-          }
-          val extracted = Project.extract(state)
+          // Re-open or create a staging repository
+          val repo = rest.openOrCreate(descriptionKeyOf(profileDescription))
 
-          // accumulate changes for settings for current project and all aggregates
-          val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
-            Seq(
-              ref / sonatypeStagingRepositoryProfile := repo,
-              ref / publishTo := Some(sonatypeDefaultResolver.value)
-            )
-          } ++ Seq(
-            sonatypeStagingRepositoryProfile := repo,
-            publishTo := Some(sonatypeDefaultResolver.value)
-          )
-
-          val next = extracted.appendWithSession(newSettings, state)
-          next
+          updatePublishTo(state, repo)
       }
+
+    val sonatypePrepare: Command = {
+      commandWithSonatypeProfileDescription(
+        "sonatypePrepare",
+        "Clean (if exists) and create a staging repository using a given description") {
+        (state, profileNameDescription) =>
+          val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
+            case Left(d) =>
+              (None, d)
+            case Right((n, d)) =>
+              (Some(n), d)
+          }
+          val rest           = getNexusRestService(state, profileName)
+          val descriptionKey = descriptionKeyOf(profileDescription)
+
+          // Drop a previous one
+          rest.dropIfExistsByKey(descriptionKey)
+          // Create a new one
+          val repo = rest.createStage(descriptionKey)
+
+          updatePublishTo(state, repo)
+      }
+    }
 
     val sonatypeClean: Command = {
       commandWithSonatypeProfileDescription("sonatypeClean", "Clean a staging repository using a given description") {
@@ -260,18 +280,8 @@ object Sonatype extends AutoPlugin {
               (Some(n), d)
           }
           val rest = getNexusRestService(state, profileName)
-
           val descriptionKey = descriptionKeyOf(profileDescription)
-          rest
-            .stagingRepositoryProfiles(warnIfMissing = false)
-            .find(_.description == descriptionKey)
-            .map { repo =>
-              state.log.info(s"Found a staging repository for ${descriptionKey}")
-              rest.dropStage(repo)
-            }
-            .getOrElse {
-              state.log.info(s"No staging repository for ${descriptionKey} is found")
-            }
+          rest.dropIfExistsByKey(descriptionKey)
           state
       }
     }

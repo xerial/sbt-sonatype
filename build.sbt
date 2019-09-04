@@ -29,8 +29,8 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
   },
-  crossSbtVersions := Vector("1.2.8"),
-  releaseCrossBuild := true,
+  crossSbtVersions := Vector("1.3.0"),
+  releaseCrossBuild := false,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   releaseProcess := Seq[ReleaseStep](
@@ -41,10 +41,11 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    releaseStepCommandAndRemaining("^ publishSigned"),
+    releaseStepCommandAndRemaining(s"sonatypePrepare 'sbt-sonatype ${version.value}'"),
+    releaseStepCommandAndRemaining("publishSigned"),
     setNextVersion,
     commitNextVersion,
-    releaseStepCommand("sonatypeReleaseAll"),
+    releaseStepCommand("sonatypeRelease"),
     pushChanges
   )
 )
