@@ -2,13 +2,14 @@ package xerial.sbt
 
 import java.io.IOException
 
-import org.apache.http.{HttpResponse, HttpStatus}
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.{HttpGet, HttpPost}
 import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.{HttpResponse, HttpStatus}
 import sbt.{Credentials, DirectCredentials, Logger}
+import xerial.sbt.NexusRESTService.{ActivityEvent, ActivityMonitor, Close, CloseAndPromote, CommandType, Drop, Promote, StagingActivity, StagingProfile, StagingRepositoryProfile}
 
 import scala.io.Source
 import scala.xml.{Utility, XML}
@@ -28,9 +29,6 @@ class NexusRESTService(
     cred: Seq[Credentials],
     credentialHost: String
 ) {
-
-  import NexusRESTService._
-
   val monitor = new ActivityMonitor(log)
 
   def findTargetRepository(command: CommandType, arg: Option[String]): StagingRepositoryProfile = {
@@ -162,23 +160,26 @@ class NexusRESTService(
   }
 
   def openOrCreate(descriptionKey: String): StagingRepositoryProfile = {
-    // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
-    def create = createStage(descriptionKey)
-
     // Find the already opened profile or create a new one
     findStagingRepositoryProfileWithKey(descriptionKey)
+            .map { repo =>
+              log.info(s"Found a staging repository ${repo}")
+              repo
+            }
+      // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
       .getOrElse(createStage(descriptionKey))
   }
 
-  def dropIfExistsByKey(descriptionKey: String): Unit = {
+  def dropIfExistsByKey(descriptionKey: String): Option[StagingRepositoryProfile] = {
     // Drop the staging repository if exists
     findStagingRepositoryProfileWithKey(descriptionKey)
       .map { repo =>
-        log.info(s"Found a staging repository for ${descriptionKey}")
+        log.info(s"Found a staging repository ${repo}")
         dropStage(repo)
       }
-      .getOrElse {
+      .orElse {
         log.info(s"No staging repository for ${descriptionKey} is found")
+        None
       }
   }
 
@@ -209,7 +210,7 @@ class NexusRESTService(
     }
   }
 
-  def stagingProfiles = {
+  def stagingProfiles: Seq[StagingProfile] = {
     log.info("Reading staging profiles...")
     Get("/staging/profiles") { response =>
       val profileXML = XML.load(response.getEntity.getContent)
@@ -227,7 +228,8 @@ class NexusRESTService(
   lazy val currentProfile = {
     val profiles = stagingProfiles
     if (profiles.isEmpty) {
-      throw new IllegalArgumentException(s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt")
+      throw new IllegalArgumentException(
+        s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt")
     }
     profiles.head
   }
@@ -273,9 +275,9 @@ class NexusRESTService(
   }
 
   def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
-    val postURL = s"/staging/profiles/${currentProfile.profileId}/start"
-    log.info(
-      s"Creating a staging repository in profile ${currentProfile.profileName} with a description key: ${description}")
+    val profile = currentProfile
+    val postURL = s"/staging/profiles/${profile.profileId}/start"
+    log.info(s"Creating a staging repository in profile ${profile.profileName} with a description key: ${description}")
     var repo: StagingRepositoryProfile = null
     val ret = Post(
       postURL,
@@ -284,10 +286,10 @@ class NexusRESTService(
         val xml = XML.load(in)
         val ids = xml \\ "data" \ "stagedRepositoryId"
         if (1 != ids.size)
-          throw new IOException(s"Failed to create repository in profile: ${currentProfile.profileName}")
+          throw new IOException(s"Failed to create repository in profile: ${profile.profileName}")
         repo = StagingRepositoryProfile(
-          currentProfile.profileId,
-          currentProfile.profileName,
+          profile.profileId,
+          profile.profileName,
           "open",
           ids.head.text,
           description
@@ -297,12 +299,12 @@ class NexusRESTService(
     )
     if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
       throw new IOException(
-        s"Failed to create repository in profile: ${currentProfile.profileName}: ${ret.getStatusLine}"
+        s"Failed to create repository in profile: ${profile.profileName}: ${ret.getStatusLine}"
       )
     }
     if (null == repo) {
       throw new IOException(
-        s"Failed to create repository in profile: ${currentProfile.profileName}: no stagedRepositoryId"
+        s"Failed to create repository in profile: ${profile.profileName}: no stagedRepositoryId"
       )
     }
     repo
@@ -317,7 +319,7 @@ class NexusRESTService(
 
     if (toContinue) {
       // Post close request
-      val postURL = s"/staging/profiles/${currentProfile.profileId}/finish"
+      val postURL = s"/staging/profiles/${repo.profileId}/finish"
       log.info(s"Closing staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo))
       if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
@@ -355,7 +357,7 @@ class NexusRESTService(
   }
 
   def dropStage(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
-    val postURL = s"/staging/profiles/${currentProfile.profileId}/drop"
+    val postURL = s"/staging/profiles/${repo.profileId}/drop"
     log.info(s"Dropping staging repository $repo")
     val ret = Post(postURL, promoteRequestXML(repo))
     if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
@@ -374,7 +376,7 @@ class NexusRESTService(
 
     if (toContinue) {
       // Post promote(release) request
-      val postURL = s"/staging/profiles/${currentProfile.profileId}/promote"
+      val postURL = s"/staging/profiles/${repo.profileId}/promote"
       log.info(s"Promoting staging repository $repo")
       val ret = Post(postURL, promoteRequestXML(repo))
       if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {

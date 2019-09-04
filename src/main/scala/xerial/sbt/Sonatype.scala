@@ -213,7 +213,8 @@ object Sonatype extends AutoPlugin {
 
     private def descriptionKeyOf(profileDescription: String) = s"[sbt-sonatype] ${profileDescription}"
 
-    private def updatePublishTo(state:State, repo:StagingRepositoryProfile): State = {
+    private def updatePublishTo(state: State, repo: StagingRepositoryProfile): State = {
+      state.log.info(s"Updating publishTo settings ...")
       val extracted = Project.extract(state)
       // accumulate changes for settings for current project and all aggregates
       val newSettings: Seq[Def.Setting[_]] = extracted.currentProject.referenced.flatMap { ref =>
@@ -230,27 +231,10 @@ object Sonatype extends AutoPlugin {
       next
     }
 
-    val sonatypeOpen: Command =
-      commandWithSonatypeProfileDescription("sonatypeOpen", "Create a staging repository and set publishTo") {
-        (state, profileNameDescription) =>
-          val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
-            case Left(d) =>
-              (None, d)
-            case Right((n, d)) =>
-              (Some(n), d)
-          }
-          val rest = getNexusRestService(state, profileName)
-
-          // Re-open or create a staging repository
-          val repo = rest.openOrCreate(descriptionKeyOf(profileDescription))
-
-          updatePublishTo(state, repo)
-      }
-
     val sonatypePrepare: Command = {
       commandWithSonatypeProfileDescription(
         "sonatypePrepare",
-        "Clean (if exists) and create a staging repository using a given description") {
+        "Clean (if exists) and create a staging repository using a given description, then update publishTo") {
         (state, profileNameDescription) =>
           val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
             case Left(d) =>
@@ -265,10 +249,26 @@ object Sonatype extends AutoPlugin {
           rest.dropIfExistsByKey(descriptionKey)
           // Create a new one
           val repo = rest.createStage(descriptionKey)
-
           updatePublishTo(state, repo)
       }
     }
+
+    val sonatypeOpen: Command =
+      commandWithSonatypeProfileDescription(
+        "sonatypeOpen",
+        "Open (or create if not exists) to a staging repository, then update publishTo") { (state, profileNameDescription) =>
+        val (profileName: Option[String], profileDescription: String) = profileNameDescription match {
+          case Left(d) =>
+            (None, d)
+          case Right((n, d)) =>
+            (Some(n), d)
+        }
+        val rest = getNexusRestService(state, profileName)
+
+        // Re-open or create a staging repository
+        val repo = rest.openOrCreate(descriptionKeyOf(profileDescription))
+        updatePublishTo(state, repo)
+      }
 
     val sonatypeClean: Command = {
       commandWithSonatypeProfileDescription("sonatypeClean", "Clean a staging repository using a given description") {
@@ -279,7 +279,7 @@ object Sonatype extends AutoPlugin {
             case Right((n, d)) =>
               (Some(n), d)
           }
-          val rest = getNexusRestService(state, profileName)
+          val rest           = getNexusRestService(state, profileName)
           val descriptionKey = descriptionKeyOf(profileDescription)
           rest.dropIfExistsByKey(descriptionKey)
           state
