@@ -314,9 +314,6 @@ object Sonatype extends AutoPlugin {
       "invalid input. please input sonatypeProfileName (e.g., org.xerial)"
     )
 
-  /**
-    * Parsing repository id argument
-    */
   private def getCredentials(extracted: Extracted, state: State) = {
     val (nextState, credential) = extracted.runTask(credentials, state)
     credential
