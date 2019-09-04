@@ -1,3 +1,5 @@
+enablePlugins(Sonatype)
+
 organization := System.getProperty("organization", "org.xerial.operations")
 sonatypeProfileName := System.getProperty("profile.name", "org.xerial")
 version := System.getProperty("version", "0.1")

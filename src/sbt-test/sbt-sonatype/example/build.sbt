@@ -1,5 +1,7 @@
 organization := "org.xerial.example"
 
+enablePlugins(Sonatype)
+
 sonatypeProfileName := "org.xerial"
 
 publishMavenStyle := true
