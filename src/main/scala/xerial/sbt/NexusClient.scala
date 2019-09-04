@@ -9,18 +9,6 @@ import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.{HttpResponse, HttpStatus}
 import sbt.{Credentials, DirectCredentials, Logger}
-import xerial.sbt.NexusRESTService.{
-  ActivityEvent,
-  ActivityMonitor,
-  Close,
-  CloseAndPromote,
-  CommandType,
-  Drop,
-  Promote,
-  StagingActivity,
-  StagingProfile,
-  StagingRepositoryProfile
-}
 
 import scala.io.Source
 import scala.xml.{Utility, XML}
@@ -40,6 +28,8 @@ class NexusRESTService(
     cred: Seq[Credentials],
     credentialHost: String
 ) {
+  import xerial.sbt.NexusRESTService._
+
   val monitor = new ActivityMonitor(log)
 
   def findTargetRepository(command: CommandType, arg: Option[String]): StagingRepositoryProfile = {
@@ -172,33 +162,37 @@ class NexusRESTService(
 
   def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
     // Find the already opened profile or create a new one
-    findStagingRepositoryProfileWithKey(descriptionKey)
-      .map { repo =>
-        log.info(s"Found a staging repository ${repo}")
-        repo
-      }
+    val repos = findStagingRepositoryProfilesWithKey(descriptionKey)
+    if (repos.size > 1) {
+      throw new IllegalStateException(
+        s"Multiple staging repositories for ${descriptionKey} exists. Run sonatypeDropAll first to clean up old repositories")
+    } else if (repos.size == 1) {
+      val repo = repos.head
+      log.info(s"Found a staging repository ${repo}")
+      repo
+    } else {
       // Create a new staging repository by appending [sbt-sonatype] prefix to its description so that we can find the repository id later
-      .getOrElse {
-        log.info(s"No staging repository for ${descriptionKey} is found. Create a new one.")
-        createStage(descriptionKey)
-      }
+      log.info(s"No staging repository for ${descriptionKey} is found. Create a new one.")
+      createStage(descriptionKey)
+    }
   }
 
   def dropIfExistsByKey(descriptionKey: String): Option[StagingRepositoryProfile] = {
     // Drop the staging repository if exists
-    findStagingRepositoryProfileWithKey(descriptionKey)
-      .map { repo =>
+    val repos = findStagingRepositoryProfilesWithKey(descriptionKey)
+    if (repos.isEmpty) {
+      log.info(s"No staging repository for ${descriptionKey} is found")
+      None
+    } else {
+      repos.map { repo =>
         log.info(s"Found a staging repository ${repo}")
         dropStage(repo)
-      }
-      .orElse {
-        log.info(s"No staging repository for ${descriptionKey} is found")
-        None
-      }
+      }.lastOption
+    }
   }
 
-  def findStagingRepositoryProfileWithKey(descriptionKey: String): Option[StagingRepositoryProfile] = {
-    stagingRepositoryProfiles(warnIfMissing = false).find(_.description == descriptionKey)
+  def findStagingRepositoryProfilesWithKey(descriptionKey: String): Seq[StagingRepositoryProfile] = {
+    stagingRepositoryProfiles(warnIfMissing = false).filter(_.description == descriptionKey)
   }
 
   def stagingRepositoryProfiles(warnIfMissing: Boolean = true) = {

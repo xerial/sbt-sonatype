@@ -9,7 +9,7 @@ A sbt plugin for publishing your project to the Maven central repository through
  [Sonatype Nexus repository](http://oss.sonatype.org/).
 
 - [Release notes](ReleaseNotes.md)
-- sbt-sonatype is available for sbt-0.13.5 or later. 
+- sbt-sonatype is available for sbt 1.x series.
 - You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
 
 
@@ -35,13 +35,13 @@ A sbt plugin for publishing your project to the Maven central repository through
 Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
 commands:
 ```scala
+// For sbt 1.x (sbt-sonatype 2.3 or higher)
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.0-M2")
+
 // For sbt 0.13.x (upto sbt-sonatype 2.3)
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
-
-// For sbt 1.2.x (sbt-sonatype 2.3 or higher)
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 ```
 
  * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.12_1.0>. It will be usually synced within 10 minutes.
