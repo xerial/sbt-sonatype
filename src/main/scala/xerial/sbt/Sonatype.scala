@@ -11,6 +11,9 @@ import sbt.Keys._
 import sbt._
 import xerial.sbt.NexusRESTService._
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
+
 /**
   * Plugin for automating release processes at Sonatype Nexus
   */
@@ -136,6 +139,8 @@ object Sonatype extends AutoPlugin {
 
   object SonatypeCommand {
     import complete.DefaultParsers._
+
+    private implicit val ec = ExecutionContext.global
 
     /**
       * Parsing repository id argument
@@ -293,20 +298,22 @@ object Sonatype extends AutoPlugin {
       commandWithSonatypeProfile("sonatypeReleaseAll", "Publish all staging repositories to Maven central") {
         (state, profileName) =>
           val rest = getNexusRestService(state, profileName)
-          for {
-            repo <- rest.stagingRepositoryProfiles
-            _ = rest.closeAndPromote(repo)
-          } ()
+          val tasks = rest.stagingRepositoryProfiles.map { repo =>
+            Future.apply(rest.closeAndPromote(repo))
+          }
+          val merged = Future.sequence(tasks)
+          Await.result(merged, Duration.Inf)
           state
       }
 
     val sonatypeDropAll: Command = commandWithSonatypeProfile("sonatypeDropAll", "Drop all staging repositories") {
       (state, profileName) =>
         val rest = getNexusRestService(state, profileName)
-        for {
-          repo <- rest.stagingRepositoryProfiles
-          _ = rest.dropStage(repo)
-        } ()
+        val dropTasks = rest.stagingRepositoryProfiles.map { repo =>
+          Future.apply(rest.dropStage(repo))
+        }
+        val merged = Future.sequence(dropTasks)
+        Await.result(merged, Duration.Inf)
         state
     }
 
