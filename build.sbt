@@ -50,8 +50,6 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-val AIRFRAME_VERSION = "19.9.2"
-
 // Project modules
 lazy val sbtSonatype =
   project
@@ -62,8 +60,6 @@ lazy val sbtSonatype =
       buildSettings,
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       libraryDependencies ++= Seq(
-        "org.apache.httpcomponents" % "httpclient"             % "4.2.6",
-        "org.wvlet.airframe"        %% "airframe-http-finagle" % AIRFRAME_VERSION,
-        "org.wvlet.airframe"        %% "airspec"               % AIRFRAME_VERSION % "test"
+        "org.apache.httpcomponents" % "httpclient"             % "4.2.6"
       )
     )

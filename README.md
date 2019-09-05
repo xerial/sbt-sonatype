@@ -1,22 +1,27 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of Scala/Java projects.
+A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables three-step release of Scala/Java projects.
 
- * First `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
- * Next `sonatypeRelease` to perform the close and release steps in the Sonatype Nexus repository. 
- * Done. Your project will be synchronized to the Maven central within tens of minutes. No longer need to enter the web interface of
- [Sonatype Nexus repository](http://oss.sonatype.org/).
+ * `sonatypePrepare`
+    * Prepare a staging repository at Sonatype. It will also clean up previously created staging repositories. This step is added since sbt-sonatype 3.0 to resume the entire release process from scratch.
+ * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
+    * Upload GPG signed artifacts to Sonatype repository
+ * `sonatypeRelease`
+    * Perform the close and release steps in the Sonatype Nexus repository.
+
+ After these steps, your project will be synchronized to the Maven central (usually) within ten minutes. No longer need to enter the web interface of
+ [Sonatype Nexus repository](http://oss.sonatype.org/) to performe these release steps.
+
 
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt 1.x series.
 - You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
 
-
 ## Prerequisites
  
  * Create a Sonatype Repository account 
-   * Follow the instruction in the [Central Repository documentation site](http://central.sonatype.org). 
+   * Follow the instruction in the [Central Repository documentation site](http://central.sonatype.org).
      * Create a Sonatype account
      * Create a GPG key
      * Open a JIRA ticket to get a permission for synchronizing your project to the Central Repository (aka Maven Central).
@@ -49,8 +54,11 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 ### build.sbt
 
 ```scala
-// Add the default sonatype repository setting
+// [Important] Use publishTo settings set by sbt-sonatype plugin
 publishTo := sonatypePublishTo.value
+
+// [Optional] If you need to manage unique session names, change this setting:
+sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
@@ -129,45 +137,56 @@ $ sbt sonatypeRelease
 ```
 This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
 
-## Available Commands
+## Commands
 
-* __sonatypeList__
-  * Show the list of staging repositories.
-* __sonatypeOpen__ (description | sonatypeProfileName description)   (since sbt-sonatype-1.1)
-  * Create a staging repository and set `sonatypeStagingRepositoryProfile` and `publishTo`.
-  * Although creating a staging repository does not result in email notifications,
-    the description will be reused for across lifecycle operations (Close, Promote, Drop)
-    to facilitate distinguishing email notifications sent by the repository by description.
-* __sonatypeClose__ (repositoryId)?
-  * Close an open staging repository and set `sonatypeStagingRepositoryProfile` and
-    clear `publishTo` if it was set by __sonatypeOpen__.
-  * The `Staging Completed` email notification sent by the repository only includes the description
-    (if created with __sonatypeOpen__); it does not include the staging repository ID.
-* __sonatypePromote__ (repositoryId)?
-  * Promote a closed staging repository and set `sonatypeStagingRepositoryProfile` and
-    clear `publishTo` if it was set by __sonatypeOpen__.
-  * The `Promotion Completed` email notification sent by the repository only includes the description
-    (if created with __sonatypeOpen__); it does not include the staging repository ID.
-* __sonatypeDrop__ (repositoryId)?
-  * Drop an open or closed staging repository and set `sonatypeStagingRepositoryProfile` and
-    clear `publishTo` if it was set by __sonatypeOpen__.
-  * The email notification sent by the repository includes both the description
-    (if created with __sonatypeOpen__) and the staging repository ID.
-* __sonatypeDropAll__
-   * Drop all staging repositories.
+### Basic Commands
+* __sonatypePrepare__
+  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key
+  * For cross-build projects, make sure running this command only once at the beginning of the release process. Then run `sonatypeOpen` for each build to reuse the already created stging repository.
+* __sonatypeOpen__
+  * Open the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
+  * This command is useful to run `publishSigned` task in parallel. 
 * __sonatypeRelease__ (repositoryId)?
-  * Close (if needed) and promote a staging repository and set `sonatypeStagingRepositoryProfile` and
-    clear `publishTo` if it was set by __sonatypeOpen__.
-  * The email notifications are those of __sonatypeClose__ (if applicable) and __sonatypePromote__.
+  * Close (if needed) and promote a staging repository. After this command, the uploaded artifacts will be synchronized to Maven central.
+
+### Batch Operations
+* __sonatypeDropAll__ (sonatypeProfileName)?
+   * Drop all staging repositories.
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
+
+## Others
 * __sonatypeStagingProfiles__
   * Show the list of staging profiles, which include profileName information.
 * __sonatypeLog__
   * Show the staging activity logs
+* __sonatypeClose__
+  * Close the open staging repository (= requirement verification)
+* __sonatypePromote__
+  * Promote the closed staging repository (= sync to Maven central)
+* __sonatypeDrop__ 
+  * Drop an open or closed staging repository
 
-### Advanced Usage
+## Uploading Artifacts In Parallel
 
+Since sbt-sonatype 3.x, it supports session based release flows:
+
+### Single Module Projects
+  - sonatypePrepare
+  - publishSigned
+  - sonatypeRelease
+
+### Multi Module Projects
+  - Run `sonatypePrepare` in a single step.
+    - You must wait for the completion of this step
+  - Then, start uploading signed artifacts using multiple processes:
+    - P1: `; sonatypeOpen; publishSigned`
+    - P2: `; sonatypeOpen; publishSigned`
+    - P3: ...
+  - Wait for all upload completion
+  - Finally, run `sonatypeRelease`
+
+For sbt-sonatype 2.x:
 * [Example workflow for creating & publishing to a staging repository](workflow.md)
 
 ## Using with sbt-release plugin
@@ -186,11 +205,12 @@ releaseProcess := Seq[ReleaseStep](
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,
+  releaseStepCommand("sonatypePrepare"),
   // For non cross-build projects, use releaseStepCommand("publishSigned")
   releaseStepCommandAndRemaining("+publishSigned"),
+  releaseStepCommand("sonatypeRelease"),
   setNextVersion,
   commitNextVersion,
-  releaseStepCommand("sonatypeReleaseAll"),
   pushChanges
 )
 ```
