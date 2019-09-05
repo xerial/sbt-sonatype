@@ -29,6 +29,8 @@ object Sonatype extends AutoPlugin {
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
+
+    val sonatypeBundle = taskKey[String]("create a bundle for upload")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -94,6 +96,7 @@ object Sonatype extends AutoPlugin {
       })
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
+    sonatypeBundle := {},
     commands ++= Seq(
       sonatypePrepare,
       sonatypeOpen,
