@@ -10,9 +10,11 @@ import org.apache.http.impl.client.{BasicCredentialsProvider, DefaultHttpClient}
 import org.apache.http.{HttpResponse, HttpStatus}
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
+import sbt.io.IO
 import sbt.{Credentials, DirectCredentials, Logger}
 
 import scala.io.Source
+import scala.util.Try
 import scala.xml.{Utility, XML}
 
 /**
@@ -168,8 +170,9 @@ class NexusRESTService(
   }
 
   def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
-    val parameters    = ParametersBuilder.defaults().build();
-    val endpoint      = s"${remoteUrl}/staging/bundle_upload"
+    val parameters = ParametersBuilder.defaults().build()
+    // Adding a trailing slash is necessary upload a bundle file to a proper location:
+    val endpoint      = s"${remoteUrl}/"
     val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
 
     val credentialProvider = new BasicCredentialsProvider()
@@ -187,7 +190,7 @@ class NexusRESTService(
     try {
       log.info(s"Uploading bundle: ${localBundlePath} to ${endpoint}")
       client.upload(deployables)
-      log.info(s"Finished uploading bundle: ${localBundlePath}")
+      log.info(s"Finished bundle upload: ${localBundlePath}")
     } finally {
       client.close()
     }
@@ -253,17 +256,36 @@ class NexusRESTService(
 
   def stagingProfiles: Seq[StagingProfile] = {
     log.info("Reading staging profiles...")
-    Get("/staging/profiles") { response =>
-      val profileXML = XML.load(response.getEntity.getContent)
-      val profiles = for (p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
-        StagingProfile(
-          (p \ "id").text,
-          (p \ "name").text,
-          (p \ "repositoryTargetId").text
-        )
+
+    val cacheFile = new File("target/sonatype-profiles.xml")
+
+    def readProfileXML: String = {
+      Get("/staging/profiles") { response =>
+        val xml = IO.readStream(response.getEntity.getContent)
+        cacheFile.getParentFile.mkdirs()
+        // Save the profile to a local target folder for future use
+        IO.write(cacheFile, xml)
+        xml
       }
-      profiles
     }
+
+    val profileXML =
+      if (cacheFile.exists() && cacheFile.length() > 0) {
+        Try(XML.loadString(IO.read(cacheFile))).getOrElse {
+          XML.loadString(readProfileXML)
+        }
+      } else {
+        XML.loadString(readProfileXML)
+      }
+
+    val profiles = for (p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
+      StagingProfile(
+        (p \ "id").text,
+        (p \ "name").text,
+        (p \ "repositoryTargetId").text
+      )
+    }
+    profiles
   }
 
   lazy val currentProfile = {

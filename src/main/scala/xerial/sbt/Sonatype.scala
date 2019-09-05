@@ -126,7 +126,7 @@ object Sonatype extends AutoPlugin {
         rest.openOrCreateByKey(descriptionKey)
       }
       rest.uploadBundle(bundlePath, repo.deployUrl)
-      state
+      updatePublishSettings(state, repo)
   }
 
   private val sonatypePrepare = newCommand(
