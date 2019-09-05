@@ -56,8 +56,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 // [Important] Use publishTo settings set by sbt-sonatype plugin
 publishTo := sonatypePublishTo.value
 
-// [Optional] If you need to manage unique session names, change this setting:
-sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
+// [Optional] If you need to manage unique session names, change this default setting:
+sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
@@ -114,7 +114,8 @@ developers := List(
 
 The general steps for publishing your artifact to the Central Repository are as follows: 
 
- * `publishSigned` to deploy your artifact to staging repository at Sonatype.
+ * `sonatypePrepare` to create a staging repository at Sonatype using `sonatypeSessionName` as a unique key.
+ * `publishSigned` to deploy your artifact to the staging repository.
  * `sonatypeRelease` do `sonatypeClose` and `sonatypePromote` in one step.
    * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
    and source code presence, pom.xml settings, etc.
@@ -140,11 +141,13 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 ### Basic Commands
 * __sonatypePrepare__
-  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key
-  * For cross-build projects, make sure running this command only once at the beginning of the release process. Then run `sonatypeOpen` for each build to reuse the already created stging repository.
+  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key.
+  * This will update `sonatypePublishTo` setting. 
+  * For cross-build projects, make sure running this command only once at the beginning of the release process. 
+  * If you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
 * __sonatypeOpen__
-  * Open the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
-  * This command is useful to run `publishSigned` task in parallel. 
+ * This command is necessary only when you need to parallelize `publishSigned` task. For small/medium-size projects, using only `sonatypePrepare` would work.
+ * This opens the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
 * __sonatypeRelease__ (repositoryId)?
   * Close (if needed) and promote a staging repository. After this command, the uploaded artifacts will be synchronized to Maven central.
 
