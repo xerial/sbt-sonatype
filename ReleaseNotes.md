@@ -3,10 +3,16 @@ Release Notes
 # 3.0
 - September 4, 2019
 - Support building idempotent release flow using `sonatypePrepare`
-- Add `sonatypeDropAll`
 - Support parallel artifact upload flows. See https://github.com/xerial/sbt-sonatype/#uploading-artifacts-in-parallel for the details.
 - Parallelize the processing of sonatypeReleaseAll and sonatypeDropAll
 - Drop `sontaypeList`. Use sonatypeStagingRepositoryProfiles instead
+- From this version, sbt-sonatype no longer overwrites `publishTo` settings automatically after `sonatypeOpen` command. Make sure setting `publishTo := sonatypePublishTo.value`.
+
+# 2.6 
+- Added `sonatypeDropAll`
+
+# 2.5 
+- Fixes issue #79
 
 # 2.4
 - Fixes a bug in propagating publishTo setting to sub projects [#76](https://github.com/xerial/sbt-sonatype/issues/76)
