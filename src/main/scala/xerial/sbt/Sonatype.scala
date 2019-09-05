@@ -30,7 +30,8 @@ object Sonatype extends AutoPlugin {
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
 
-    val sonatypeBundle = taskKey[String]("create a bundle for upload")
+    val sonatypeBundle          = taskKey[String]("create a bundle for upload")
+    val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -81,13 +82,10 @@ object Sonatype extends AutoPlugin {
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeDefaultResolver := {
-      val sonatypeRepo = "https://oss.sonatype.org/"
-      val profileM     = sonatypeTargetRepositoryProfile.?.value
+      val profileM = sonatypeTargetRepositoryProfile.?.value
 
       val staged = profileM.map { stagingRepoProfile =>
-        "releases" at sonatypeRepo +
-          "service/local/staging/deployByRepositoryId/" +
-          stagingRepoProfile.repositoryId
+        "releases" at stagingRepoProfile.deployUrl
       }
       staged.getOrElse(if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
@@ -96,8 +94,13 @@ object Sonatype extends AutoPlugin {
       })
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
-    sonatypeBundle := {},
+    sonatypeBundleDirectory := target.value / "sonatype-staging",
+    sonatypeBundle := {
+
+      "Ok"
+    },
     commands ++= Seq(
+      sonatypeBundleUpload,
       sonatypePrepare,
       sonatypeOpen,
       sonatypeClose,
@@ -112,6 +115,19 @@ object Sonatype extends AutoPlugin {
       sonatypeStagingProfiles
     )
   )
+
+  private val sonatypeBundleUpload = newCommand("sonatypeBundleUpload", "Upload a bundle in sonatypeBundleDirectory") {
+    state: State =>
+      val extracted              = Project.extract(state)
+      val bundlePath             = extracted.get(sonatypeBundleDirectory)
+      val rest: NexusRESTService = getNexusRestService(state)
+      val repo = extracted.getOpt(sonatypeTargetRepositoryProfile).getOrElse {
+        val descriptionKey = extracted.get(sonatypeSessionName)
+        rest.openOrCreateByKey(descriptionKey)
+      }
+      rest.uploadBundle(bundlePath, repo.deployUrl)
+      state
+  }
 
   private val sonatypePrepare = newCommand(
     "sonatypePrepare",

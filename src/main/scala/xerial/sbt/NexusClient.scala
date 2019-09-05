@@ -169,7 +169,8 @@ class NexusRESTService(
 
   def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
     val parameters    = ParametersBuilder.defaults().build();
-    val clientBuilder = new Hc4ClientBuilder(parameters, remoteUrl)
+    val endpoint      = s"${remoteUrl}/staging/bundle_upload"
+    val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
 
     val credentialProvider = new BasicCredentialsProvider()
     val usernamePasswordCredentials =
@@ -184,7 +185,9 @@ class NexusRESTService(
 
     val client = clientBuilder.build()
     try {
+      log.info(s"Uploading bundle: ${localBundlePath} to ${endpoint}")
       client.upload(deployables)
+      log.info(s"Finished uploading bundle: ${localBundlePath}")
     } finally {
       client.close()
     }
@@ -542,6 +545,8 @@ object NexusRESTService {
     def toClosed   = copy(stagingType = "closed")
     def toDropped  = copy(stagingType = "dropped")
     def toReleased = copy(stagingType = "released")
+
+    def deployUrl: String = s"https://oss.sonatype.org/service/local/staging/deployByRepositoryId/${repositoryId}"
   }
 
   /**
