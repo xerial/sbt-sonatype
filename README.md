@@ -183,7 +183,7 @@ Since sbt-sonatype 3.x, it supports session based release flows:
     - P2: `; sonatypeOpen; publishSigned`
     - P3: ...
   - Wait for all upload completion
-  - Finally, run `sonatypeRelease`
+  - Finally, run `; sonatypeOpen; sonatypeRelease`
 
 Travis CI (stages) and Circle CI (workflows) have features to write such workflows.
 
