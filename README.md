@@ -170,12 +170,12 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 Since sbt-sonatype 3.x, it supports session based release flows:
 
-### Single Module Projects
-  - sonatypePrepare
-  - publishSigned
-  - sonatypeRelease
+### Sequential Upload Release (Use this for small projects)
+```scala
+> ; sonatypePrepare; publishSigned; sonatypeRelease
+```
 
-### Multi Module Projects
+### Parallel Upload Release
   - Run `sonatypePrepare` in a single step.
     - You must wait for the completion of this step
   - Then, start uploading signed artifacts using multiple processes:
@@ -184,6 +184,8 @@ Since sbt-sonatype 3.x, it supports session based release flows:
     - P3: ...
   - Wait for all upload completion
   - Finally, run `sonatypeRelease`
+
+Travis CI (stages) and Circle CI (workflows) have features to write such workflows.
 
 For sbt-sonatype 2.x:
 * [Example workflow for creating & publishing to a staging repository](workflow.md)
