@@ -25,6 +25,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeCredentialHost          = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver         = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
+    val sonatypePublishToBundle         = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypeTargetRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
@@ -81,6 +82,9 @@ object Sonatype extends AutoPlugin {
       else developers.value
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
+    sonatypePublishToBundle := {
+      Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
+    },
     sonatypeDefaultResolver := {
       val profileM = sonatypeTargetRepositoryProfile.?.value
 
@@ -94,7 +98,10 @@ object Sonatype extends AutoPlugin {
       })
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
-    sonatypeBundleDirectory := target.value / "sonatype-staging",
+    sonatypeBundleDirectory := {
+      // The root project folder
+      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging"
+    },
     sonatypeBundle := {
 
       "Ok"

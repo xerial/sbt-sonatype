@@ -6,13 +6,14 @@ import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.{HttpGet, HttpPost}
 import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.{BasicCredentialsProvider, DefaultHttpClient}
+import org.apache.http.impl.client.{BasicCredentialsProvider, DefaultHttpClient, HttpClientBuilder}
 import org.apache.http.{HttpResponse, HttpStatus}
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.io.IO
 import sbt.{Credentials, DirectCredentials, Logger}
 
+import scala.concurrent.ExecutionException
 import scala.io.Source
 import scala.util.Try
 import scala.xml.{Utility, XML}
@@ -156,7 +157,8 @@ class NexusRESTService(
   }
 
   private def withHttpClient[U](body: HttpClient => U): U = {
-    val credt  = directCredentials
+    val credt = directCredentials
+
     val client = new DefaultHttpClient()
     try {
       val user   = credt.userName
@@ -188,9 +190,13 @@ class NexusRESTService(
 
     val client = clientBuilder.build()
     try {
-      log.info(s"Uploading bundle: ${localBundlePath} to ${endpoint}")
+      log.info(s"Uploading bundle ${localBundlePath} to ${endpoint}")
       client.upload(deployables)
       log.info(s"Finished bundle upload: ${localBundlePath}")
+    } catch {
+      case e: ExecutionException if e.getMessage.contains("400 Bad Request") =>
+        log.error("Upload failed. Probably the bundle is already uploaded. Run sonatypeClean or sonatypeDropAll first.")
+        throw e
     } finally {
       client.close()
     }
