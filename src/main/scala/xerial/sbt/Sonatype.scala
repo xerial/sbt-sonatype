@@ -32,7 +32,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
 
     val sonatypeBundle          = taskKey[String]("create a bundle for upload")
-    val sonatypeBundleClean     = taskKey[Unit]("Clean e a bundle folder")
+    val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
   }
 
@@ -85,14 +85,11 @@ object Sonatype extends AutoPlugin {
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeBundleDirectory := {
       // The root project folder
-      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging"
+      val folder = s"${name.value}-${version.value}"
+      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / folder
     },
     sonatypeBundleClean := {
       IO.delete(sonatypeBundleDirectory.value)
-    },
-    sonatypeBundle := {
-
-      "Ok"
     },
     sonatypePublishToBundle := {
       if (isSnapshot.value) {
