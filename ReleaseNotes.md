@@ -1,5 +1,9 @@
 Release Notes
 ===
+# 3.2
+- 2019-09-05
+- Re-built for sbt 1.2.8 
+
 # 3.1
 - September 5, 2019
 - Support `sonatypeBundleUpload`, which makes uploading hundreds of artifacts much faster than directly uploading them to Sonatype. [#89](https://github.com/xerial/sbt-sonatype/issues/89)
