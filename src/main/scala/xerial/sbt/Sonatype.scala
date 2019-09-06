@@ -90,7 +90,7 @@ object Sonatype extends AutoPlugin {
       IO.delete(sonatypeBundleDirectory.value)
     },
     sonatypePublishToBundle := {
-      if (isSnapshot.value) {
+      if (version.value.endsWith("-SNAPSHOT")) {
         Some(Opts.resolver.sonatypeSnapshots)
       } else {
         Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
@@ -102,7 +102,7 @@ object Sonatype extends AutoPlugin {
       val staged = profileM.map { stagingRepoProfile =>
         "releases" at stagingRepoProfile.deployUrl
       }
-      staged.getOrElse(if (isSnapshot.value) {
+      staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
         Opts.resolver.sonatypeSnapshots
       } else {
         Opts.resolver.sonatypeStaging
