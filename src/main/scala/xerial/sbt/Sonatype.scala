@@ -31,9 +31,9 @@ object Sonatype extends AutoPlugin {
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
 
-    val sonatypeBundle          = taskKey[String]("create a bundle for upload")
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
+    val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -112,6 +112,7 @@ object Sonatype extends AutoPlugin {
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
     commands ++= Seq(
+      sonatypeBundleRelease,
       sonatypeBundleUpload,
       sonatypePrepare,
       sonatypeOpen,
@@ -127,6 +128,19 @@ object Sonatype extends AutoPlugin {
       sonatypeStagingProfiles
     )
   )
+  private val sonatypeBundleRelease =
+    newCommand("sonatypeBundleRelease", "Upload a bundle in sonatypeBundleDirectory and release it at Sonatype") {
+      state: State =>
+        val extracted              = Project.extract(state)
+        val bundlePath             = extracted.get(sonatypeBundleDirectory)
+        val rest: NexusRESTService = getNexusRestService(state)
+        val repo = extracted.getOpt(sonatypeTargetRepositoryProfile).getOrElse {
+          val descriptionKey = extracted.get(sonatypeSessionName)
+          rest.openOrCreateByKey(descriptionKey)
+        }
+        rest.uploadBundle(bundlePath, repo.deployUrl)
+        updatePublishSettings(state, repo)
+    }
 
   private val sonatypeBundleUpload = newCommand("sonatypeBundleUpload", "Upload a bundle in sonatypeBundleDirectory") {
     state: State =>
@@ -138,6 +152,7 @@ object Sonatype extends AutoPlugin {
         rest.openOrCreateByKey(descriptionKey)
       }
       rest.uploadBundle(bundlePath, repo.deployUrl)
+      rest.closeAndPromote(repo)
       updatePublishSettings(state, repo)
   }
 

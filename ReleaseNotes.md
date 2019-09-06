@@ -1,5 +1,9 @@
 Release Notes
 ===
+# 3.3
+- 2019-09-05
+- Added sonatypeBundleRelease as a short cut for `sonatypePrepare; sonatypeUploadBundle; sonatypeRelease`
+
 # 3.2
 - 2019-09-05
 - Re-built for sbt 1.2.8 
