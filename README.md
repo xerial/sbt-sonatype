@@ -6,7 +6,7 @@ A sbt plugin for publishing your project to the Maven central repository through
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
     * Upload GPG signed artifacts to a local staging repository.
     * Add `publishTo := sonatypePublishToBundle.value` to your build.sbt
- * `sonatypeBundleRelease` (New in sbt-sonatype 3.3) 
+ * `sonatypeBundleRelease` (New in sbt-sonatype 3.4)
     * Upload the artifacts in the local staging folder to the remote staging repository at Sonatype.
     * Then perform the close and release steps at the Sonatype Nexus repository.
 
@@ -53,7 +53,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 ### build.sbt
 
 ```scala
-// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory)
+// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot setting is true
+// If isSnapshot is false, this will upload to Sonatype SNAPSHOT repository
 publishTo := sonatypePublishToBundle.value
 
 // [Optional] Use this setting when you need to uploads artifacts directly to Sonatype
@@ -122,7 +123,7 @@ developers := List(
 The general steps for publishing your artifact to the Central Repository are as follows: 
 
   * `publishSigned` to deploy your artifact to a local staging repository.
-  * `sonatypeBundleRelease` (since sbt-sonatype 3.3)
+  * `sonatypeBundleRelease` (since sbt-sonatype 3.4)
     * This command is equivalent to `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease`. 
     * Internally `sonatypeRelease` will do `sonatypeClose` and `sonatypePromote` in one step.
       * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
