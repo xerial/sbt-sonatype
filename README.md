@@ -66,7 +66,7 @@ If necessary, you can tweak several configurations:
 // [Optional] The local staging folder name:
 sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${version.value}"
 
-// [Optional] If you need to manage unique session names by your self, change this default setting:
+// [Optional] If you need to manage unique session names by yourself, change this default setting:
 sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 
 // [If you cannot use bundle upload] Use this setting when you need to uploads artifacts directly to Sonatype
