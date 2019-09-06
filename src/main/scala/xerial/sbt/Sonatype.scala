@@ -84,9 +84,7 @@ object Sonatype extends AutoPlugin {
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeBundleDirectory := {
-      // The root project folder
-      val folder = s"${name.value}-${version.value}"
-      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / folder
+      (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${version.value}"
     },
     sonatypeBundleClean := {
       IO.delete(sonatypeBundleDirectory.value)
