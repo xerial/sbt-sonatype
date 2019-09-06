@@ -37,7 +37,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 
 ### project/plugins.sbt
 
-Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeRelease` and `publishSigned`
+Import ***sbt-sonatype*** plugin and [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/) to use `sonatypeBundleRelease` and `publishSigned`
 commands:
 ```scala
 // For sbt 1.x (sbt-sonatype 2.3 or higher)
@@ -62,7 +62,7 @@ With this setting, `publishSigned` will create a bundle of your project to the l
 If `isSnapshot.value` is true (e.g., if the version name contains -SNAPSHOT), publishSigned task will upload files to the Sonatype Snapshots repository without using the local bundle folder.
 
 If necessary, you can tweak several configurations:
-```
+```scala
 // [Optional] The local staging folder name:
 sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${version.value}"
 
@@ -72,7 +72,6 @@ sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 // [If you cannot use bundle upload] Use this setting when you need to uploads artifacts directly to Sonatype
 // With this setting, you cannot use sonatypeBundleXXX commands
 publishTo := sonatypePublishTo.value
-
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
