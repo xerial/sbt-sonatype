@@ -1,6 +1,7 @@
 Release Notes
 ===
-# 3.3
+
+# 3.4
 - 2019-09-05
 - Added sonatypeBundleRelease as a short cut for `sonatypePrepare; sonatypeUploadBundle; sonatypeRelease`
 
