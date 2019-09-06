@@ -60,7 +60,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 publishTo := sonatypePublishToBundle.value
 
 // Use this setting when you need to uploads artifacts directly to Sonatype
-// If use this setting, you cannot use sonatypeBundleUpload
+// With this setting, you cannot use sonatypeBundleUpload
 publishTo := sonatypePublishTo.value
 
 // [Optional] local staging folder
