@@ -59,13 +59,12 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 // [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory)
 publishTo := sonatypePublishToBundle.value
 
-// Use this setting when you need to uploads artifacts directly to Sonatype
+// [Optional] Use this setting when you need to uploads artifacts directly to Sonatype
 // With this setting, you cannot use sonatypeBundleUpload
 publishTo := sonatypePublishTo.value
 
-// [Optional] Configure the local staging folder name
+// [Optional] Configure the local staging folder name if necessary:
 sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${name.value}-${version.value}"
-
 
 // [Optional] If you need to manage unique session names, change this default setting:
 sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
