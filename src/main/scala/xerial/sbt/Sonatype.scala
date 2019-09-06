@@ -31,9 +31,9 @@ object Sonatype extends AutoPlugin {
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
 
-    val sonatypeBundle          = taskKey[String]("create a bundle for upload")
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
+    val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -112,6 +112,7 @@ object Sonatype extends AutoPlugin {
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
     commands ++= Seq(
+      sonatypeBundleRelease,
       sonatypeBundleUpload,
       sonatypePrepare,
       sonatypeOpen,
@@ -127,6 +128,32 @@ object Sonatype extends AutoPlugin {
       sonatypeStagingProfiles
     )
   )
+
+  private def prepare(state: State, rest: NexusRESTService): StagingRepositoryProfile = {
+    val extracted      = Project.extract(state)
+    val descriptionKey = extracted.get(sonatypeSessionName)
+    state.log.info(s"Preparing a new staging repository for ${descriptionKey}")
+    // Drop a previous staging repository if exists
+    val dropTask = Future.apply(rest.dropIfExistsByKey(descriptionKey))
+    // Create a new one
+    val createTask = Future.apply(rest.createStage(descriptionKey))
+    // Run two tasks in parallel
+    val merged                     = dropTask.zip(createTask)
+    val (droppedRepo, createdRepo) = Await.result(merged, Duration.Inf)
+    createdRepo
+  }
+
+  private val sonatypeBundleRelease =
+    newCommand("sonatypeBundleRelease", "Upload a bundle in sonatypeBundleDirectory and release it at Sonatype") {
+      state: State =>
+        val rest: NexusRESTService = getNexusRestService(state)
+        val repo                   = prepare(state, rest)
+        val extracted              = Project.extract(state)
+        val bundlePath             = extracted.get(sonatypeBundleDirectory)
+        rest.uploadBundle(bundlePath, repo.deployUrl)
+        rest.closeAndPromote(repo)
+        updatePublishSettings(state, repo)
+    }
 
   private val sonatypeBundleUpload = newCommand("sonatypeBundleUpload", "Upload a bundle in sonatypeBundleDirectory") {
     state: State =>
@@ -145,18 +172,9 @@ object Sonatype extends AutoPlugin {
     "sonatypePrepare",
     "Clean (if exists) and create a staging repository for releasing the current version, then update publishTo") {
     state: State =>
-      val extracted      = Project.extract(state)
-      val descriptionKey = extracted.get(sonatypeSessionName)
-      state.log.info(s"Preparing a new staging repository for ${descriptionKey}")
       val rest: NexusRESTService = getNexusRestService(state)
-      // Drop a previous staging repository if exists
-      val dropTask = Future.apply(rest.dropIfExistsByKey(descriptionKey))
-      // Create a new one
-      val createTask = Future.apply(rest.createStage(descriptionKey))
-      // Run two tasks in parallel
-      val merged                     = dropTask.zip(createTask)
-      val (droppedRepo, createdRepo) = Await.result(merged, Duration.Inf)
-      updatePublishSettings(state, createdRepo)
+      val repo                   = prepare(state, rest)
+      updatePublishSettings(state, repo)
   }
 
   private val sonatypeOpen = newCommand(
