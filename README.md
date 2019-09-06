@@ -142,10 +142,10 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 
 ### Basic Commands
 * __sonatypePrepare__
-  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key.
+  * Drop the exising staging repositories (if exist) and create a new staging repository using `sonatypeSessionName` as a unique key.
   * This will update `sonatypePublishTo` setting. 
   * For cross-build projects, make sure running this command only once at the beginning of the release process. 
-    * If you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
+    * Usually using sonatypeBundleUpload should be sufficient, but if you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
 * __sonatypeBundleUpload__
   * Upload your local staging folder contents to a remote Sonatype repository.
 * __sonatypeOpen__
@@ -182,7 +182,14 @@ Since sbt-sonatype 3.x, it supports session-based release flows:
 
 ### Sequential Upload Release (Use this for small projects)
 
+```
 > ; sonatypePrepare; publishSigned; sonatypeBundleUpload; sonatypeRelease
+```
+
+For cross-building projects, use `+ publishSigned`:
+```
+> ; sonatypePrepare; + publishSigned; sonatypeBundleUpload; sonatypeRelease
+```
 
 ### Parallel Upload Release
 
