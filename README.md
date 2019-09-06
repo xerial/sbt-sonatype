@@ -52,13 +52,17 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 ### build.sbt
 
+sbt-sonatype creates a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) using `publishSigned` command into a local folder `target/sonatype-staging`. To do so, you need to set `publishTo` setting in your build.sbt as follows:
 ```scala
 // [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot setting is true
-// If isSnapshot is false, this will upload to Sonatype SNAPSHOT repository
+// If isSnapshot is false, this will use to Sonatype SNAPSHOT repository.
 publishTo := sonatypePublishToBundle.value
+```
 
+If necessary, you can tweak more optional configurations:
+```
 // [Optional] Use this setting when you need to uploads artifacts directly to Sonatype
-// With this setting, you cannot use sonatypeBundleUpload
+// With this setting, you cannot use sonatypeBundleXXX commands
 publishTo := sonatypePublishTo.value
 
 // [Optional] Configure the local staging folder name if necessary:
@@ -70,7 +74,7 @@ sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
 
-Set Sonatype account information (user name and password) in the global sbt settings. To protect your password, never include this file within your project.
+For the authentication to Sonatype API, you need to set your Sonatype account information (user name and password) in the global sbt settings. To protect your password, never include this file within your project.
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
@@ -124,7 +128,7 @@ The general steps for publishing your artifact to the Central Repository are as 
 
   * `publishSigned` to deploy your artifact to a local staging repository.
   * `sonatypeBundleRelease` (since sbt-sonatype 3.4)
-    * This command is equivalent to `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease`. 
+    * This command is equivalent to running `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease`. 
     * Internally `sonatypeRelease` will do `sonatypeClose` and `sonatypePromote` in one step.
       * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
    and source code presence, pom.xml settings, etc.
@@ -134,10 +138,12 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 
 ## Commands
 
-### Basic Commands
+In sbt-sonatype, basically you only need to run `sonatypeBundleRelease` command:
 * __sonatypeBundleRelase__ 
   * This will run a sequence of commands `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease` in one step.
+  * You must run `publishSigned` before this command.
 
+### Individual Step Commands
 * __sonatypePrepare__
   * Drop the exising staging repositories (if exist) and create a new staging repository using `sonatypeSessionName` as a unique key.
   * This will update `sonatypePublishTo` setting. 
@@ -157,7 +163,7 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 
-## Others
+## Other Commmands
 * __sonatypeBundleClean__
   * Clean a local bundle folder
 * __sonatypeClean__
