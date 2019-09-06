@@ -1,5 +1,9 @@
 Release Notes
 ===
+# 3.1
+- September 5, 2019
+- Support `sonatypeBundleUpload`, which makes uploading hundreds of artifacts much faster than directly uploading them to Sonatype. [#89](https://github.com/xerial/sbt-sonatype/issues/89)
+
 # 3.0
 - September 4, 2019
 - Support building idempotent release flow using `sonatypePrepare`

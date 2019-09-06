@@ -1,16 +1,21 @@
 package xerial.sbt
 
-import java.io.IOException
+import java.io.{File, IOException}
 
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.{HttpGet, HttpPost}
 import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.impl.client.{BasicCredentialsProvider, DefaultHttpClient, HttpClientBuilder}
 import org.apache.http.{HttpResponse, HttpStatus}
+import org.sonatype.spice.zapper.ParametersBuilder
+import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
+import sbt.io.IO
 import sbt.{Credentials, DirectCredentials, Logger}
 
+import scala.concurrent.ExecutionException
 import scala.io.Source
+import scala.util.Try
 import scala.xml.{Utility, XML}
 
 /**
@@ -140,7 +145,7 @@ class NexusRESTService(
     response
   }
 
-  private def withHttpClient[U](body: HttpClient => U): U = {
+  private lazy val directCredentials = {
     val credt: DirectCredentials = Credentials
       .forHost(cred, credentialHost)
       .getOrElse {
@@ -148,6 +153,11 @@ class NexusRESTService(
           s"No credential is found for $credentialHost. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file."
         )
       }
+    credt
+  }
+
+  private def withHttpClient[U](body: HttpClient => U): U = {
+    val credt = directCredentials
 
     val client = new DefaultHttpClient()
     try {
@@ -159,6 +169,37 @@ class NexusRESTService(
       )
       body(client)
     } finally client.getConnectionManager.shutdown()
+  }
+
+  def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
+    val parameters = ParametersBuilder.defaults().build()
+    // Adding a trailing slash is necessary upload a bundle file to a proper location:
+    val endpoint      = s"${remoteUrl}/"
+    val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
+
+    val credentialProvider = new BasicCredentialsProvider()
+    val usernamePasswordCredentials =
+      new UsernamePasswordCredentials(directCredentials.userName, directCredentials.passwd)
+
+    credentialProvider.setCredentials(AuthScope.ANY, usernamePasswordCredentials)
+
+    clientBuilder.withPreemptiveRealm(credentialProvider)
+
+    import org.sonatype.spice.zapper.fs.DirectoryIOSource
+    val deployables = new DirectoryIOSource(localBundlePath)
+
+    val client = clientBuilder.build()
+    try {
+      log.info(s"Uploading bundle ${localBundlePath} to ${endpoint}")
+      client.upload(deployables)
+      log.info(s"Finished bundle upload: ${localBundlePath}")
+    } catch {
+      case e: IOException if e.getMessage.contains("400 Bad Request") =>
+        log.error("Upload failed. Probably the bundle is already uploaded. Run sonatypeClean or sonatypeDropAll first.")
+        throw e
+    } finally {
+      client.close()
+    }
   }
 
   def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
@@ -221,17 +262,36 @@ class NexusRESTService(
 
   def stagingProfiles: Seq[StagingProfile] = {
     log.info("Reading staging profiles...")
-    Get("/staging/profiles") { response =>
-      val profileXML = XML.load(response.getEntity.getContent)
-      val profiles = for (p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
-        StagingProfile(
-          (p \ "id").text,
-          (p \ "name").text,
-          (p \ "repositoryTargetId").text
-        )
+
+    val cacheFile = new File("target/sonatype-profiles.xml")
+
+    def readProfileXML: String = {
+      Get("/staging/profiles") { response =>
+        val xml = IO.readStream(response.getEntity.getContent)
+        cacheFile.getParentFile.mkdirs()
+        // Save the profile to a local target folder for future use
+        IO.write(cacheFile, xml)
+        xml
       }
-      profiles
     }
+
+    val profileXML =
+      if (cacheFile.exists() && cacheFile.length() > 0) {
+        Try(XML.loadString(IO.read(cacheFile))).getOrElse {
+          XML.loadString(readProfileXML)
+        }
+      } else {
+        XML.loadString(readProfileXML)
+      }
+
+    val profiles = for (p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
+      StagingProfile(
+        (p \ "id").text,
+        (p \ "name").text,
+        (p \ "repositoryTargetId").text
+      )
+    }
+    profiles
   }
 
   lazy val currentProfile = {
@@ -513,6 +573,8 @@ object NexusRESTService {
     def toClosed   = copy(stagingType = "closed")
     def toDropped  = copy(stagingType = "dropped")
     def toReleased = copy(stagingType = "released")
+
+    def deployUrl: String = s"https://oss.sonatype.org/service/local/staging/deployByRepositoryId/${repositoryId}"
   }
 
   /**

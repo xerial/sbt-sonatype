@@ -25,10 +25,15 @@ object Sonatype extends AutoPlugin {
     val sonatypeCredentialHost          = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver         = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
+    val sonatypePublishToBundle         = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypeTargetRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
+
+    val sonatypeBundle          = taskKey[String]("create a bundle for upload")
+    val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
+    val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -78,14 +83,26 @@ object Sonatype extends AutoPlugin {
       else developers.value
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
+    sonatypeBundleDirectory := {
+      // The root project folder
+      val folder = s"${name.value}-${version.value}"
+      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / folder
+    },
+    sonatypeBundleClean := {
+      IO.delete(sonatypeBundleDirectory.value)
+    },
+    sonatypePublishToBundle := {
+      if (isSnapshot.value) {
+        Some(Opts.resolver.sonatypeSnapshots)
+      } else {
+        Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
+      }
+    },
     sonatypeDefaultResolver := {
-      val sonatypeRepo = "https://oss.sonatype.org/"
-      val profileM     = sonatypeTargetRepositoryProfile.?.value
+      val profileM = sonatypeTargetRepositoryProfile.?.value
 
       val staged = profileM.map { stagingRepoProfile =>
-        "releases" at sonatypeRepo +
-          "service/local/staging/deployByRepositoryId/" +
-          stagingRepoProfile.repositoryId
+        "releases" at stagingRepoProfile.deployUrl
       }
       staged.getOrElse(if (isSnapshot.value) {
         Opts.resolver.sonatypeSnapshots
@@ -95,6 +112,7 @@ object Sonatype extends AutoPlugin {
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
     commands ++= Seq(
+      sonatypeBundleUpload,
       sonatypePrepare,
       sonatypeOpen,
       sonatypeClose,
@@ -109,6 +127,19 @@ object Sonatype extends AutoPlugin {
       sonatypeStagingProfiles
     )
   )
+
+  private val sonatypeBundleUpload = newCommand("sonatypeBundleUpload", "Upload a bundle in sonatypeBundleDirectory") {
+    state: State =>
+      val extracted              = Project.extract(state)
+      val bundlePath             = extracted.get(sonatypeBundleDirectory)
+      val rest: NexusRESTService = getNexusRestService(state)
+      val repo = extracted.getOpt(sonatypeTargetRepositoryProfile).getOrElse {
+        val descriptionKey = extracted.get(sonatypeSessionName)
+        rest.openOrCreateByKey(descriptionKey)
+      }
+      rest.uploadBundle(bundlePath, repo.deployUrl)
+      updatePublishSettings(state, repo)
+  }
 
   private val sonatypePrepare = newCommand(
     "sonatypePrepare",
