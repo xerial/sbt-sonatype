@@ -6,9 +6,10 @@ A sbt plugin for publishing your project to the Maven central repository through
  * `sonatypePrepare`
     * Prepare a staging repository at Sonatype. It will also clean up previously created staging repositories. This step is added since sbt-sonatype 3.0 to support retyring the entire release process from scratch.
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
-    * Upload GPG signed artifacts to Sonatype repository
+    * Upload GPG signed artifacts to a local staging repository.
+    * Add `publishTo := sonatypePublishToBundle.value` to your build.sbt
  * `sonatypeBundleUpload` (New in sbt-sonatype 3.1) 
-    * Upload 
+    * Upload the artifacts in the local staging folder to the remote staging repository in Sonatype.
  * `sonatypeRelease`
     * Perform the close and release steps in the Sonatype Nexus repository.
 
@@ -30,7 +31,6 @@ A sbt plugin for publishing your project to the Maven central repository through
 
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
-    * [Publishing SBT projects to Nexus](http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/)
     * [Uploading to a Staging Repository via REST API](https://support.sonatype.com/hc/en-us/articles/213465868-Uploading-to-a-Staging-Repository-via-REST-API)
 
 ## Configurations
@@ -56,11 +56,18 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 ### build.sbt
 
 ```scala
-// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirecotry)
+// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory)
 publishTo := sonatypePublishToBundle.value
 
-// [Optional] If you need to manage unique session names, change this setting:
-sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
+// Use this setting when you need to uploads artifacts directly to Sonatype:
+publishTo := sonatypePublishTo.value
+
+// [Optional] local staging folder
+sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${name.value}-${version.value}"
+
+
+// [Optional] If you need to manage unique session names, change this default setting:
+sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
@@ -117,13 +124,14 @@ developers := List(
 
 The general steps for publishing your artifact to the Central Repository are as follows: 
 
+ * `sonatypePrepare` to create a staging repository at Sonatype using `sonatypeSessionName` as a unique key.
  * `publishSigned` to deploy your artifact to a local staging repository.
  * `sonatypeBundleUplaod` to upload your local staging repository to Sonatype. (Since sbt-sonatype 3.1)
  * `sonatypeRelease` 
    * This command will do `sonatypeClose` and `sonatypePromote` in one step.
-   * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
+     * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
    and source code presence, pom.xml settings, etc.
-   * `sonatypePromote` command verifies the closed repository so that it can be synchronized with Maven central.
+     * `sonatypePromote` command verifies the closed repository so that it can be synchronized with Maven central.
 
 
 Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `sonatypeRelease` command.
@@ -132,13 +140,15 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 
 ### Basic Commands
 * __sonatypePrepare__
-  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key
-  * For cross-build projects, make sure running this command only once at the beginning of the release process. Then run `sonatypeOpen` for each build to reuse the already created stging repository.
+  * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key.
+  * This will update `sonatypePublishTo` setting. 
+  * For cross-build projects, make sure running this command only once at the beginning of the release process. 
+    * If you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
 * __sonatypeBundleUpload__
   * Upload your local staging folder contents to a remote Sonatype repository.
 * __sonatypeOpen__
-  * Open the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
-  * This command is useful to run `publishSigned` task in parallel. 
+ * This command is necessary only when you need to parallelize `publishSigned` task. For small/medium-size projects, using only `sonatypePrepare` would work.
+ * This opens the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
 * __sonatypeRelease__ (repositoryId)?
   * Close (if needed) and promote a staging repository. After this command, the uploaded artifacts will be synchronized to Maven central.
 
@@ -162,15 +172,15 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 
 ## Uploading Artifacts In Parallel
 
-Since sbt-sonatype 3.x, it supports session based release flows:
+Since sbt-sonatype 3.x, it supports session-based release flows:
 
-### Module Projects
-  - sonatypePrepare
-  - publishSigned
-  - sonatypeBundleUpload
-  - sonatypeRelease
+### Sequential Upload Release (Use this for small projects)
+> ; sonatypePrepare; publishSigned; sonatypeBundleUpload; sonatypeRelease
 
-### Multi Module Projects
+### Parallel Upload Release
+
+___Warning___: `sonatypeBundleUpload` can not be used in this configuration
+
   - Run `sonatypePrepare` in a single step.
     - You must wait for the completion of this step
   - Then, start uploading signed artifacts using multiple processes:
@@ -178,7 +188,9 @@ Since sbt-sonatype 3.x, it supports session based release flows:
     - P2: `; sonatypeOpen; publishSigned`
     - P3: ...
   - Wait for all upload completion
-  - Finally, run `sonatypeRelease`
+  - Finally, run `; sonatypeOpen; sonatypeRelease`
+
+Travis CI (stages) and Circle CI (workflows) have features to write such workflows.
 
 For sbt-sonatype 2.x:
 * [Example workflow for creating & publishing to a staging repository](workflow.md)
@@ -202,6 +214,7 @@ releaseProcess := Seq[ReleaseStep](
   releaseStepCommand("sonatypePrepare"),
   // For non cross-build projects, use releaseStepCommand("publishSigned")
   releaseStepCommandAndRemaining("+publishSigned"),
+  releaseStepCommand("sonatypeBundleUpload"),
   releaseStepCommand("sonatypeRelease"),
   setNextVersion,
   commitNextVersion,
