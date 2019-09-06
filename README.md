@@ -63,7 +63,7 @@ publishTo := sonatypePublishToBundle.value
 // With this setting, you cannot use sonatypeBundleUpload
 publishTo := sonatypePublishTo.value
 
-// [Optional] local staging folder
+// [Optional] Configure the local staging folder name
 sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${name.value}-${version.value}"
 
 
