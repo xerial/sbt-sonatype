@@ -55,8 +55,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 sbt-sonatype will create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder `target/sonatype-staging` with `publishSigned` task. To make it work, you need to set `publishTo` setting in your build.sbt as follows:
 ```scala
-// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot setting is false
-// If isSnapshot is true, this will use to Sonatype SNAPSHOT repository.
+// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot.value is false
+// If isSnapshot is true, this will use Sonatype SNAPSHOT repository.
 publishTo := sonatypePublishToBundle.value
 ```
 
