@@ -53,7 +53,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 ### build.sbt
 
-To use sbt-sonatype, you need to create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder specified by `sonatypeBundleDirectory`. By default the folder is `(project root)/target/sonatype-staging/(project name)-(version)`. Add the following `publishTo` setting to create a local bundle of your project:
+To use sbt-sonatype, you need to create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder specified by `sonatypeBundleDirectory`. By default the folder is `(project root)/target/sonatype-staging/(version)`. Add the following `publishTo` setting to create a local bundle of your project:
 ```scala
 publishTo := sonatypePublishToBundle.value
 ```
