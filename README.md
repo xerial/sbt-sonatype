@@ -1,12 +1,14 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables three-step release of Scala/Java projects.
+A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin simplifies the release process of Scala/Java projects.
 
  * `sonatypePrepare`
     * Prepare a staging repository at Sonatype. It will also clean up previously created staging repositories. This step is added since sbt-sonatype 3.0 to support retyring the entire release process from scratch.
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
     * Upload GPG signed artifacts to Sonatype repository
+ * `sonatypeBundleUpload` (New in sbt-sonatype 3.1) 
+    * Upload 
  * `sonatypeRelease`
     * Perform the close and release steps in the Sonatype Nexus repository.
 
@@ -54,8 +56,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 ### build.sbt
 
 ```scala
-// [Important] Use publishTo settings set by sbt-sonatype plugin
-publishTo := sonatypePublishTo.value
+// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirecotry)
+publishTo := sonatypePublishToBundle.value
 
 // [Optional] If you need to manage unique session names, change this setting:
 sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
@@ -115,27 +117,16 @@ developers := List(
 
 The general steps for publishing your artifact to the Central Repository are as follows: 
 
- * `publishSigned` to deploy your artifact to staging repository at Sonatype.
- * `sonatypeRelease` do `sonatypeClose` and `sonatypePromote` in one step.
+ * `publishSigned` to deploy your artifact to a local staging repository.
+ * `sonatypeBundleUplaod` to upload your local staging repository to Sonatype. (Since sbt-sonatype 3.1)
+ * `sonatypeRelease` 
+   * This command will do `sonatypeClose` and `sonatypePromote` in one step.
    * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
    and source code presence, pom.xml settings, etc.
    * `sonatypePromote` command verifies the closed repository so that it can be synchronized with Maven central.
 
 
-Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `sonatypeRelease` command. 
-
-### Command Line Usage
-
-Publish a GPG-signed artifact to Sonatype:
-```
-$ sbt publishSigned
-```
-
-Do close and promote at once:
-```
-$ sbt sonatypeRelease
-```
-This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html), then sends close and promote commands. 
+Note: If your project version has "SNAPSHOT" suffix, your project will be published to the [snapshot repository](http://oss.sonatype.org/content/repositories/snapshots) of Sonatype, and you cannot use `sonatypeRelease` command.
 
 ## Commands
 
@@ -143,6 +134,8 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 * __sonatypePrepare__
   * Drop (if exists) and create a new staging repository using `sonatypeSessionName` as a unique key
   * For cross-build projects, make sure running this command only once at the beginning of the release process. Then run `sonatypeOpen` for each build to reuse the already created stging repository.
+* __sonatypeBundleUpload__
+  * Upload your local staging folder contents to a remote Sonatype repository.
 * __sonatypeOpen__
   * Open the existing staging repository using `sonatypeSessionName` as a unique key. If it doesn't exist, create a new one. It will update`sonatypePublishTo`
   * This command is useful to run `publishSigned` task in parallel. 
@@ -171,9 +164,10 @@ This command accesses [Sonatype Nexus REST API](https://oss.sonatype.org/nexus-s
 
 Since sbt-sonatype 3.x, it supports session based release flows:
 
-### Single Module Projects
+### Module Projects
   - sonatypePrepare
   - publishSigned
+  - sonatypeBundleUpload
   - sonatypeRelease
 
 ### Multi Module Projects
