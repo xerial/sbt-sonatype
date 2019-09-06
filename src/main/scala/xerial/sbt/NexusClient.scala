@@ -194,7 +194,7 @@ class NexusRESTService(
       client.upload(deployables)
       log.info(s"Finished bundle upload: ${localBundlePath}")
     } catch {
-      case e: ExecutionException if e.getMessage.contains("400 Bad Request") =>
+      case e: IOException if e.getMessage.contains("400 Bad Request") =>
         log.error("Upload failed. Probably the bundle is already uploaded. Run sonatypeClean or sonatypeDropAll first.")
         throw e
     } finally {

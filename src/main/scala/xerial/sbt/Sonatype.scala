@@ -32,6 +32,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
 
     val sonatypeBundle          = taskKey[String]("create a bundle for upload")
+    val sonatypeBundleClean     = taskKey[Unit]("Clean e a bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
   }
 
@@ -82,8 +83,23 @@ object Sonatype extends AutoPlugin {
       else developers.value
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
+    sonatypeBundleDirectory := {
+      // The root project folder
+      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging"
+    },
+    sonatypeBundleClean := {
+      IO.delete(sonatypeBundleDirectory.value)
+    },
+    sonatypeBundle := {
+
+      "Ok"
+    },
     sonatypePublishToBundle := {
-      Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
+      if (isSnapshot.value) {
+        Some(Opts.resolver.sonatypeSnapshots)
+      } else {
+        Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
+      }
     },
     sonatypeDefaultResolver := {
       val profileM = sonatypeTargetRepositoryProfile.?.value
@@ -98,14 +114,6 @@ object Sonatype extends AutoPlugin {
       })
     },
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
-    sonatypeBundleDirectory := {
-      // The root project folder
-      (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging"
-    },
-    sonatypeBundle := {
-
-      "Ok"
-    },
     commands ++= Seq(
       sonatypeBundleUpload,
       sonatypePrepare,
