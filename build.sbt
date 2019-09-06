@@ -41,10 +41,8 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    releaseStepCommand("sonatypePrepare"),
     releaseStepCommandAndRemaining("publishSigned"),
-    releaseStepCommand("sonatypeBundleUpload"),
-    releaseStepCommand("sonatypeRelease"),
+    releaseStepCommand("sonatypeBundleRelease"),
     setNextVersion,
     commitNextVersion,
     pushChanges
