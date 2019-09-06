@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.5
+- 2019-09-06
+- A minor fix for multi-module projects to use a single staging folder [#94](https://github.com/xerial/sbt-sonatype/pull/94)
+
 # 3.4
 - 2019-09-05
 - Added sonatypeBundleRelease as a short cut for `sonatypePrepare; sonatypeUploadBundle; sonatypeRelease`
