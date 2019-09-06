@@ -1,14 +1,15 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin simplifies the release process of Scala/Java projects.
+A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of your Scala/Java projects.
 
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
-    * Upload GPG signed artifacts to a local staging repository.
-    * Add `publishTo := sonatypePublishToBundle.value` to your build.sbt
+    * Create GPG signed artifacts to a local staging repository.
+    * Make sure adding `publishTo := sonatypePublishToBundle.value` to your build.sbt
  * `sonatypeBundleRelease` (New in sbt-sonatype 3.4)
-    * Upload the artifacts in the local staging folder to the remote staging repository at Sonatype.
-    * Then perform the close and release steps at the Sonatype Nexus repository.
+    * This command will prepare a new remote staging repository at Sonatype. If there are exisiting staging repositories that have the same description with `sonatypeSessionName` key, they will be discarded properly.
+    * Then it will upload the artifacts in the local staging folder to the remote staging repository.
+    * Finally, it will perform the close and release steps at the Sonatype Nexus repository.
 
  After these steps, your project will be synchronized to the Maven central (usually) within ten minutes. No longer need to enter the web interface of
  [Sonatype Nexus repository](http://oss.sonatype.org/) to performe these release steps.
@@ -52,10 +53,10 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 ### build.sbt
 
-sbt-sonatype creates a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) using `publishSigned` command into a local folder `target/sonatype-staging`. To do so, you need to set `publishTo` setting in your build.sbt as follows:
+sbt-sonatype will create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder `target/sonatype-staging` with `publishSigned` task. To make it work, you need to set `publishTo` setting in your build.sbt as follows:
 ```scala
-// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot setting is true
-// If isSnapshot is false, this will use to Sonatype SNAPSHOT repository.
+// [Important] Publishing artifacts to a local staging folder (sonatypeBundleDirectory) if isSnapshot setting is false
+// If isSnapshot is true, this will use to Sonatype SNAPSHOT repository.
 publishTo := sonatypePublishToBundle.value
 ```
 
