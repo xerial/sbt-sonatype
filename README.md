@@ -181,7 +181,7 @@ Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
 * __sonatypeDrop__ 
   * Drop an open or closed staging repository
 
-## Uploading Artifacts In Parallel
+## Parallelizing Your Builds
 
 Since sbt-sonatype 3.3, it supports session-based release flows:
 
@@ -195,21 +195,20 @@ For cross-building projects, use `+ publishSigned`:
 ```scala
 > ; + publishSigned; sonatypeBundleRelease
 ```
+### Parallelizing Builds When Sharing A Working Folder
 
-### Parallel Upload Release
+When you are sharing a working folder, you can parallelize publishSigned step for each module and each Scala binary version:
 
-___Warning___: `sonatypeBundleUpload` can not be used in the following steps:
+- Run multiple publishSigned tasks in parallel
+- Finally, run `sonatypeBundleRelease`
 
-  - Run `sonatypePrepare` in a single step.
-    - You must wait for the completion of this step
-  - Then, start uploading signed artifacts using multiple processes:
-    - P1: `; sonatypeOpen; publishSigned`
-    - P2: `; sonatypeOpen; publishSigned`
-    - P3: ...
-  - Wait for all upload completion
-  - Finally, run `; sonatypeOpen; sonatypeRelease`
+### Parallelizing Builds When Not Sharing Any Working Folder
 
-Travis CI (stages) and Circle CI (workflows) have features to write such workflows.
+If you are not sharing any working directory, you need to publish a bundle for each build because Sonatype API only supports uploading one bundle per a staging repository.
+ 
+Here is an example to parallelize your build for each Scala binary version: 
+  - Set `sonatypeSessionName := "[sbt-sonatype] ${name.value}-${scalaBinaryVersion.value}-${version.value}"` to use unique session keys for individual Scala binary versions.
+  - For each Scala version, run: `sbt ++(Scala version) "; publishSigned; sonatypeBundleRelease`
 
 For sbt-sonatype 2.x:
 * [Example workflow for creating & publishing to a staging repository](workflow.md)
