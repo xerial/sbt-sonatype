@@ -181,13 +181,11 @@ Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
 * __sonatypeDrop__ 
   * Drop an open or closed staging repository
 
-## Parallelizing Your Builds
-
-Since sbt-sonatype 3.3, it supports session-based release flows:
+## Advanced Build Settings
 
 ### Sequential Upload Release (Use this for small projects)
 
-```scalaa
+```scala
 > ; publishSigned; sonatypeBundleRelease
 ```
 
@@ -197,7 +195,7 @@ For cross-building projects, use `+ publishSigned`:
 ```
 ### Parallelizing Builds When Sharing A Working Folder
 
-When you are sharing a working folder, you can parallelize publishSigned step for each module and each Scala binary version:
+When you are sharing a working folder, you can parallelize publishSigned step for each module or for each Scala binary version:
 
 - Run multiple publishSigned tasks in parallel
 - Finally, run `sonatypeBundleRelease`
@@ -208,7 +206,7 @@ If you are not sharing any working directory, you need to publish a bundle for e
  
 Here is an example to parallelize your build for each Scala binary version: 
   - Set `sonatypeSessionName := "[sbt-sonatype] ${name.value}-${scalaBinaryVersion.value}-${version.value}"` to use unique session keys for individual Scala binary versions.
-  - For each Scala version, run: `sbt ++(Scala version) "; publishSigned; sonatypeBundleRelease`
+  - For each Scala version, run: `sbt ++(Scala version) "; publishSigned; sonatypeBundleRelease"`
 
 For sbt-sonatype 2.x:
 * [Example workflow for creating & publishing to a staging repository](workflow.md)
