@@ -202,7 +202,7 @@ When you are sharing a working folder, you can parallelize publishSigned step fo
 
 ### Parallelizing Builds When Not Sharing Any Working Folder
 
-If you are not sharing any working directory, you need to publish a bundle for each build because Sonatype API only supports uploading one bundle per a staging repository.
+If you are not sharing any working directory (e.g., Travis CI), to parallelize the release process, you need to publish a bundle for each build because Sonatype API only supports uploading one bundle per a staging repository.
  
 Here is an example to parallelize your build for each Scala binary version: 
   - Set `sonatypeSessionName := "[sbt-sonatype] ${name.value}-${scalaBinaryVersion.value}-${version.value}"` to use unique session keys for individual Scala binary versions.
