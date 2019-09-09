@@ -213,7 +213,7 @@ For sbt-sonatype 2.x:
 
 ## Using with sbt-release plugin
 
-To perform publishSigned and sonatypeReleaseAll with [sbt-release](https://github.com/sbt/sbt-release) plugin, define your custom release process as follows:
+To perform publishSigned and sonatypeBundleRelease with [sbt-release](https://github.com/sbt/sbt-release) plugin, define your custom release process as follows:
 
 ```scala
 import ReleaseTransformations._
