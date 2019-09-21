@@ -29,7 +29,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
   },
-  crossSbtVersions := Vector("1.2.8"),
+  crossSbtVersions := Vector("1.3.2"),
   releaseCrossBuild := false,
   releaseTagName := { (version in ThisBuild).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
