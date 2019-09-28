@@ -223,11 +223,11 @@ class NexusRESTService(
     // Drop the staging repository if exists
     val repos = findStagingRepositoryProfilesWithKey(descriptionKey)
     if (repos.isEmpty) {
-      log.info(s"No staging repository for ${descriptionKey} is found")
+      log.info(s"No previous staging repository for ${descriptionKey} was found")
       None
     } else {
       repos.map { repo =>
-        log.info(s"Found a staging repository ${repo}")
+        log.info(s"Found a previous staging repository ${repo}")
         dropStage(repo)
       }.lastOption
     }
