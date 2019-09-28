@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.8
+- 2019-09-27
+- Show log message periodically to avoid Travis CI 10 minutes timeout [#108](https://github.com/xerial/sbt-sonatype/issues/108)
+
 # 3.7
 - 2019-09-11
 - Upgrade http-client version to address NoClassDefFound error. 
