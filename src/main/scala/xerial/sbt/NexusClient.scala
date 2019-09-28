@@ -412,7 +412,7 @@ class NexusRESTService(
             throw new Exception("Failed to close the repository")
           } else {
             // Activity log exists, but the close phase is not yet terminated
-            log.debug("Close process is in progress ...")
+            log.info("The close process is in progress ...")
             timer.doWait
           }
         case None =>
@@ -476,7 +476,7 @@ class NexusRESTService(
             activity.reportFailure(log)
             throw new Exception("Failed to promote the repository")
           } else {
-            log.debug("Release process is in progress ...")
+            log.info("The release process is in progress ...")
             timer.doWait
           }
         case None =>
@@ -595,13 +595,21 @@ object NexusRESTService {
   case class StagingActivity(name: String, started: String, stopped: String, events: Seq[ActivityEvent]) {
     override def toString = {
       val b = Seq.newBuilder[String]
-      b += s"-activity -- name:$name, started:$started, stopped:$stopped"
+      b += activityLog
       for (e <- events)
         b += s" ${e.toString}"
       b.result.mkString("\n")
     }
 
-    def activityLog = s"Activity $name started:$started, stopped:$stopped"
+    def activityLog = {
+      val b = Seq.newBuilder[String]
+      b += s"Activity name:${name}"
+      b += s"started:${started}"
+      if (stopped.nonEmpty) {
+        b += s"stopped:${stopped}"
+      }
+      b.result().mkString(", ")
+    }
 
     def log(log: Logger): Unit = {
       log.info(activityLog)
@@ -665,8 +673,9 @@ object NexusRESTService {
     def ruleType: String = property.getOrElse("typeId", "other")
     def isFailure        = name == "ruleFailed"
 
-    override def toString =
+    override def toString = {
       s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
+    }
 
     def log(s: Logger, useErrorLog: Boolean = false): Unit = {
       val props = {
