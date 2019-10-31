@@ -8,7 +8,7 @@ A sbt plugin for publishing your project to the Maven central repository through
     * Make sure adding `publishTo := sonatypePublishToBundle.value` to your build.sbt
  * `sonatypeBundleRelease` (New in sbt-sonatype 3.4)
     * This command will prepare a new remote staging repository at Sonatype. If there are exisiting staging repositories that have the same description with `sonatypeSessionName` key, sbt-sonatype will discard them properly.
-    * Then, it will upload the artifacts in the local staging folder to the remote staging repository. Uploading artifacts as a bundle is much faster than uploaing each artifact to Sonatype. For example, thousands of files can be uploaded in several minutes with bundle upload.
+    * Then, it will upload the artifacts in the local staging folder to the remote staging repository. Uploading artifacts as a bundle is much faster than uploading each artifact to Sonatype. For example, thousands of files can be uploaded in several minutes with bundle upload.
     * Finally, this command will perform the close and release steps at the Sonatype Nexus repository to verify the Maven central requirements.
 
  After these steps, your project will be synchronized to the Maven central within ten minutes. No longer need to enter the web interface of
