@@ -58,9 +58,10 @@ object Sonatype extends AutoPlugin {
       false
     },
     credentials ++= {
-      val alreadyContainsSonatypeCredentials = credentials.value.collect {
+      val alreadyContainsSonatypeCredentials: Boolean = credentials.value.exists {
         case d: DirectCredentials => d.host == sonatypeCredentialHost.value
-      }.nonEmpty
+        case _ => false
+      }
       if (!alreadyContainsSonatypeCredentials) {
         val env = sys.env.get(_)
         (for {
