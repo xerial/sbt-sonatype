@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.8.1
+- 2019-11-20
+- Fix for the credential resolver to support sbt-gpg [#124](https://github.com/xerial/sbt-sonatype/pull/124)
+
 # 3.8
 - 2019-09-27
 - Show log message periodically to avoid Travis CI 10 minutes timeout [#108](https://github.com/xerial/sbt-sonatype/issues/108)
