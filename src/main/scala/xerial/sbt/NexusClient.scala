@@ -31,7 +31,8 @@ class NexusRESTService(
     repositoryUrl: String,
     val profileName: String,
     cred: Seq[Credentials],
-    credentialHost: String
+    credentialHost: String,
+    timeoutConfig: NexusRESTService.TimeoutConfig
 ) {
   import xerial.sbt.NexusRESTService._
 
@@ -159,7 +160,11 @@ class NexusRESTService(
   private def withHttpClient[U](body: HttpClient => U): U = {
     val credt = directCredentials
 
-    val client = new DefaultHttpClient()
+    val client     = new DefaultHttpClient()
+    val httpParams = client.getParams
+    timeoutConfig.socketSeconds.foreach(t => httpParams.setParameter("http.socket.timeout", t * 1000))
+    timeoutConfig.connectionSeconds.foreach(t => httpParams.setParameter("http.connection.timeout", t * 1000))
+
     try {
       val user   = credt.userName
       val passwd = credt.passwd
@@ -529,6 +534,10 @@ class NexusRESTService(
 }
 
 object NexusRESTService {
+  case class TimeoutConfig(
+      socketSeconds: Option[Int],
+      connectionSeconds: Option[Int]
+  )
 
   /**
     * Switches of a Sonatype command to use

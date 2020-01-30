@@ -34,6 +34,13 @@ object Sonatype extends AutoPlugin {
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
     val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
+
+    val sonatypeSocketTimeout = settingKey[Option[Int]](
+      "Timeout in milliseconds for waiting for data. i.e.. maximum period inactivity between two consecutive data packets"
+    )
+    val sonatypeConnectionTimeout = settingKey[Option[Int]](
+      "Timeout in milliseconds until a connection is established."
+    )
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -372,7 +379,11 @@ object Sonatype extends AutoPlugin {
       extracted.get(sonatypeRepository),
       profileName.getOrElse(extracted.get(sonatypeProfileName)),
       getCredentials(extracted, state),
-      extracted.get(sonatypeCredentialHost)
+      extracted.get(sonatypeCredentialHost),
+      NexusRESTService.TimeoutConfig(
+        socketSeconds = extracted.get(sonatypeSocketTimeout),
+        connectionSeconds = extracted.get(sonatypeConnectionTimeout)
+      )
     )
   }
 
