@@ -19,6 +19,8 @@ A sbt plugin for publishing your project to the Maven central repository through
 - sbt-sonatype is available for sbt 1.x series.
 - You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
 
+- [Blazingly Fast Relase to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
+
 ## Prerequisites
  
  * Create a Sonatype Repository account 
