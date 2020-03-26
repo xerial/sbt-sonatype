@@ -5,12 +5,13 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 import com.twitter.finagle.http.{MediaType, Request, Response}
+import org.apache.http.HttpStatus
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
-import wvlet.airframe.control.{Control, Retry}
+import wvlet.airframe.control.{Control, ResultClass, Retry}
 import wvlet.airframe.http.HttpClient
 import wvlet.airframe.http.finagle.Finagle
 import wvlet.log.LogSupport
@@ -20,7 +21,7 @@ import xerial.sbt.sonatype.SonatypeClient._
   * REST API Client for Sonatype API (nexus-staigng)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html
   */
-class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHost: String)
+class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHost: String, maxRetries: Int = 100)
     extends AutoCloseable
     with LogSupport {
 
@@ -53,7 +54,7 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
       import wvlet.airframe.http.finagle._
       HttpClient
         .defaultHttpClientRetry[Request, Response]
-        .withMaxRetry(30)
+        .withMaxRetry(maxRetries)
         .withJitter(maxIntervalMillis = 30000)
     }
     .withRequestFilter { request =>
@@ -102,20 +103,57 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
     repo
   }
 
-  def closeStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
+  private val monitor = new ActivityMonitor()
+
+  private def waitForStageCompletion(taskName: String,
+                                     repo: StagingRepositoryProfile,
+                                     terminationCond: StagingActivity => Boolean): StagingRepositoryProfile = {
+    val retryer = Retry.withJitter(maxRetry = maxRetries, maxIntervalMillis = 60000)
+
+    retryer
+      .withResultClassifier[Option[ActivityEvent]] {
+        case Some(activity: StagingActivity) =>
+          if (terminationCond(activity)) {
+            info(s"[${taskName}] Finished successfully")
+            ResultClass.Succeeded
+          } else if (activity.containsError) {
+            error(s"[${taskName}] Failed")
+            activity.reportFailure
+            ResultClass.nonRetryableFailure(new Exception(s"Failed to ${taskName} the repository"))
+          } else {
+            ResultClass.retryableFailure(new Exception(s"Waiting for the completion of the ${taskName} process..."))
+          }
+      }
+      .run {
+        val activities = activitiesOf(repo)
+        monitor.report(activities)
+        activities.lastOption
+      }
+
+    repo
+  }
+
+  def closeStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
     info(s"Closing staging repository $repo")
-    httpClient.postOps[Map[String, StageTransitionRequest], Response](
+    val ret = httpClient.postOps[Map[String, StageTransitionRequest], Response](
       s"/staging/profiles/${repo.profileId}/finish",
       newStageTransitionRequest(currentProfile, repo)
     )
+    waitForStageCompletion("close", repo, terminationCond = { _.isCloseSucceeded(repo.repositoryId) }).toClosed
   }
 
-  def promoteStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
+  def promoteStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
     info(s"Promoting staging repository $repo")
-    httpClient.postOps[Map[String, StageTransitionRequest], Response](
+    val ret = httpClient.postOps[Map[String, StageTransitionRequest], Response](
       s"/staging/profiles/${repo.profileId}/promote",
       newStageTransitionRequest(currentProfile, repo)
     )
+    if (ret.statusCode != HttpStatus.SC_CREATED) {
+      error(s"${ret.status}: ${ret.contentString}")
+      throw new Exception("Failed to close the repository")
+    }
+
+    waitForStageCompletion("promote", repo, terminationCond = { _.isReleaseSucceeded(repo.repositoryId) })
   }
 
   def dropStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
@@ -135,10 +173,6 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
         description = repo.description
       )
     )
-  }
-
-  def activities: Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
-    for (r <- stagingRepositoryProfiles) yield r -> activitiesOf(r)
   }
 
   def activitiesOf(r: StagingRepositoryProfile): Seq[StagingActivity] = {
