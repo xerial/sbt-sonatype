@@ -5,17 +5,15 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 import com.twitter.finagle.http.{MediaType, Request, Response}
-import org.apache.http.HttpStatus
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
 import wvlet.airframe.control.{Control, ResultClass, Retry}
-import wvlet.airframe.http.HttpClient
+import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.airframe.http.finagle.Finagle
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeClient._
 
 /**
   * REST API Client for Sonatype API (nexus-staigng)
@@ -41,12 +39,15 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
     Base64.getEncoder.encodeToString(s"${credt.userName}:${credt.passwd}".getBytes(StandardCharsets.UTF_8))
   }
 
-  private val repoUri = {
+  private lazy val repoUri = {
     def repoBase(url: String) = if (url.endsWith("/")) url.dropRight(1) else url
     val url                   = repoBase(repositoryUrl)
     info(s"Nexus repository URL: $url")
     //info(s"sonatypeProfileName = ${profileName}")
     url
+  }
+  private val pathPrefix = {
+    new java.net.URL(repoUri).getPath
   }
 
   private val httpClient = Finagle.client
@@ -68,27 +69,30 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
     httpClient.close()
   }
 
+  import xerial.sbt.sonatype.SonatypeClient._
+
   def stagingRepositoryProfiles: Seq[StagingRepositoryProfile] = {
     info("Reading staging repository profiles...")
-    val result = httpClient.get[Map[String, Seq[StagingRepositoryProfile]]]("/staging/profile_repositories")
+    val result =
+      httpClient.get[Map[String, Seq[StagingRepositoryProfile]]](s"${pathPrefix}/staging/profile_repositories")
     result.getOrElse("data", Seq.empty)
   }
 
   def stagingRepository(repositoryId: String) = {
-    info(s"Seaching for repository ${repositoryId} ...")
-    httpClient.get[String](s"/staging/repository/${repositoryId}")
+    info(s"Searching for repository ${repositoryId} ...")
+    httpClient.get[String](s"${pathPrefix}/staging/repository/${repositoryId}")
   }
 
   def stagingProfiles: Seq[StagingProfile] = {
     info("Reading staging profiles...")
-    val result = httpClient.get[Map[String, Seq[StagingProfile]]]("/staging/profiles")
-    result.getOrElse("data", Seq.empty)
+    val result = httpClient.get[StagingProfileResponse](s"${pathPrefix}/staging/profiles")
+    result.data
   }
 
   def createStage(profile: StagingProfile, description: String): StagingRepositoryProfile = {
     info(s"Creating a staging repository in profile ${profile.name} with a description key: ${description}")
     val ret = httpClient.postOps[Map[String, String], CreateStageResponse](
-      s"/staging/profiles/${profile.id}/start",
+      s"${pathPrefix}/staging/profiles/${profile.id}/start",
       Map("data" -> description)
     )
     // Retrieve created staging repository ids
@@ -111,18 +115,16 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
     val retryer = Retry.withJitter(maxRetry = maxRetries, maxIntervalMillis = 60000)
 
     retryer
-      .withResultClassifier[Option[ActivityEvent]] {
-        case Some(activity: StagingActivity) =>
-          if (terminationCond(activity)) {
-            info(s"[${taskName}] Finished successfully")
-            ResultClass.Succeeded
-          } else if (activity.containsError) {
-            error(s"[${taskName}] Failed")
-            activity.reportFailure
-            ResultClass.nonRetryableFailure(new Exception(s"Failed to ${taskName} the repository"))
-          } else {
-            ResultClass.retryableFailure(new Exception(s"Waiting for the completion of the ${taskName} process..."))
-          }
+      .withResultClassifier[Option[StagingActivity]] {
+        case Some(activity) if terminationCond(activity) =>
+          info(s"[${taskName}] Finished successfully")
+          ResultClass.Succeeded
+        case Some(activity) if (activity.containsError) =>
+          error(s"[${taskName}] Failed")
+          activity.reportFailure
+          ResultClass.nonRetryableFailure(new Exception(s"Failed to ${taskName} the repository"))
+        case _ =>
+          ResultClass.retryableFailure(new Exception(s"Waiting for the completion of the ${taskName} process..."))
       }
       .run {
         val activities = activitiesOf(repo)
@@ -136,7 +138,7 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
   def closeStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
     info(s"Closing staging repository $repo")
     val ret = httpClient.postOps[Map[String, StageTransitionRequest], Response](
-      s"/staging/profiles/${repo.profileId}/finish",
+      s"${pathPrefix}/staging/profiles/${repo.profileId}/finish",
       newStageTransitionRequest(currentProfile, repo)
     )
     waitForStageCompletion("close", repo, terminationCond = { _.isCloseSucceeded(repo.repositoryId) }).toClosed
@@ -145,10 +147,10 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
   def promoteStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
     info(s"Promoting staging repository $repo")
     val ret = httpClient.postOps[Map[String, StageTransitionRequest], Response](
-      s"/staging/profiles/${repo.profileId}/promote",
+      s"${pathPrefix}/staging/profiles/${repo.profileId}/promote",
       newStageTransitionRequest(currentProfile, repo)
     )
-    if (ret.statusCode != HttpStatus.SC_CREATED) {
+    if (ret.statusCode != HttpStatus.Created_201.code) {
       error(s"${ret.status}: ${ret.contentString}")
       throw new Exception("Failed to close the repository")
     }
@@ -159,7 +161,7 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
   def dropStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
     info(s"Dropping staging repository $repo")
     httpClient.postOps[Map[String, StageTransitionRequest], Response](
-      s"/staging/profiles/${repo.profileId}/drop",
+      s"${pathPrefix}/staging/profiles/${repo.profileId}/drop",
       newStageTransitionRequest(currentProfile, repo)
     )
   }
@@ -177,7 +179,7 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
 
   def activitiesOf(r: StagingRepositoryProfile): Seq[StagingActivity] = {
     debug(s"Checking activity logs of ${r.repositoryId} ...")
-    httpClient.get[Seq[StagingActivity]](s"/staging/repository/${r.repositoryId}/activity")
+    httpClient.get[Seq[StagingActivity]](s"${pathPrefix}/staging/repository/${r.repositoryId}/activity")
   }
 
   def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
@@ -205,10 +207,14 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
 
         import org.sonatype.spice.zapper.fs.DirectoryIOSource
         val deployables = new DirectoryIOSource(localBundlePath)
-        Control.withResource(clientBuilder.build()) { client =>
+
+        val client = clientBuilder.build()
+        try {
           info(s"Uploading bundle ${localBundlePath} to ${endpoint}")
           client.upload(deployables)
           info(s"Finished bundle upload: ${localBundlePath}")
+        } finally {
+          client.close()
         }
       }
   }
@@ -216,6 +222,8 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
 }
 
 object SonatypeClient extends LogSupport {
+
+  case class StagingProfileResponse(data: Seq[StagingProfile] = Seq.empty)
 
   /**
     * Staging profile is the information associated to a Sonatype account.
@@ -289,9 +297,9 @@ object SonatypeClient extends LogSupport {
       val name_s      = name.replaceAll("rule(s)?", "")
       val message     = f"$name_s%10s: $messageLine"
       if (useErrorLog)
-        error(message)
+        logger.error(message)
       else
-        info(message)
+        logger.info(message)
     }
   }
 
@@ -302,7 +310,7 @@ object SonatypeClient extends LogSupport {
     def report(stagingActivities: Seq[StagingActivity]) = {
       for (sa <- stagingActivities) {
         if (!reportedActivities.contains(sa.started)) {
-          info(sa.activityLog)
+          logger.info(sa.activityLog)
           reportedActivities += sa.started
         }
         for (ae <- sa.events if !reportedEvents.contains(ae)) {
@@ -340,7 +348,7 @@ object SonatypeClient extends LogSupport {
     }
 
     def showProgress: Unit = {
-      info(activityLog)
+      logger.info(activityLog)
       val hasError = containsError
       for (e <- suppressEvaluateLog) {
         e.showProgress(hasError)
@@ -369,7 +377,7 @@ object SonatypeClient extends LogSupport {
     def containsError = events.exists(_.severity != "0")
 
     def reportFailure: Unit = {
-      error(activityLog)
+      logger.error(activityLog)
       val failureReport = suppressEvaluateLog.filter(_.isFailure)
       for (e <- failureReport) {
         e.showProgress(useErrorLog = true)
