@@ -1,7 +1,11 @@
 package xerial.sbt
 
 import java.io.{File, IOException}
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+import java.util.concurrent.TimeUnit
 
+import com.twitter.finagle.http.{MediaType, Request, Response}
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.{HttpGet, HttpPost}
@@ -12,11 +16,19 @@ import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.io.IO
 import sbt.{Credentials, DirectCredentials, Logger}
+import wvlet.airframe.codec.MessageCodec
+import wvlet.airframe.control.{ResultClass, Retry}
+import wvlet.airframe.control.Retry.RetryContext
+import wvlet.airframe.http.finagle.Finagle
+import wvlet.airframe.json.JSON.JSONValue
+import xerial.sbt.sonatype.SonatypeClient
 
 import scala.concurrent.ExecutionException
 import scala.io.Source
 import scala.util.Try
 import scala.xml.{Utility, XML}
+
+import sonatype.SonatypeClient._
 
 /**
   * Interface to access the REST API of Nexus
@@ -27,12 +39,12 @@ import scala.xml.{Utility, XML}
   * @param credentialHost
   */
 class NexusRESTService(
+    sonatypClient: SonatypeClient,
     log: Logger,
     repositoryUrl: String,
     val profileName: String,
     cred: Seq[Credentials],
     credentialHost: String,
-    backOffRetrySettings: NexusBackOffRetrySettings
 ) {
   import xerial.sbt.NexusRESTService._
 
@@ -78,137 +90,8 @@ class NexusRESTService(
   def openRepositories   = stagingRepositoryProfiles().filter(_.isOpen).sortBy(_.repositoryId)
   def closedRepositories = stagingRepositoryProfiles().filter(_.isClosed).sortBy(_.repositoryId)
 
-  private def repoBase(url: String) = if (url.endsWith("/")) url.dropRight(1) else url
-  private val repo = {
-    val url = repoBase(repositoryUrl)
-    log.info(s"Nexus repository URL: $url")
-    log.info(s"sonatypeProfileName = ${profileName}")
-    url
-  }
-
-  def Get[U](path: String)(body: HttpResponse => U): U = {
-    val req = new HttpGet(s"${repo}$path")
-    req.addHeader("Content-Type", "application/xml")
-
-    val retry = new ExponentialBackOffRetry(
-      initialWaitSeq = 0,
-      intervalSeq = backOffRetrySettings.intervalSeq,
-      maxRetries = backOffRetrySettings.maxRetries
-    )
-    var toContinue             = true
-    var response: HttpResponse = null
-    var ret: Any               = null
-    while (toContinue && retry.hasNext) {
-      withHttpClient { client =>
-        response = client.execute(req)
-        log.debug(s"Status line: ${response.getStatusLine}")
-        response.getStatusLine.getStatusCode match {
-          case HttpStatus.SC_OK =>
-            toContinue = false
-            ret = body(response)
-          case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-            log.warn(s"Received 500 error: ${response.getStatusLine}. Retrying...")
-            retry.doWait
-          case _ =>
-            throw new IOException(s"Failed to retrieve data from $path: ${response.getStatusLine}")
-        }
-      }
-    }
-    if (ret == null) {
-      throw new IOException(s"Failed to retrieve data from $path")
-    }
-    ret.asInstanceOf[U]
-  }
-
-  def IgnoreEntityContent(in: java.io.InputStream): Unit = ()
-
-  def Post(path: String, bodyXML: String, contentHandler: java.io.InputStream => Unit = IgnoreEntityContent) = {
-    val req = new HttpPost(s"${repo}$path")
-    req.setEntity(new StringEntity(bodyXML))
-    req.addHeader("Content-Type", "application/xml")
-
-    val retry = new ExponentialBackOffRetry(
-      initialWaitSeq = 0,
-      intervalSeq = backOffRetrySettings.intervalSeq,
-      maxRetries = backOffRetrySettings.maxRetries
-    )
-    var response: HttpResponse = null
-    var toContinue             = true
-    while (toContinue && retry.hasNext) {
-      withHttpClient { client =>
-        response = client.execute(req)
-        response.getStatusLine.getStatusCode match {
-          case HttpStatus.SC_INTERNAL_SERVER_ERROR =>
-            log.warn(s"Received 500 error: ${response.getStatusLine}. Retrying...")
-            retry.doWait
-          case _ =>
-            log.debug(s"Status line: ${response.getStatusLine}")
-            toContinue = false
-            contentHandler(response.getEntity.getContent)
-        }
-      }
-    }
-    if (toContinue) {
-      throw new IOException(s"Failed to retrieve data from $path")
-    }
-    response
-  }
-
-  private lazy val directCredentials = {
-    val credt: DirectCredentials = Credentials
-      .forHost(cred, credentialHost)
-      .getOrElse {
-        throw new IllegalStateException(
-          s"No credential is found for $credentialHost. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file."
-        )
-      }
-    credt
-  }
-
-  private def withHttpClient[U](body: HttpClient => U): U = {
-    val credt = directCredentials
-
-    val client = new DefaultHttpClient()
-    try {
-      val user   = credt.userName
-      val passwd = credt.passwd
-      client.getCredentialsProvider.setCredentials(
-        new AuthScope(credt.host, AuthScope.ANY_PORT),
-        new UsernamePasswordCredentials(user, passwd)
-      )
-      body(client)
-    } finally client.getConnectionManager.shutdown()
-  }
-
   def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
-    val parameters = ParametersBuilder.defaults().build()
-    // Adding a trailing slash is necessary upload a bundle file to a proper location:
-    val endpoint      = s"${remoteUrl}/"
-    val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
-
-    val credentialProvider = new BasicCredentialsProvider()
-    val usernamePasswordCredentials =
-      new UsernamePasswordCredentials(directCredentials.userName, directCredentials.passwd)
-
-    credentialProvider.setCredentials(AuthScope.ANY, usernamePasswordCredentials)
-
-    clientBuilder.withPreemptiveRealm(credentialProvider)
-
-    import org.sonatype.spice.zapper.fs.DirectoryIOSource
-    val deployables = new DirectoryIOSource(localBundlePath)
-
-    val client = clientBuilder.build()
-    try {
-      log.info(s"Uploading bundle ${localBundlePath} to ${endpoint}")
-      client.upload(deployables)
-      log.info(s"Finished bundle upload: ${localBundlePath}")
-    } catch {
-      case e: IOException if e.getMessage.contains("400 Bad Request") =>
-        log.error("Upload failed. Probably the bundle is already uploaded. Run sonatypeClean or sonatypeDropAll first.")
-        throw e
-    } finally {
-      client.close()
-    }
+    sonatypClient.uploadBundle(localBundlePath, remoteUrl)
   }
 
   def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
@@ -246,64 +129,39 @@ class NexusRESTService(
     stagingRepositoryProfiles(warnIfMissing = false).filter(_.description == descriptionKey)
   }
 
-  def stagingRepositoryProfiles(warnIfMissing: Boolean = true) = {
-    log.info("Reading staging repository profiles...")
-    // Note: using /stging/profile_repositories/(profile id) is preferred to reduce the response size,
+  def stagingRepositoryProfiles(warnIfMissing: Boolean = true): Seq[StagingRepositoryProfile] = {
+    // Note: using /staging/profile_repositories/(profile id) is preferred to reduce the response size,
     // but Sonatype API is quite slow (as of Sep 2019) so using a single request was much better.
-    Get(s"/staging/profile_repositories") { response =>
-      val profileRepositoriesXML = XML.load(response.getEntity.getContent)
-      val repositoryProfiles = for (p <- profileRepositoriesXML \\ "stagingProfileRepository") yield {
-        StagingRepositoryProfile(
-          (p \ "profileId").text,
-          (p \ "profileName").text,
-          (p \ "type").text,
-          (p \ "repositoryId").text,
-          (p \ "description").text
-        )
-      }
-      val myProfiles = repositoryProfiles.filter(_.profileName == profileName)
-      if (myProfiles.isEmpty && warnIfMissing) {
-        log.warn(s"No staging repository is found. Do publishSigned first.")
-      }
-      myProfiles
+    val response   = sonatypClient.stagingRepositoryProfiles
+    val myProfiles = response.filter(_.profileName == profileName)
+    if (myProfiles.isEmpty && warnIfMissing) {
+      log.warn(s"No staging repository is found. Do publishSigned first.")
     }
+    myProfiles
+  }
+
+  private def withCache[A: scala.reflect.runtime.universe.TypeTag](fileName: String, a: => A): A = {
+    val codec     = MessageCodec.of[A]
+    val cacheFile = new File(fileName)
+    val value = if (cacheFile.exists() && cacheFile.length() > 0) {
+      Try {
+        val json = IO.read(cacheFile)
+        codec.fromJson(json)
+      }.getOrElse(a)
+    } else {
+      a
+    }
+    cacheFile.getParentFile.mkdirs()
+    IO.write(cacheFile, codec.toJson(value))
+    value
   }
 
   def stagingProfiles: Seq[StagingProfile] = {
-    log.info("Reading staging profiles...")
-
-    val cacheFile = new File("target/sonatype-profiles.xml")
-
-    def readProfileXML: String = {
-      Get("/staging/profiles") { response =>
-        val xml = IO.readStream(response.getEntity.getContent)
-        cacheFile.getParentFile.mkdirs()
-        // Save the profile to a local target folder for future use
-        IO.write(cacheFile, xml)
-        xml
-      }
-    }
-
-    val profileXML =
-      if (cacheFile.exists() && cacheFile.length() > 0) {
-        Try(XML.loadString(IO.read(cacheFile))).getOrElse {
-          XML.loadString(readProfileXML)
-        }
-      } else {
-        XML.loadString(readProfileXML)
-      }
-
-    val profiles = for (p <- profileXML \\ "stagingProfile" if (p \ "name").text == profileName) yield {
-      StagingProfile(
-        (p \ "id").text,
-        (p \ "name").text,
-        (p \ "repositoryTargetId").text
-      )
-    }
-    profiles
+    val profiles = withCache(s"target/sonatype-profile-${profileName}.json", sonatypClient.stagingProfiles)
+    profiles.filter(_.name == profileName)
   }
 
-  lazy val currentProfile = {
+  lazy val currentProfile: StagingProfile = {
     val profiles = stagingProfiles
     if (profiles.isEmpty) {
       throw new IllegalArgumentException(
@@ -312,206 +170,98 @@ class NexusRESTService(
     profiles.head
   }
 
-  private def createRequestXML(description: String) =
-    s"""|<?xml version="1.0" encoding="UTF-8"?>
-        |<promoteRequest>
-        |  <data>
-        |    <description>${Utility.escape(description)}</description>
-        |  </data>
-        |</promoteRequest>
-         """.stripMargin
-
-  private def promoteRequestXML(repo: StagingRepositoryProfile) =
-    s"""|<?xml version="1.0" encoding="UTF-8"?>
-        |<promoteRequest>
-        |  <data>
-        |    <stagedRepositoryId>${repo.repositoryId}</stagedRepositoryId>
-        |    <targetRepositoryId>${currentProfile.repositoryTargetId}</targetRepositoryId>
-        |    <description>${repo.description}</description>
-        |  </data>
-        |</promoteRequest>
-         """.stripMargin
-
-  class ExponentialBackOffRetry(initialWaitSeq: Int, intervalSeq: Int, maxRetries: Int) {
-    private var numTrial        = 0
-    private var currentInterval = intervalSeq
-
-    def hasNext = numTrial < maxRetries
-
-    def nextWait = {
-      val interval = if (numTrial == 0) initialWaitSeq else currentInterval
-      currentInterval = (currentInterval * 1.5 + 0.5).toInt
-      numTrial += 1
-      interval
-    }
-
-    def doWait: Unit = {
-      val w = nextWait
-      Thread.sleep(w * 1000)
-    }
-
-  }
-
   def createStage(description: String = "Requested by sbt-sonatype plugin"): StagingRepositoryProfile = {
-    val profile = currentProfile
-    val postURL = s"/staging/profiles/${profile.profileId}/start"
-    log.info(s"Creating a staging repository in profile ${profile.profileName} with a description key: ${description}")
-    var repo: StagingRepositoryProfile = null
-    val ret = Post(
-      postURL,
-      createRequestXML(description),
-      (in: java.io.InputStream) => {
-        val xml = XML.load(in)
-        val ids = xml \\ "data" \ "stagedRepositoryId"
-        if (1 != ids.size)
-          throw new IOException(s"Failed to create repository in profile: ${profile.profileName}")
-        repo = StagingRepositoryProfile(
-          profile.profileId,
-          profile.profileName,
-          "open",
-          ids.head.text,
-          description
-        )
-        log.info(s"Created successfully: ${repo.repositoryId}")
-      }
-    )
-    if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-      throw new IOException(
-        s"Failed to create repository in profile: ${profile.profileName}: ${ret.getStatusLine}"
-      )
-    }
-    if (null == repo) {
-      throw new IOException(
-        s"Failed to create repository in profile: ${profile.profileName}: no stagedRepositoryId"
-      )
-    }
-    repo
+    sonatypClient.createStage(currentProfile, description)
   }
+
+  private val retryer = Retry.withJitter(maxRetry = 100, maxIntervalMillis = 60000)
 
   def closeStage(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
-    var toContinue = true
     if (repo.isClosed || repo.isReleased) {
       log.info(s"Repository ${repo.repositoryId} is already closed")
-      toContinue = false
+    } else {
+      sonatypClient.closeStage(repo)
     }
 
-    if (toContinue) {
-      // Post close request
-      val postURL = s"/staging/profiles/${repo.profileId}/finish"
-      log.info(s"Closing staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo))
-      if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-        throw new IOException(s"Failed to send close operation: ${ret.getStatusLine}")
-      }
-    }
-
-    toContinue = true
-    val timer = new ExponentialBackOffRetry(
-      initialWaitSeq = backOffRetrySettings.initialWaitSeq,
-      intervalSeq = backOffRetrySettings.intervalSeq,
-      maxRetries = backOffRetrySettings.maxRetries
-    )
-    while (toContinue && timer.hasNext) {
-      val activities = activitiesOf(repo)
-      monitor.report(activities)
-      activities.filter(_.name == "close").lastOption match {
-        case Some(activity) =>
+    retryer
+      .withResultClassifier[Option[ActivityEvent]] {
+        case Some(activity: StagingActivity) =>
           if (activity.isCloseSucceeded(repo.repositoryId)) {
-            toContinue = false
             log.info("Closed successfully")
+            ResultClass.Succeeded
           } else if (activity.containsError) {
             log.error("Failed to close the repository")
-            activity.reportFailure(log)
-            throw new Exception("Failed to close the repository")
+            activity.reportFailure
+            ResultClass.nonRetryableFailure(new Exception("Failed to close the repository"))
           } else {
-            // Activity log exists, but the close phase is not yet terminated
-            log.info("The close process is in progress ...")
-            timer.doWait
+            ResultClass.retryableFailure(new Exception("Waiting for the completion of the close process..."))
           }
-        case None =>
-          timer.doWait
       }
-    }
-    if (toContinue)
-      throw new IOException("Timed out")
+      .run {
+        val activities = sonatypClient.activitiesOf(repo)
+        monitor.report(activities)
+        activities.lastOption
+      }
 
     repo.toClosed
   }
 
   def dropStage(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
-    val postURL = s"/staging/profiles/${repo.profileId}/drop"
-    log.info(s"Dropping staging repository $repo")
-    val ret = Post(postURL, promoteRequestXML(repo))
-    if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-      throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.getStatusLine}")
+    val ret = sonatypClient.dropStage(currentProfile, repo)
+    if (ret.statusCode != HttpStatus.SC_CREATED) {
+      throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.status}")
     }
     log.info(s"Dropped successfully: ${repo.repositoryId}")
     repo.toDropped
   }
 
   def promoteStage(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
-    var toContinue = true
     if (repo.isReleased) {
       log.info(s"Repository ${repo.repositoryId} is already released")
-      toContinue = false
-    }
-
-    if (toContinue) {
+    } else {
       // Post promote(release) request
-      val postURL = s"/staging/profiles/${repo.profileId}/promote"
-      log.info(s"Promoting staging repository $repo")
-      val ret = Post(postURL, promoteRequestXML(repo))
-      if (ret.getStatusLine.getStatusCode != HttpStatus.SC_CREATED) {
-        log.error(s"${ret.getStatusLine}")
-        for (errorLine <- Source.fromInputStream(ret.getEntity.getContent).getLines()) {
-          log.error(errorLine)
-        }
+      val ret = sonatypClient.promoteStage(currentProfile, repo)
+      if (ret.statusCode != HttpStatus.SC_CREATED) {
+        log.error(s"${ret.status}: ${ret.contentString}")
         throw new Exception("Failed to promote the repository")
       }
     }
 
-    toContinue = true
-    var result: StagingRepositoryProfile = null
-    val timer = new ExponentialBackOffRetry(
-      initialWaitSeq = backOffRetrySettings.initialWaitSeq,
-      intervalSeq = backOffRetrySettings.intervalSeq,
-      maxRetries = backOffRetrySettings.maxRetries
-    )
-    while (toContinue && timer.hasNext) {
-      val activities = activitiesOf(repo)
-      monitor.report(activities)
-      activities.filter(_.name == "release").lastOption match {
-        case Some(activity) =>
-          if (activity.isReleaseSucceeded(repo.repositoryId)) {
-            log.info("Promoted successfully")
+    val lastActivity =
+      retryer
+        .withResultClassifier[Option[StagingActivity]] {
+          case Some(activity) =>
+            if (activity.isReleaseSucceeded(repo.repositoryId)) {
+              log.info("Promoted successfully")
+              ResultClass.Succeeded
+            } else if (activity.containsError) {
+              log.error("Failed to promote the repository")
+              activity.reportFailure
+              Retry.nonRetryableFailure(new Exception("Failed to promote the repository"))
+            } else {
+              Retry.retryableFailure(new Exception("Waiting for the completion of the release process..."))
+            }
+        }
+        .run {
+          val activities = sonatypClient.activitiesOf(repo)
+          monitor.report(activities)
+          activities.filter(_.name == "release").lastOption
+        }
 
-            // Drop after release
-            result = dropStage(repo.toReleased)
-            toContinue = false
-          } else if (activity.containsError) {
-            log.error("Failed to promote the repository")
-            activity.reportFailure(log)
-            throw new Exception("Failed to promote the repository")
-          } else {
-            log.info("The release process is in progress ...")
-            timer.doWait
-          }
-        case None =>
-          timer.doWait
+    val droppedRepo = lastActivity
+      .map { x =>
+        // Drop after release
+        dropStage(repo.toReleased)
       }
-    }
-    if (toContinue)
-      throw new IOException("Timed out")
-    require(null != result)
-    result
+      .getOrElse {
+        throw new IOException("Timed out")
+      }
+
+    droppedRepo
   }
 
   def stagingRepositoryInfo(repositoryId: String) = {
-    log.info(s"Seaching for repository $repositoryId ...")
-    val ret = Get(s"/staging/repository/$repositoryId") { response =>
-      XML.load(response.getEntity.getContent)
-    }
-    ret
+    sonatypClient.stagingRepository(repositoryId)
   }
 
   def closeAndPromote(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
@@ -523,26 +273,6 @@ class NexusRESTService(
     }
   }
 
-  def activities: Seq[(StagingRepositoryProfile, Seq[StagingActivity])] = {
-    for (r <- stagingRepositoryProfiles()) yield r -> activitiesOf(r)
-  }
-
-  def activitiesOf(r: StagingRepositoryProfile): Seq[StagingActivity] = {
-    log.debug(s"Checking activity logs of ${r.repositoryId} ...")
-    val a = Get(s"/staging/repository/${r.repositoryId}/activity") { response =>
-      val xml = XML.load(response.getEntity.getContent)
-      for (sa <- xml \\ "stagingActivity") yield {
-        val ae = for (event <- sa \ "events" \ "stagingActivityEvent") yield {
-          val props = for (prop <- event \ "properties" \ "stagingProperty") yield {
-            (prop \ "name").text -> (prop \ "value").text
-          }
-          ActivityEvent((event \ "timestamp").text, (event \ "name").text, (event \ "severity").text, props.toMap)
-        }
-        StagingActivity((sa \ "name").text, (sa \ "started").text, (sa \ "stopped").text, ae.toSeq)
-      }
-    }
-    a
-  }
 }
 
 object NexusRESTService {
@@ -564,171 +294,6 @@ object NexusRESTService {
   }
   case object CloseAndPromote extends CommandType {
     def errNotFound = "No staging repository is found. Run publishSigned first"
-  }
-
-  /**
-    * Staging repository profile has an id of deployed artifact and the current staging state.
-    * @param profileId
-    * @param profileName
-    * @param stagingType
-    * @param repositoryId
-    * @param description
-    */
-  case class StagingRepositoryProfile(
-      profileId: String,
-      profileName: String,
-      stagingType: String,
-      repositoryId: String,
-      description: String
-  ) {
-    override def toString =
-      s"[$repositoryId] status:$stagingType, profile:$profileName($profileId) description: $description"
-    def isOpen     = stagingType == "open"
-    def isClosed   = stagingType == "closed"
-    def isReleased = stagingType == "released"
-
-    def toClosed   = copy(stagingType = "closed")
-    def toDropped  = copy(stagingType = "dropped")
-    def toReleased = copy(stagingType = "released")
-
-    def deployUrl: String = s"https://oss.sonatype.org/service/local/staging/deployByRepositoryId/${repositoryId}"
-  }
-
-  /**
-    * Staging profile is the information associated to a Sonatype account.
-    * @param profileId
-    * @param profileName
-    * @param repositoryTargetId
-    */
-  case class StagingProfile(profileId: String, profileName: String, repositoryTargetId: String)
-
-  /**
-    * Staging activity is an action to the staged repository
-    * @param name activity name, e.g. open, close, promote, etc.
-    * @param started
-    * @param stopped
-    * @param events
-    */
-  case class StagingActivity(name: String, started: String, stopped: String, events: Seq[ActivityEvent]) {
-    override def toString = {
-      val b = Seq.newBuilder[String]
-      b += activityLog
-      for (e <- events)
-        b += s" ${e.toString}"
-      b.result.mkString("\n")
-    }
-
-    def activityLog = {
-      val b = Seq.newBuilder[String]
-      b += s"Activity name:${name}"
-      b += s"started:${started}"
-      if (stopped.nonEmpty) {
-        b += s"stopped:${stopped}"
-      }
-      b.result().mkString(", ")
-    }
-
-    def log(log: Logger): Unit = {
-      log.info(activityLog)
-      val hasError = containsError
-      for (e <- suppressEvaluateLog) {
-        e.log(log, hasError)
-      }
-    }
-
-    def suppressEvaluateLog = {
-      val in     = events.toIndexedSeq
-      var cursor = 0
-      val b      = Seq.newBuilder[ActivityEvent]
-      while (cursor < in.size) {
-        val current = in(cursor)
-        if (cursor < in.size - 1) {
-          val next = in(cursor + 1)
-          if (current.name == "ruleEvaluate" && current.ruleType == next.ruleType) {
-            // skip
-          } else {
-            b += current
-          }
-        }
-        cursor += 1
-      }
-      b.result
-    }
-
-    def containsError = events.exists(_.severity != "0")
-
-    def reportFailure(log: Logger): Unit = {
-      log.error(activityLog)
-      val failureReport = suppressEvaluateLog.filter(_.isFailure)
-      for (e <- failureReport) {
-        e.log(log, useErrorLog = true)
-      }
-    }
-
-    def isReleaseSucceeded(repositoryId: String): Boolean = {
-      events
-        .find(_.name == "repositoryReleased")
-        .exists(_.property.getOrElse("id", "") == repositoryId)
-    }
-
-    def isCloseSucceeded(repositoryId: String): Boolean = {
-      events
-        .find(_.name == "repositoryClosed")
-        .exists(_.property.getOrElse("id", "") == repositoryId)
-    }
-
-  }
-
-  /**
-    * ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
-    * @param timestamp
-    * @param name
-    * @param severity
-    * @param property
-    */
-  case class ActivityEvent(timestamp: String, name: String, severity: String, property: Map[String, String]) {
-    def ruleType: String = property.getOrElse("typeId", "other")
-    def isFailure        = name == "ruleFailed"
-
-    override def toString = {
-      s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
-    }
-
-    def log(s: Logger, useErrorLog: Boolean = false): Unit = {
-      val props = {
-        val front =
-          if (property.contains("typeId"))
-            Seq(property("typeId"))
-          else
-            Seq.empty
-        front ++ property.filter(_._1 != "typeId").map(p => s"${p._1}:${p._2}")
-      }
-      val messageLine = props.mkString(", ")
-      val name_s      = name.replaceAll("rule(s)?", "")
-      val message     = f"$name_s%10s: $messageLine"
-      if (useErrorLog)
-        s.error(message)
-      else
-        s.info(message)
-    }
-  }
-
-  class ActivityMonitor(s: Logger) {
-    var reportedActivities = Set.empty[String]
-    var reportedEvents     = Set.empty[ActivityEvent]
-
-    def report(stagingActivities: Seq[StagingActivity]) = {
-      for (sa <- stagingActivities) {
-        if (!reportedActivities.contains(sa.started)) {
-          s.info(sa.activityLog)
-          reportedActivities += sa.started
-        }
-        for (ae <- sa.events if !reportedEvents.contains(ae)) {
-          ae.log(s, useErrorLog = false)
-          reportedEvents += ae
-        }
-      }
-    }
   }
 
 }

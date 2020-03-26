@@ -61,7 +61,7 @@ object Sonatype extends AutoPlugin {
     credentials ++= {
       val alreadyContainsSonatypeCredentials: Boolean = credentials.value.exists {
         case d: DirectCredentials => d.host == sonatypeCredentialHost.value
-        case _ => false
+        case _                    => false
       }
       if (!alreadyContainsSonatypeCredentials) {
         val env = sys.env.get(_)
@@ -285,7 +285,7 @@ object Sonatype extends AutoPlugin {
     for ((repo, activities) <- alist) {
       log.info(s"Staging activities of $repo:")
       for (a <- activities) {
-        a.log(log)
+        a.showProgress(log)
       }
     }
     state
