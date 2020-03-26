@@ -29,7 +29,8 @@ object Sonatype extends AutoPlugin {
     val sonatypeTargetRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
-    val sonatypeSessionName = settingKey[String]("Used for identifying a sonatype staging repository")
+    val sonatypeSessionName               = settingKey[String]("Used for identifying a sonatype staging repository")
+    val sonatypeNexusBackOffRetrySettings = settingKey[NexusBackOffRetrySettings]("nexus backOff retry settings")
 
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
@@ -372,7 +373,8 @@ object Sonatype extends AutoPlugin {
       extracted.get(sonatypeRepository),
       profileName.getOrElse(extracted.get(sonatypeProfileName)),
       getCredentials(extracted, state),
-      extracted.get(sonatypeCredentialHost)
+      extracted.get(sonatypeCredentialHost),
+      extracted.get(sonatypeNexusBackOffRetrySettings)
     )
   }
 
