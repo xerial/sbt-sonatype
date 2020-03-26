@@ -59,7 +59,9 @@ lazy val sbtSonatype =
       buildSettings,
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       libraryDependencies ++= Seq(
-        "org.apache.httpcomponents" % "httpclient"   % "4.5.10",
-        "org.sonatype.spice.zapper" % "spice-zapper" % "1.3"
+        "org.apache.httpcomponents" % "httpclient"             % "4.5.10",
+        "org.sonatype.spice.zapper" % "spice-zapper"           % "1.3",
+        "org.wvlet.airframe"        %% "airframe-control"      % "20.3.2",
+        "org.wvlet.airframe"        %% "airframe-http-finagle" % "20.3.2"
       )
     )
