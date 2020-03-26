@@ -31,7 +31,8 @@ class NexusRESTService(
     repositoryUrl: String,
     val profileName: String,
     cred: Seq[Credentials],
-    credentialHost: String
+    credentialHost: String,
+    backOffRetrySettings: NexusBackOffRetrySettings
 ) {
   import xerial.sbt.NexusRESTService._
 
@@ -89,7 +90,11 @@ class NexusRESTService(
     val req = new HttpGet(s"${repo}$path")
     req.addHeader("Content-Type", "application/xml")
 
-    val retry                  = new ExponentialBackOffRetry(initialWaitSeq = 0)
+    val retry = new ExponentialBackOffRetry(
+      initialWaitSeq = 0,
+      intervalSeq = backOffRetrySettings.intervalSeq,
+      maxRetries = backOffRetrySettings.maxRetries
+    )
     var toContinue             = true
     var response: HttpResponse = null
     var ret: Any               = null
@@ -122,7 +127,11 @@ class NexusRESTService(
     req.setEntity(new StringEntity(bodyXML))
     req.addHeader("Content-Type", "application/xml")
 
-    val retry                  = new ExponentialBackOffRetry(initialWaitSeq = 0)
+    val retry = new ExponentialBackOffRetry(
+      initialWaitSeq = 0,
+      intervalSeq = backOffRetrySettings.intervalSeq,
+      maxRetries = backOffRetrySettings.maxRetries
+    )
     var response: HttpResponse = null
     var toContinue             = true
     while (toContinue && retry.hasNext) {
@@ -323,7 +332,7 @@ class NexusRESTService(
         |</promoteRequest>
          """.stripMargin
 
-  class ExponentialBackOffRetry(initialWaitSeq: Int = 5, intervalSeq: Int = 3, maxRetries: Int = 10) {
+  class ExponentialBackOffRetry(initialWaitSeq: Int, intervalSeq: Int, maxRetries: Int) {
     private var numTrial        = 0
     private var currentInterval = intervalSeq
 
@@ -397,7 +406,11 @@ class NexusRESTService(
     }
 
     toContinue = true
-    val timer = new ExponentialBackOffRetry()
+    val timer = new ExponentialBackOffRetry(
+      initialWaitSeq = backOffRetrySettings.initialWaitSeq,
+      intervalSeq = backOffRetrySettings.intervalSeq,
+      maxRetries = backOffRetrySettings.maxRetries
+    )
     while (toContinue && timer.hasNext) {
       val activities = activitiesOf(repo)
       monitor.report(activities)
@@ -459,7 +472,11 @@ class NexusRESTService(
 
     toContinue = true
     var result: StagingRepositoryProfile = null
-    val timer                            = new ExponentialBackOffRetry()
+    val timer = new ExponentialBackOffRetry(
+      initialWaitSeq = backOffRetrySettings.initialWaitSeq,
+      intervalSeq = backOffRetrySettings.intervalSeq,
+      maxRetries = backOffRetrySettings.maxRetries
+    )
     while (toContinue && timer.hasNext) {
       val activities = activitiesOf(repo)
       monitor.report(activities)
