@@ -30,7 +30,7 @@ object Sonatype extends AutoPlugin {
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName               = settingKey[String]("Used for identifying a sonatype staging repository")
-    val sonatypeNexusBackOffRetrySettings = settingKey[NexusBackOffRetrySettings]("nexus backOff retry settings")
+    val sonatypeNexusBackOffRetrySettings = settingKey[NexusBackOffRetrySettings]("nexus back-off retry settings")
 
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
