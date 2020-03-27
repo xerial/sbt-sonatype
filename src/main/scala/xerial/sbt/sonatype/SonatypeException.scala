@@ -15,7 +15,7 @@ object SonatypeException {
 
   case object STAGE_FAILURE extends ErrorCode
 
-  case object BUNDLE_ALREADY_EXISTS extends ErrorCode
+  case object BUNDLE_UPLOAD_FAILURE extends ErrorCode
 
   case object MISSING_CREDENTIAL extends ErrorCode
 

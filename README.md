@@ -21,8 +21,8 @@ A sbt plugin for publishing your project to the Maven central repository through
 - [Blazingly Fast Relase to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
 
 ## Prerequisites
- 
- * Create a Sonatype Repository account 
+
+ * Create a Sonatype Repository account
    * Follow the instruction in the [Central Repository documentation site](http://central.sonatype.org).
      * Create a Sonatype account
      * Create a GPG key
@@ -70,6 +70,9 @@ sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getN
 // [Optional] If you need to manage unique session names by yourself, change this default setting:
 sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"
 
+// [Optional] Timeout until giving up sonatype close/promote stages. Default is 60 min.
+sonatypeTimeoutMillis := 60 * 60 * 1000 
+
 // [If you cannot use bundle upload] Use this setting when you need to uploads artifacts directly to Sonatype
 // With this setting, you cannot use sonatypeBundleXXX commands
 publishTo := sonatypePublishTo.value
@@ -88,13 +91,13 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 
 ### (project root)/sonatype.sbt
 
-sbt-sonatype is an auto-plugin, which will automatically configure your build. There are a few settings though that you need to define yourself:
+sbt-sonatype is an auto-plugin, which will automatically configure your build. There are a few settings though that you need to define by yourself:
 
-  * `sonatypeProfileName` 
+  * `sonatypeProfileName`
      * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
      * A fragment of Maven's pom.xml. You must define url, licenses, scm and developers tags in this XML to satisfy [Central Repository sync requirements](http://central.sonatype.org/pages/requirements.html).
-  
+
 Example settings:
 ```scala
 // Your profile name of the sonatype account. The default is the same with the organization value
@@ -127,11 +130,11 @@ developers := List(
 
 ## Publishing Your Artifact
 
-The basic steps for publishing your artifact to the Central Repository are as follows: 
+The basic steps for publishing your artifact to the Central Repository are as follows:
 
   * `publishSigned` to deploy your artifact to a local staging repository.
   * `sonatypeBundleRelease` (since sbt-sonatype 3.4)
-    * This command is equivalent to running `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease`. 
+    * This command is equivalent to running `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease`.
     * Internally `sonatypeRelease` will do `sonatypeClose` and `sonatypePromote` in one step.
       * `sonatypeClose` closes your staging repository at Sonatype. This step verifies Maven central sync requirement, GPG-signature, javadoc
    and source code presence, pom.xml settings, etc.
@@ -142,15 +145,15 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 ## Commands
 
 Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
-* __sonatypeBundleRelase__ 
+* __sonatypeBundleRelase__
   * This will run a sequence of commands `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease` in one step.
   * You must run `publishSigned` before this command to create a local staging bundle.
 
 ### Individual Step Commands
 * __sonatypePrepare__
   * Drop the exising staging repositories (if exist) and create a new staging repository using `sonatypeSessionName` as a unique key.
-  * This will update `sonatypePublishTo` setting. 
-  * For cross-build projects, make sure running this command only once at the beginning of the release process. 
+  * This will update `sonatypePublishTo` setting.
+  * For cross-build projects, make sure running this command only once at the beginning of the release process.
     * Usually using sonatypeBundleUpload should be sufficient, but if you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
 * __sonatypeBundleUpload__
   * Upload your local staging folder contents to a remote Sonatype repository.
@@ -179,7 +182,7 @@ Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
   * Close the open staging repository (= requirement verification)
 * __sonatypePromote__
   * Promote the closed staging repository (= sync to Maven central)
-* __sonatypeDrop__ 
+* __sonatypeDrop__
   * Drop an open or closed staging repository
 
 ## Advanced Build Settings
@@ -204,8 +207,8 @@ When you are sharing a working folder, you can parallelize publishSigned step fo
 ### Parallelizing Builds When Not Sharing Any Working Folder
 
 If you are not sharing any working directory (e.g., Travis CI), to parallelize the release process, you need to publish a bundle for each build because Sonatype API only supports uploading one bundle per a staging repository.
- 
-Here is an example to parallelize your build for each Scala binary version: 
+
+Here is an example to parallelize your build for each Scala binary version:
   - Set `sonatypeSessionName := "[sbt-sonatype] ${name.value}-${scalaBinaryVersion.value}-${version.value}"` to use unique session keys for individual Scala binary versions.
   - For each Scala version, run: `sbt ++(Scala version) "; publishSigned; sonatypeBundleRelease"`
 
