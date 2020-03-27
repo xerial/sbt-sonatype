@@ -114,7 +114,7 @@ class SonatypeClient(repositoryUrl: String,
       s"${pathPrefix}/staging/profiles/${profile.id}/start",
       Map("data" -> Map("description" -> description))
     )
-    // Retrieve created staging repository ids
+    // Extract created staging repository ids
     val repo = StagingRepositoryProfile(
       profile.id,
       profile.name,
