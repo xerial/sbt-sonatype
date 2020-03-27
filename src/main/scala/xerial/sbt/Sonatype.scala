@@ -12,7 +12,7 @@ import sbt._
 import wvlet.log.{LogLevel, LogSupport}
 import xerial.sbt.Sonatype.withSonatypeService
 import xerial.sbt.sonatype.SonatypeService._
-import xerial.sbt.sonatype.{SonatypeClient, SonatypeService}
+import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 
 import scala.concurrent.duration.Duration
@@ -23,7 +23,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
   */
 object Sonatype extends AutoPlugin with LogSupport {
   wvlet.log.Logger.init
-  wvlet.log.Logger.setDefaultLogLevel(LogLevel.DEBUG)
 
   trait SonatypeKeys {
     val sonatypeRepository              = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
@@ -385,10 +384,11 @@ object Sonatype extends AutoPlugin with LogSupport {
     credential
   }
 
-  private def withSonatypeService[U](state: State, profileName: Option[String] = None)(
-      body: SonatypeService => U): U = {
+  private def withSonatypeService(state: State, profileName: Option[String] = None)(
+      body: SonatypeService => State): State = {
     val extracted = Project.extract(state)
     val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
+    wvlet.log.Logger.setDefaultLogLevel(logLevel)
     val sonatypeClient = new SonatypeClient(
       repositoryUrl = extracted.get(sonatypeRepository),
       cred = getCredentials(extracted, state),
@@ -401,6 +401,13 @@ object Sonatype extends AutoPlugin with LogSupport {
     )
     try {
       body(service)
+    } catch {
+      case e: SonatypeException =>
+        error(e.toString)
+        state.fail
+      case e: Throwable =>
+        error(e)
+        state.fail
     } finally {
       service.close()
     }
