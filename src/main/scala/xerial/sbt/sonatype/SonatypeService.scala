@@ -1,10 +1,9 @@
 package xerial.sbt.sonatype
 
-import java.io.{File, IOException}
+import java.io.File
 
-import org.apache.http.HttpStatus
 import sbt.io.IO
-import wvlet.airframe.codec.{MessageCodec, MessageCodecFactory}
+import wvlet.airframe.codec.MessageCodecFactory
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeClient._
 import xerial.sbt.sonatype.SonatypeException.{MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
@@ -163,10 +162,7 @@ class SonatypeService(
   }
 
   def dropStage(repo: StagingRepositoryProfile): StagingRepositoryProfile = {
-    val ret = sonatypClient.dropStage(currentProfile, repo)
-    if (ret.statusCode != HttpStatus.SC_CREATED) {
-      throw new IOException(s"Failed to drop ${repo.repositoryId}: ${ret.status}")
-    }
+    sonatypClient.dropStage(currentProfile, repo)
     info(s"Dropped successfully: ${repo.repositoryId}")
     repo.toDropped
   }
