@@ -10,10 +10,9 @@ package xerial.sbt
 import sbt.Keys._
 import sbt._
 import wvlet.log.{LogLevel, LogSupport}
-import xerial.sbt.Sonatype.withSonatypeService
+import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 import xerial.sbt.sonatype.SonatypeService._
 import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
-import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
