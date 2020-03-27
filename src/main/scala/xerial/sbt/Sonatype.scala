@@ -115,7 +115,7 @@ object Sonatype extends AutoPlugin with LogSupport {
         Opts.resolver.sonatypeStaging
       })
     },
-    sonatypeTimeoutMillis := 30 * 60 * 1000, // 30 minutes
+    sonatypeTimeoutMillis := 60 * 60 * 1000, // 60 minutes
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
     sonatypeLogLevel := "info",
     commands ++= Seq(
