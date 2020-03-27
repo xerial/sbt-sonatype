@@ -14,7 +14,12 @@ import wvlet.airframe.control.{ResultClass, Retry}
 import wvlet.airframe.http.finagle.Finagle
 import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeException.{BUNDLE_ALREADY_EXISTS, STAGE_FAILURE, STAGE_IN_PROGRESS}
+import xerial.sbt.sonatype.SonatypeException.{
+  BUNDLE_ALREADY_EXISTS,
+  MISSING_CREDENTIAL,
+  STAGE_FAILURE,
+  STAGE_IN_PROGRESS
+}
 
 /**
   * REST API Client for Sonatype API (nexus-staigng)
@@ -31,7 +36,8 @@ class SonatypeClient(repositoryUrl: String,
     val credt: DirectCredentials = Credentials
       .forHost(cred, credentialHost)
       .getOrElse {
-        throw new IllegalStateException(
+        throw SonatypeException(
+          MISSING_CREDENTIAL,
           s"No credential is found for ${credentialHost}. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file."
         )
       }
@@ -59,8 +65,7 @@ class SonatypeClient(repositoryUrl: String,
         .defaultHttpClientRetry[Request, Response]
         .withMaxRetry(15)
         .withJitter(initialIntervalMillis = 3000, maxIntervalMillis = 30000)
-    }
-    .withRequestFilter { request =>
+    }.withRequestFilter { request =>
       request.setContentTypeJson()
       request.accept = MediaType.Json
       request.authorization = s"Basic ${base64Credentials}"
@@ -121,7 +126,7 @@ class SonatypeClient(repositoryUrl: String,
       .beforeRetry { ctx =>
         ctx.lastError match {
           case SonatypeException(STAGE_IN_PROGRESS, msg) =>
-            info(msg)
+            info(f"${msg} Waiting for ${ctx.nextWaitMillis}%.2f sec.")
           case _ =>
             warn(
               f"[${ctx.retryCount}/${ctx.maxRetry}] Execution failed: ${ctx.lastError.getMessage}. Retrying in ${ctx.nextWaitMillis / 1000.0}%.2f sec."
@@ -135,10 +140,9 @@ class SonatypeClient(repositoryUrl: String,
         case Some(activity) if (activity.containsError) =>
           error(s"[${taskName}] Failed")
           activity.reportFailure
-          ResultClass.nonRetryableFailure(SonatypeException(STAGE_FAILURE, s"Failed to ${taskName} the repository"))
+          ResultClass.nonRetryableFailure(SonatypeException(STAGE_FAILURE, s"Failed to ${taskName} the repository."))
         case _ =>
-          ResultClass.retryableFailure(
-            SonatypeException(STAGE_IN_PROGRESS, s"Waiting for the completion of the ${taskName} process..."))
+          ResultClass.retryableFailure(SonatypeException(STAGE_IN_PROGRESS, s"The ${taskName} stage is in progress."))
       }
       .run {
         val activities = activitiesOf(repo)

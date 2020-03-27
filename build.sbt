@@ -65,7 +65,6 @@ lazy val sbtSonatype =
       libraryDependencies ++= Seq(
         "org.sonatype.spice.zapper" % "spice-zapper"           % "1.3",
         "org.wvlet.airframe"        %% "airframe-http-finagle" % AIRFRAME_VERSION,
-        "org.wvlet.airframe"        %% "airspec" % "20.3.3" % "test"
+        "org.wvlet.airframe" %% "airspec" % AIRFRAME_VERSION % "test"
       )
     )
-
