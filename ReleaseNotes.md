@@ -1,6 +1,15 @@
 Release Notes
 ===
 
+# 3.9.0
+- 2020-03-26
+- Add sonatypeTimeoutMillis to wait longer time until close/promote stage completes. The default is 60 minutes.
+- Changed the backend HTTP client to airframe-http-finagle
+- Use JSON REST API of Sonatype instead of handling XML
+- Add retry for each HTTP request and bundle upload
+- Use ANSI colors for logging messages
+- Improved error messages
+
 # 3.8.1
 - 2019-11-20
 - Fix for the credential resolver to support sbt-gpg [#124](https://github.com/xerial/sbt-sonatype/pull/124)
@@ -11,7 +20,7 @@ Release Notes
 
 # 3.7
 - 2019-09-11
-- Upgrade http-client version to address NoClassDefFound error. 
+- Upgrade http-client version to address NoClassDefFound error.
 
 # 3.6
 - 2019-09-06
@@ -27,7 +36,7 @@ Release Notes
 
 # 3.2
 - 2019-09-05
-- Re-built for sbt 1.2.8 
+- Re-built for sbt 1.2.8
 
 # 3.1
 - September 5, 2019
@@ -41,10 +50,10 @@ Release Notes
 - Drop `sontaypeList`. Use sonatypeStagingRepositoryProfiles instead
 - From this version, sbt-sonatype no longer overwrites `publishTo` settings automatically after `sonatypeOpen` command. Make sure setting `publishTo := sonatypePublishTo.value`.
 
-# 2.6 
+# 2.6
 - Added `sonatypeDropAll`
 
-# 2.5 
+# 2.5
 - Fixes issue #79
 
 # 2.4
@@ -59,14 +68,14 @@ Release Notes
 - If you are not using these keys, no need to upgrade to this version.
 
 # 2.1
-- Fixes [#55](https://github.com/xerial/sbt-sonatype/issues/55) with `sonatypePublishTo` setting:  
+- Fixes [#55](https://github.com/xerial/sbt-sonatype/issues/55) with `sonatypePublishTo` setting:
 ```scala
 publishTo := sonatypePublishTo
-``` 
+```
 - Add shortcut `sonatypeProjectHosting` for quickly setting `homepage`, `scmInfo` and `developers`
 
 
-# 2.0 
+# 2.0
 - Support sbt-0.13, 1.0.0-M5, 1.0.0-M6, and 1.0.0-RC3
 
 # 2.0.0-M1
@@ -91,7 +100,7 @@ publishTo := Some(
 - `sonatypeReleaseAll (sonatypeProfileName)` command can be used standalone without preparing sbt project files.
 
 # 0.5.0
- - sonatypeRelease etc. are now sbt Commands. 
+ - sonatypeRelease etc. are now sbt Commands.
  - No need exists to include `sonatypeSettings`. This will be automcatically loaded
 
 # 0.4.0
@@ -104,6 +113,6 @@ publishTo := Some(
 
 # 0.3.0
  - sbt-sonatype is now an auto plugin
- - Migration guide from 0.2.x 
+ - Migration guide from 0.2.x
    - `profileName` -> `sonatypeProfileName`
    - No need to include sonatypeSettings
