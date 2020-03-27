@@ -85,7 +85,7 @@ class SonatypeClient(repositoryUrl: String,
       .newSyncClient(repoUri)
 
   override def close(): Unit = {
-    Control.closeResources(httpClient.close(), httpClientForCreateStage.close())
+    Control.closeResources(httpClient, httpClientForCreateStage)
   }
 
   import xerial.sbt.sonatype.SonatypeClient._
