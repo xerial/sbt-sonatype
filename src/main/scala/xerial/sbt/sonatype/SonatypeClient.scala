@@ -28,7 +28,7 @@ import xerial.sbt.sonatype.SonatypeException.{
 class SonatypeClient(repositoryUrl: String,
                      cred: Seq[Credentials],
                      credentialHost: String,
-                     timeoutMillis: Int = 30 * 60 * 1000)
+                     timeoutMillis: Int = 60 * 60 * 1000)
     extends AutoCloseable
     with LogSupport {
 
@@ -116,8 +116,20 @@ class SonatypeClient(repositoryUrl: String,
 
   private val monitor = new ActivityMonitor()
 
-  private val retryer =
-    Retry.withBoundedBackoff(initialIntervalMillis = 1500, maxTotalWaitMillis = timeoutMillis)
+  /**
+    * backoff retry (max 30 sec.) until the timeout (60 min by default)
+    */
+  private val retryer = {
+    val maxInterval  = 30000
+    val initInterval = 1500
+    // init * (multiplier ^ n) = max
+    // n = log(max / init) / log(multiplier)
+    val retryCountUntilMaxInterval = (math.log(maxInterval.toDouble / initInterval) / math.log(1.5)).toInt.max(1)
+    val numRetry                   = (timeoutMillis / maxInterval).ceil.toInt
+    Retry.withBackOff(maxRetry = retryCountUntilMaxInterval + numRetry,
+                      initialIntervalMillis = initInterval,
+                      maxIntervalMillis = maxInterval)
+  }
 
   private def waitForStageCompletion(taskName: String,
                                      repo: StagingRepositoryProfile,
@@ -126,7 +138,7 @@ class SonatypeClient(repositoryUrl: String,
       .beforeRetry { ctx =>
         ctx.lastError match {
           case SonatypeException(STAGE_IN_PROGRESS, msg) =>
-            info(f"${msg} Waiting for ${ctx.nextWaitMillis}%.2f sec.")
+            info(f"${msg} Waiting for ${ctx.nextWaitMillis / 1000.0}%.2f sec.")
           case _ =>
             warn(
               f"[${ctx.retryCount}/${ctx.maxRetry}] Execution failed: ${ctx.lastError.getMessage}. Retrying in ${ctx.nextWaitMillis / 1000.0}%.2f sec."
