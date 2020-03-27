@@ -171,7 +171,12 @@ class SonatypeClient(repositoryUrl: String,
       s"${pathPrefix}/staging/profiles/${repo.profileId}/finish",
       newStageTransitionRequest(currentProfile, repo)
     )
-    waitForStageCompletion("close", repo, terminationCond = { _.isCloseSucceeded(repo.repositoryId) }).toClosed
+    if (ret.statusCode != HttpStatus.Created_201.code) {
+      throw SonatypeException(STAGE_FAILURE, s"Failed to close the repository. [${ret.status}]: ${ret.contentString}")
+    }
+    waitForStageCompletion("close", repo, terminationCond = {
+      _.isCloseSucceeded(repo.repositoryId)
+    }).toClosed
   }
 
   def promoteStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
@@ -181,8 +186,7 @@ class SonatypeClient(repositoryUrl: String,
       newStageTransitionRequest(currentProfile, repo)
     )
     if (ret.statusCode != HttpStatus.Created_201.code) {
-      error(s"${ret.status}: ${ret.contentString}")
-      throw new Exception("Failed to close the repository")
+      throw SonatypeException(STAGE_FAILURE, s"Failed to promote the repository. [${ret.status}]: ${ret.contentString}")
     }
 
     waitForStageCompletion("promote", repo, terminationCond = { _.isReleaseSucceeded(repo.repositoryId) })
@@ -190,10 +194,14 @@ class SonatypeClient(repositoryUrl: String,
 
   def dropStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
     info(s"Dropping staging repository $repo")
-    httpClient.postOps[Map[String, StageTransitionRequest], Response](
+    val ret = httpClient.postOps[Map[String, StageTransitionRequest], Response](
       s"${pathPrefix}/staging/profiles/${repo.profileId}/drop",
       newStageTransitionRequest(currentProfile, repo)
     )
+    if (ret.statusCode != HttpStatus.Created_201.code) {
+      throw SonatypeException(STAGE_FAILURE, s"Failed to drop the repository. [${ret.status}]: ${ret.contentString}")
+    }
+    ret
   }
 
   private def newStageTransitionRequest(currentProfile: StagingProfile,
