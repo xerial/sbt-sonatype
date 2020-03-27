@@ -2,7 +2,7 @@ Release Notes
 ===
 
 # 3.9.1
-- 2020-03-06
+- 2020-03-27
 - Adjust the wait interval for close/promote stages
 - Fixed a bug so as not to retry the create staging repository request 
 
