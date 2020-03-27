@@ -1,4 +1,4 @@
-val SONATYPE_VERSION = sys.env.getOrElse("SONATYPE_VERSION", "3.9.1")
+val SONATYPE_VERSION = sys.env.getOrElse("SONATYPE_VERSION", "3.9.2")
 addSbtPlugin("com.github.gseitz" % "sbt-release"  % "1.0.13")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % SONATYPE_VERSION)
 addSbtPlugin("com.jsuereth"      % "sbt-pgp"      % "2.0.1")
