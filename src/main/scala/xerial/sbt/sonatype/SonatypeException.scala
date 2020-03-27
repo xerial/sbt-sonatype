@@ -1,7 +1,7 @@
 package xerial.sbt.sonatype
 
 /**
-  * An exception used for showing an error message when there is no need to show stack traces
+  * An exception used for showing only an error message when there is no need to show stack traces
   */
 case class SonatypeException(errorCode: ErrorCode, message: String) extends Exception(message) {
   override def toString = s"[${errorCode}] ${message}"
@@ -20,6 +20,8 @@ object SonatypeException {
   case object MISSING_CREDENTIAL extends ErrorCode
 
   case object MISSING_STAGING_PROFILE extends ErrorCode
+
+  case object MISSING_PROFILE extends ErrorCode
 
   case object UNKNOWN_STAGE extends ErrorCode
 
