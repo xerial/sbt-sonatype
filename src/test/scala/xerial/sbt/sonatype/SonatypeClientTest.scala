@@ -14,13 +14,15 @@ class SonatypeClientTest extends AirSpec {
     val json    = IOUtil.readAsString("/profiles.json")
     val codec   = MessageCodec.of[StagingProfileResponse]
     val profile = codec.fromJson(json)
-    info(profile)
+    profile.data.size shouldBe 2
 
     val p = MessagePack.newBufferPacker
     JSONCodec.pack(p, json)
     val msgpack = p.toByteArray
 
     val unpacked = codec.fromMsgPack(msgpack)
-    info(unpacked)
+    unpacked.data.size shouldBe 2
+
+    profile shouldBe unpacked
   }
 }
