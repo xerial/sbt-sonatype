@@ -3,6 +3,7 @@ package xerial.sbt.sonatype
 import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 
 import com.twitter.finagle.http.{MediaType, Request, Response}
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
@@ -10,10 +11,12 @@ import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
+import wvlet.airframe.control.Retry.warn
 import wvlet.airframe.control.{Control, ResultClass, Retry}
 import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.airframe.http.finagle.Finagle
 import wvlet.log.LogSupport
+import xerial.sbt.sonatype.SonatypeException.{STAGE_FAILURE, STAGE_IN_PROGRESS}
 
 /**
   * REST API Client for Sonatype API (nexus-staigng)
@@ -39,11 +42,9 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
     Base64.getEncoder.encodeToString(s"${credt.userName}:${credt.passwd}".getBytes(StandardCharsets.UTF_8))
   }
 
-  private lazy val repoUri = {
+  lazy val repoUri = {
     def repoBase(url: String) = if (url.endsWith("/")) url.dropRight(1) else url
     val url                   = repoBase(repositoryUrl)
-    info(s"Nexus repository URL: $url")
-    //info(s"sonatypeProfileName = ${profileName}")
     url
   }
   private val pathPrefix = {
@@ -112,9 +113,20 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
   private def waitForStageCompletion(taskName: String,
                                      repo: StagingRepositoryProfile,
                                      terminationCond: StagingActivity => Boolean): StagingRepositoryProfile = {
-    val retryer = Retry.withJitter(maxRetry = maxRetries, maxIntervalMillis = 60000)
+    val retryer =
+      Retry.withBoundedBackoff(initialIntervalMillis = 3000, maxTotalWaitMillis = TimeUnit.MINUTES.toMillis(30).toInt)
 
     retryer
+      .beforeRetry { ctx =>
+        ctx.lastError match {
+          case SonatypeException(STAGE_IN_PROGRESS, msg) =>
+            info(msg)
+          case _ =>
+            warn(
+              f"[${ctx.retryCount}/${ctx.maxRetry}] Execution failed: ${ctx.lastError.getMessage}. Retrying in ${ctx.nextWaitMillis / 1000.0}%.2f sec."
+            )
+        }
+      }
       .withResultClassifier[Option[StagingActivity]] {
         case Some(activity) if terminationCond(activity) =>
           info(s"[${taskName}] Finished successfully")
@@ -122,9 +134,10 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
         case Some(activity) if (activity.containsError) =>
           error(s"[${taskName}] Failed")
           activity.reportFailure
-          ResultClass.nonRetryableFailure(new Exception(s"Failed to ${taskName} the repository"))
+          ResultClass.nonRetryableFailure(SonatypeException(STAGE_FAILURE, s"Failed to ${taskName} the repository"))
         case _ =>
-          ResultClass.retryableFailure(new Exception(s"Waiting for the completion of the ${taskName} process..."))
+          ResultClass.retryableFailure(
+            SonatypeException(STAGE_IN_PROGRESS, s"Waiting for the completion of the ${taskName} process..."))
       }
       .run {
         val activities = activitiesOf(repo)
@@ -269,29 +282,32 @@ object SonatypeClient extends LogSupport {
       description: String
   )
 
+  case class Prop(name: String, value: String)
+
   /**
     * ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
     * @param timestamp
     * @param name
     * @param severity
-    * @param property
+    * @param properties
     */
-  case class ActivityEvent(timestamp: String, name: String, severity: String, property: Map[String, String]) {
-    def ruleType: String = property.getOrElse("typeId", "other")
+  case class ActivityEvent(timestamp: String, name: String, severity: Int, properties: Seq[Prop]) {
+    lazy val map         = properties.map(x => x.name -> x.value).toMap
+    def ruleType: String = map.getOrElse("typeId", "other")
     def isFailure        = name == "ruleFailed"
 
     override def toString = {
-      s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${property.map(p => s"${p._1}:${p._2}").mkString(", ")}"
+      s"-event -- timestamp:$timestamp, name:$name, severity:$severity, ${properties.map(p => s"${p.name}:${p.value}").mkString(", ")}"
     }
 
     def showProgress(useErrorLog: Boolean = false): Unit = {
       val props = {
         val front =
-          if (property.contains("typeId"))
-            Seq(property("typeId"))
+          if (map.contains("typeId"))
+            Seq(map("typeId"))
           else
             Seq.empty
-        front ++ property.filter(_._1 != "typeId").map(p => s"${p._1}:${p._2}")
+        front ++ map.filter(_._1 != "typeId").map(p => s"${p._1}:${p._2}")
       }
       val messageLine = props.mkString(", ")
       val name_s      = name.replaceAll("rule(s)?", "")
@@ -374,11 +390,12 @@ object SonatypeClient extends LogSupport {
       b.result
     }
 
-    def containsError = events.exists(_.severity != "0")
+    def containsError = events.exists(_.severity != 0)
+
+    def failureReport = suppressEvaluateLog.filter(_.isFailure)
 
     def reportFailure: Unit = {
       logger.error(activityLog)
-      val failureReport = suppressEvaluateLog.filter(_.isFailure)
       for (e <- failureReport) {
         e.showProgress(useErrorLog = true)
       }
@@ -387,13 +404,13 @@ object SonatypeClient extends LogSupport {
     def isReleaseSucceeded(repositoryId: String): Boolean = {
       events
         .find(_.name == "repositoryReleased")
-        .exists(_.property.getOrElse("id", "") == repositoryId)
+        .exists(_.map.getOrElse("id", "") == repositoryId)
     }
 
     def isCloseSucceeded(repositoryId: String): Boolean = {
       events
         .find(_.name == "repositoryClosed")
-        .exists(_.property.getOrElse("id", "") == repositoryId)
+        .exists(_.map.getOrElse("id", "") == repositoryId)
     }
   }
 }

@@ -4,7 +4,7 @@ import java.io.{File, IOException}
 
 import org.apache.http.HttpStatus
 import sbt.io.IO
-import wvlet.airframe.codec.MessageCodec
+import wvlet.airframe.codec.{MessageCodec, MessageCodecFactory}
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeClient._
 
@@ -20,6 +20,9 @@ class SonatypeService(
 ) extends LogSupport
     with AutoCloseable {
   import SonatypeService._
+
+  info(s"sonatypeRepository  : ${sonatypClient.repoUri}")
+  info(s"sonatypeProfileName : ${profileName}")
 
   override def close(): Unit = {
     sonatypClient.close()
@@ -115,7 +118,7 @@ class SonatypeService(
   }
 
   private def withCache[A: scala.reflect.runtime.universe.TypeTag](fileName: String, a: => A): A = {
-    val codec     = MessageCodec.of[A]
+    val codec     = MessageCodecFactory.defaultFactoryForJSON.of[A]
     val cacheFile = new File(fileName)
     val value: A = if (cacheFile.exists() && cacheFile.length() > 0) {
       Try {
