@@ -7,6 +7,7 @@ import sbt.io.IO
 import wvlet.airframe.codec.{MessageCodec, MessageCodecFactory}
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeClient._
+import xerial.sbt.sonatype.SonatypeException.{MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
 
 import scala.util.Try
 
@@ -39,7 +40,7 @@ class SonatypeService(
       if (stagingProfiles.isEmpty) {
         error(s"No staging profile found for $profileName")
         error("Have you requested a staging profile and successfully published your signed artifact there?")
-        throw new IllegalStateException(s"No staging profile found for $profileName")
+        throw SonatypeException(MISSING_STAGING_PROFILE, s"No staging profile found for $profileName")
       } else {
         throw new IllegalStateException(command.errNotFound)
       }
@@ -49,7 +50,7 @@ class SonatypeService(
       repos.find(_.repositoryId == target).getOrElse {
         error(s"Repository $target is not found")
         error(s"Specify one of the repository ids in:\n${repos.mkString("\n")}")
-        throw new IllegalArgumentException(s"Repository $target is not found")
+        throw SonatypeException(UNKNOWN_STAGE, s"Repository $target is not found")
       }
     }
 
@@ -57,7 +58,7 @@ class SonatypeService(
       if (repos.size > 1) {
         error(s"Multiple repositories are found:\n${repos.mkString("\n")}")
         error(s"Specify one of the repository ids in the command line or run sonatypeDropAll to cleanup repositories")
-        throw new IllegalStateException("Found multiple staging repositories")
+        throw SonatypeException(MULTIPLE_TARGETS, "Found multiple staging repositories")
       } else {
         repos.head
       }
@@ -75,7 +76,8 @@ class SonatypeService(
     // Find the already opened profile or create a new one
     val repos = findStagingRepositoryProfilesWithKey(descriptionKey)
     if (repos.size > 1) {
-      throw new IllegalStateException(
+      throw SonatypeException(
+        MULTIPLE_TARGETS,
         s"Multiple staging repositories for ${descriptionKey} exists. Run sonatypeDropAll first to clean up old repositories")
     } else if (repos.size == 1) {
       val repo = repos.head
