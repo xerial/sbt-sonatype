@@ -49,8 +49,6 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
-
 val AIRFRAME_VERSION = "20.3.3"
 
 // Project modules
