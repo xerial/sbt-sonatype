@@ -8,7 +8,7 @@ Release Notes
 
 # 3.9.0
 - 2020-03-26
-- ** This version has an issue in creating staging repositories. Use 3.9.1 **
+- __This version has an issue in creating staging repositories. Use 3.9.1__
 - Add sonatypeTimeoutMillis to wait longer time until close/promote stage completes. The default is 60 minutes.
 - Changed the backend HTTP client to airframe-http-finagle
 - Use JSON REST API of Sonatype instead of handling XML
