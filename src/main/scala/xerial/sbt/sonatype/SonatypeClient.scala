@@ -12,7 +12,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
-import wvlet.airframe.control.{ResultClass, Retry}
+import wvlet.airframe.control.{Control, ResultClass, Retry}
 import wvlet.airframe.http.finagle.Finagle
 import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.log.LogSupport
@@ -61,6 +61,8 @@ class SonatypeClient(repositoryUrl: String,
   }
 
   private val clientConfig = Finagle.client
+  // airframe-http will retry the request several times within this timeout duration.
+    .withTimeout(Duration(10, TimeUnit.MINUTES))
     .withRetryContext {
       import wvlet.airframe.http.finagle._
       // For individual REST calls, use a normal jittering
@@ -76,15 +78,14 @@ class SonatypeClient(repositoryUrl: String,
     }
 
   private val httpClient = clientConfig.newSyncClient(repoUri)
-  // Create stage is not idempotent, so we just need to wait for a long time
+
+  // Create stage is not idempotent, so we just need to wait for a long time without retry
   private val httpClientForCreateStage =
     clientConfig.noRetry
-      .withTimeout(Duration(5, TimeUnit.MINUTES))
       .newSyncClient(repoUri)
 
   override def close(): Unit = {
-    httpClient.close()
-    httpClientForCreateStage.close()
+    Control.closeResources(httpClient.close(), httpClientForCreateStage.close())
   }
 
   import xerial.sbt.sonatype.SonatypeClient._
@@ -128,7 +129,7 @@ class SonatypeClient(repositoryUrl: String,
   private val monitor = new ActivityMonitor()
 
   /**
-    * backoff retry (max 30 sec. / each http request) until the timeout reaches (upto 60 min by default)
+    * backoff retry (max 15 sec. / each http request) until the timeout reaches (upto 60 min by default)
     */
   private val retryer = {
     val maxInterval  = 15000
