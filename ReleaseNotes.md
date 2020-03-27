@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.2
+- 2020-03-27
+- Use a longer total timeout (upto 10 min.) for individual HTTP requests to address an issue like [#149](https://github.com/xerial/sbt-sonatype/issues/149)
+
 # 3.9.1
 - 2020-03-27
 - Adjust the wait interval for close/promote stages
