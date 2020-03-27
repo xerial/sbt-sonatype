@@ -3,8 +3,10 @@ package xerial.sbt.sonatype
 import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import java.util.concurrent.TimeUnit
 
 import com.twitter.finagle.http.{MediaType, Request, Response}
+import com.twitter.util.Duration
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
@@ -58,7 +60,7 @@ class SonatypeClient(repositoryUrl: String,
     new java.net.URL(repoUri).getPath
   }
 
-  private val httpClient = Finagle.client
+  private val clientConfig = Finagle.client
     .withRetryContext {
       import wvlet.airframe.http.finagle._
       // For individual REST calls, use a normal jittering
@@ -71,10 +73,18 @@ class SonatypeClient(repositoryUrl: String,
       request.accept = MediaType.Json
       request.authorization = s"Basic ${base64Credentials}"
       request
-    }.newSyncClient(repoUri)
+    }
+
+  private val httpClient = clientConfig.newSyncClient(repoUri)
+  // Create stage is not idempotent, so we just need to wait for a long time
+  private val httpClientForCreateStage =
+    clientConfig.noRetry
+      .withTimeout(Duration(5, TimeUnit.MINUTES))
+      .newSyncClient(repoUri)
 
   override def close(): Unit = {
     httpClient.close()
+    httpClientForCreateStage.close()
   }
 
   import xerial.sbt.sonatype.SonatypeClient._
@@ -99,7 +109,7 @@ class SonatypeClient(repositoryUrl: String,
 
   def createStage(profile: StagingProfile, description: String): StagingRepositoryProfile = {
     info(s"Creating a staging repository in profile ${profile.name} with a description key: ${description}")
-    val ret = httpClient.postOps[Map[String, Map[String, String]], CreateStageResponse](
+    val ret = httpClientForCreateStage.postOps[Map[String, Map[String, String]], CreateStageResponse](
       s"${pathPrefix}/staging/profiles/${profile.id}/start",
       Map("data" -> Map("description" -> description))
     )
