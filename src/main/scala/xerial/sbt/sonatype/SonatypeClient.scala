@@ -225,8 +225,11 @@ class SonatypeClient(repositoryUrl: String,
     retryer
       .retryOn {
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
-          Retry.nonRetryableFailure(SonatypeException(BUNDLE_UPLOAD_FAILURE,
-            s"Bundle upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first: ${e.getMessage}")
+          Retry.nonRetryableFailure(
+            SonatypeException(
+              BUNDLE_UPLOAD_FAILURE,
+              s"Bundle upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first: ${e.getMessage}"
+            ))
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()
