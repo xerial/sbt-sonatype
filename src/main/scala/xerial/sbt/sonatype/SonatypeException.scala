@@ -11,7 +11,7 @@ sealed trait ErrorCode
 
 object SonatypeException {
 
-  case object STAGE_IN_PROGRESS extends ErrorCode
-  case object STAGE_FAILURE     extends ErrorCode
-
+  case object STAGE_IN_PROGRESS     extends ErrorCode
+  case object STAGE_FAILURE         extends ErrorCode
+  case object BUNDLE_ALREADY_EXISTS extends ErrorCode
 }

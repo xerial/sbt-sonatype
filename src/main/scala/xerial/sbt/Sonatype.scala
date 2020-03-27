@@ -35,7 +35,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName     = settingKey[String]("Used for identifying a sonatype staging repository")
-    val sonatypeMaxRetries      = settingKey[Int]("The number of max retries for Sonatype API requests")
+    val sonatypeTimeoutMillis   = settingKey[Int]("milliseconds before giving up Sonatype API requests")
     val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
     val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
@@ -115,7 +115,7 @@ object Sonatype extends AutoPlugin with LogSupport {
         Opts.resolver.sonatypeStaging
       })
     },
-    sonatypeMaxRetries := 30,
+    sonatypeTimeoutMillis := 30 * 60 * 1000, // 30 minutes
     sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
     sonatypeLogLevel := "info",
     commands ++= Seq(
@@ -393,7 +393,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       repositoryUrl = extracted.get(sonatypeRepository),
       cred = getCredentials(extracted, state),
       credentialHost = extracted.get(sonatypeCredentialHost),
-      maxRetries = extracted.get(sonatypeMaxRetries)
+      timeoutMillis = extracted.get(sonatypeTimeoutMillis)
     )
     val service = new SonatypeService(
       sonatypeClient,

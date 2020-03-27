@@ -3,7 +3,6 @@ package xerial.sbt.sonatype
 import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import java.util.concurrent.TimeUnit
 
 import com.twitter.finagle.http.{MediaType, Request, Response}
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
@@ -11,18 +10,20 @@ import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
-import wvlet.airframe.control.Retry.warn
-import wvlet.airframe.control.{Control, ResultClass, Retry}
-import wvlet.airframe.http.{HttpClient, HttpStatus}
+import wvlet.airframe.control.{ResultClass, Retry}
 import wvlet.airframe.http.finagle.Finagle
+import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeException.{STAGE_FAILURE, STAGE_IN_PROGRESS}
+import xerial.sbt.sonatype.SonatypeException.{BUNDLE_ALREADY_EXISTS, STAGE_FAILURE, STAGE_IN_PROGRESS}
 
 /**
   * REST API Client for Sonatype API (nexus-staigng)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html
   */
-class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHost: String, maxRetries: Int = 100)
+class SonatypeClient(repositoryUrl: String,
+                     cred: Seq[Credentials],
+                     credentialHost: String,
+                     timeoutMillis: Int = 30 * 60 * 1000)
     extends AutoCloseable
     with LogSupport {
 
@@ -56,8 +57,8 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
       import wvlet.airframe.http.finagle._
       HttpClient
         .defaultHttpClientRetry[Request, Response]
-        .withMaxRetry(maxRetries)
-        .withJitter(maxIntervalMillis = 30000)
+        .withMaxRetry(15)
+        .withJitter(initialIntervalMillis = 3000, maxIntervalMillis = 30000)
     }
     .withRequestFilter { request =>
       request.setContentTypeJson()
@@ -110,12 +111,12 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
 
   private val monitor = new ActivityMonitor()
 
+  private val retryer =
+    Retry.withBoundedBackoff(initialIntervalMillis = 1500, maxTotalWaitMillis = timeoutMillis)
+
   private def waitForStageCompletion(taskName: String,
                                      repo: StagingRepositoryProfile,
                                      terminationCond: StagingActivity => Boolean): StagingRepositoryProfile = {
-    val retryer =
-      Retry.withBoundedBackoff(initialIntervalMillis = 3000, maxTotalWaitMillis = TimeUnit.MINUTES.toMillis(30).toInt)
-
     retryer
       .beforeRetry { ctx =>
         ctx.lastError match {
@@ -196,13 +197,12 @@ class SonatypeClient(repositoryUrl: String, cred: Seq[Credentials], credentialHo
   }
 
   def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
-    Retry
-      .withBackOff()
+    retryer
       .retryOn {
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
           error(
             "Upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first.")
-          Retry.nonRetryableFailure(e)
+          Retry.nonRetryableFailure(SonatypeException(BUNDLE_ALREADY_EXISTS, e.getMessage))
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()
