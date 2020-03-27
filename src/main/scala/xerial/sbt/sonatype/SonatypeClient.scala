@@ -65,7 +65,7 @@ class SonatypeClient(repositoryUrl: String,
       HttpClient
         .defaultHttpClientRetry[Request, Response]
         .withMaxRetry(15)
-        .withJitter(initialIntervalMillis = 3000, maxIntervalMillis = 30000)
+        .withJitter(initialIntervalMillis = 1500, maxIntervalMillis = 30000)
     }.withRequestFilter { request =>
       request.setContentTypeJson()
       request.accept = MediaType.Json
@@ -99,9 +99,9 @@ class SonatypeClient(repositoryUrl: String,
 
   def createStage(profile: StagingProfile, description: String): StagingRepositoryProfile = {
     info(s"Creating a staging repository in profile ${profile.name} with a description key: ${description}")
-    val ret = httpClient.postOps[Map[String, String], CreateStageResponse](
+    val ret = httpClient.postOps[Map[String, Map[String, String]], CreateStageResponse](
       s"${pathPrefix}/staging/profiles/${profile.id}/start",
-      Map("data" -> description)
+      Map("data" -> Map("description" -> description))
     )
     // Retrieve created staging repository ids
     val repo = StagingRepositoryProfile(
@@ -121,8 +121,8 @@ class SonatypeClient(repositoryUrl: String,
     * backoff retry (max 30 sec. / each http request) until the timeout reaches (upto 60 min by default)
     */
   private val retryer = {
-    val maxInterval  = 30000
-    val initInterval = 1500
+    val maxInterval  = 15000
+    val initInterval = 3000
     // init * (multiplier ^ n) = max
     // n = log(max / init) / log(multiplier)
     val retryCountUntilMaxInterval = (math.log(maxInterval.toDouble / initInterval) / math.log(1.5)).toInt.max(1)

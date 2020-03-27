@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.1
+- 2020-03-06
+- Adjust the wait interval for close/promote stages
+
 # 3.9.0
 - 2020-03-26
 - Add sonatypeTimeoutMillis to wait longer time until close/promote stage completes. The default is 60 minutes.
