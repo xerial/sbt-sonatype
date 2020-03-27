@@ -15,7 +15,7 @@ import wvlet.airframe.http.finagle.Finagle
 import wvlet.airframe.http.{HttpClient, HttpStatus}
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeException.{
-  BUNDLE_ALREADY_EXISTS,
+  BUNDLE_UPLOAD_FAILURE,
   MISSING_CREDENTIAL,
   STAGE_FAILURE,
   STAGE_IN_PROGRESS
@@ -61,6 +61,7 @@ class SonatypeClient(repositoryUrl: String,
   private val httpClient = Finagle.client
     .withRetryContext {
       import wvlet.airframe.http.finagle._
+      // For individual REST calls, use a normal jittering
       HttpClient
         .defaultHttpClientRetry[Request, Response]
         .withMaxRetry(15)
@@ -117,7 +118,7 @@ class SonatypeClient(repositoryUrl: String,
   private val monitor = new ActivityMonitor()
 
   /**
-    * backoff retry (max 30 sec.) until the timeout (60 min by default)
+    * backoff retry (max 30 sec. / each http request) until the timeout reaches (upto 60 min by default)
     */
   private val retryer = {
     val maxInterval  = 30000
@@ -224,9 +225,8 @@ class SonatypeClient(repositoryUrl: String,
     retryer
       .retryOn {
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
-          error(
-            "Upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first.")
-          Retry.nonRetryableFailure(SonatypeException(BUNDLE_ALREADY_EXISTS, e.getMessage))
+          Retry.nonRetryableFailure(SonatypeException(BUNDLE_UPLOAD_FAILURE,
+            s"Bundle upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first: ${e.getMessage}")
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()
