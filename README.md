@@ -1,7 +1,7 @@
 sbt-sonatype plugin
 ======
 
-A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](http://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of your Scala/Java projects.
+A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](https://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of your Scala/Java projects.
 
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
     * Create GPG signed artifacts to a local staging repository.
@@ -50,7 +50,7 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 ```
 
- * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <http://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.12_1.0>. It will be usually synced within 10 minutes.
+ * If downloading the sbt-sonatype plugin fails, check the repository in the Maven central: <https://repo1.maven.org/maven2/org/xerial/sbt/sbt-sonatype_2.12_1.0>. It will be usually synced within 10 minutes.
 
 ### build.sbt
 
