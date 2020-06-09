@@ -43,7 +43,7 @@ commands:
 ```scala
 // For sbt 1.x (sbt-sonatype 2.3 or higher)
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.0-M2")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.1")
 
 // For sbt 0.13.x (upto sbt-sonatype 2.3)
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "(version)")
