@@ -27,11 +27,12 @@ import xerial.sbt.sonatype.SonatypeException.{
   * REST API Client for Sonatype API (nexus-staigng)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html
   */
-class SonatypeClient(repositoryUrl: String,
-                     cred: Seq[Credentials],
-                     credentialHost: String,
-                     timeoutMillis: Int = 60 * 60 * 1000)
-    extends AutoCloseable
+class SonatypeClient(
+    repositoryUrl: String,
+    cred: Seq[Credentials],
+    credentialHost: String,
+    timeoutMillis: Int = 60 * 60 * 1000
+) extends AutoCloseable
     with LogSupport {
 
   private lazy val directCredentials = {
@@ -138,14 +139,18 @@ class SonatypeClient(repositoryUrl: String,
     // n = log(max / init) / log(multiplier)
     val retryCountUntilMaxInterval = (math.log(maxInterval.toDouble / initInterval) / math.log(1.5)).toInt.max(1)
     val numRetry                   = (timeoutMillis / maxInterval).ceil.toInt
-    Retry.withBackOff(maxRetry = retryCountUntilMaxInterval + numRetry,
-                      initialIntervalMillis = initInterval,
-                      maxIntervalMillis = maxInterval)
+    Retry.withBackOff(
+      maxRetry = retryCountUntilMaxInterval + numRetry,
+      initialIntervalMillis = initInterval,
+      maxIntervalMillis = maxInterval
+    )
   }
 
-  private def waitForStageCompletion(taskName: String,
-                                     repo: StagingRepositoryProfile,
-                                     terminationCond: StagingActivity => Boolean): StagingRepositoryProfile = {
+  private def waitForStageCompletion(
+      taskName: String,
+      repo: StagingRepositoryProfile,
+      terminationCond: StagingActivity => Boolean
+  ): StagingRepositoryProfile = {
     retryer
       .beforeRetry { ctx =>
         ctx.lastError match {
@@ -186,9 +191,13 @@ class SonatypeClient(repositoryUrl: String,
     if (ret.statusCode != HttpStatus.Created_201.code) {
       throw SonatypeException(STAGE_FAILURE, s"Failed to close the repository. [${ret.status}]: ${ret.contentString}")
     }
-    waitForStageCompletion("close", repo, terminationCond = {
-      _.isCloseSucceeded(repo.repositoryId)
-    }).toClosed
+    waitForStageCompletion(
+      "close",
+      repo,
+      terminationCond = {
+        _.isCloseSucceeded(repo.repositoryId)
+      }
+    ).toClosed
   }
 
   def promoteStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): StagingRepositoryProfile = {
@@ -216,8 +225,10 @@ class SonatypeClient(repositoryUrl: String,
     ret
   }
 
-  private def newStageTransitionRequest(currentProfile: StagingProfile,
-                                        repo: StagingRepositoryProfile): Map[String, StageTransitionRequest] = {
+  private def newStageTransitionRequest(
+      currentProfile: StagingProfile,
+      repo: StagingRepositoryProfile
+  ): Map[String, StageTransitionRequest] = {
     Map(
       "data" -> StageTransitionRequest(
         stagedRepositoryId = repo.repositoryId,
@@ -240,7 +251,8 @@ class SonatypeClient(repositoryUrl: String,
             SonatypeException(
               BUNDLE_UPLOAD_FAILURE,
               s"Bundle upload failed. Probably a previously uploaded bundle remains. Run sonatypeClean or sonatypeDropAll first: ${e.getMessage}"
-            ))
+            )
+          )
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()

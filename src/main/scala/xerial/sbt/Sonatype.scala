@@ -72,13 +72,12 @@ object Sonatype extends AutoPlugin with LogSupport {
         (for {
           username <- env("SONATYPE_USERNAME")
           password <- env("SONATYPE_PASSWORD")
-        } yield
-          Credentials(
-            "Sonatype Nexus Repository Manager",
-            sonatypeCredentialHost.value,
-            username,
-            password
-          )).toSeq
+        } yield Credentials(
+          "Sonatype Nexus Repository Manager",
+          sonatypeCredentialHost.value,
+          username,
+          password
+        )).toSeq
       } else Seq.empty
     },
     homepage := homepage.value.orElse(sonatypeProjectHosting.value.map(h => url(h.homepage))),
@@ -178,24 +177,24 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   private val sonatypePrepare = newCommand(
     "sonatypePrepare",
-    "Clean (if exists) and create a staging repository for releasing the current version, then update publishTo") {
-    state: State =>
-      withSonatypeService(state) { rest =>
-        val repo = prepare(state, rest)
-        updatePublishSettings(state, repo)
-      }
+    "Clean (if exists) and create a staging repository for releasing the current version, then update publishTo"
+  ) { state: State =>
+    withSonatypeService(state) { rest =>
+      val repo = prepare(state, rest)
+      updatePublishSettings(state, repo)
+    }
   }
 
   private val sonatypeOpen = newCommand(
     "sonatypeOpen",
-    "Open (or create if not exists) to a staging repository for the current version, then update publishTo") {
-    state: State =>
-      withSonatypeService(state) { rest =>
-        // Re-open or create a staging repository
-        val descriptionKey = Project.extract(state).get(sonatypeSessionName)
-        val repo           = rest.openOrCreateByKey(descriptionKey)
-        updatePublishSettings(state, repo)
-      }
+    "Open (or create if not exists) to a staging repository for the current version, then update publishTo"
+  ) { state: State =>
+    withSonatypeService(state) { rest =>
+      // Re-open or create a staging repository
+      val descriptionKey = Project.extract(state).get(sonatypeSessionName)
+      val repo           = rest.openOrCreateByKey(descriptionKey)
+      updatePublishSettings(state, repo)
+    }
   }
 
   private def updatePublishSettings(state: State, repo: StagingRepositoryProfile): State = {
@@ -371,7 +370,8 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   private val repositoryIdParser: complete.Parser[Option[String]] =
     (Space ~> token(StringBasic, "(sonatype staging repository id)")).?.!!!(
-      "invalid input. please input a repository id")
+      "invalid input. please input a repository id"
+    )
 
   private val sonatypeProfileParser: complete.Parser[Option[String]] =
     (Space ~> token(StringBasic, "(sonatypeProfileName)")).?.!!!(
@@ -384,7 +384,8 @@ object Sonatype extends AutoPlugin with LogSupport {
   }
 
   private def withSonatypeService(state: State, profileName: Option[String] = None)(
-      body: SonatypeService => State): State = {
+      body: SonatypeService => State
+  ): State = {
     val extracted = Project.extract(state)
     val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
@@ -396,7 +397,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     )
     val service = new SonatypeService(
       sonatypeClient,
-      profileName.getOrElse(extracted.get(sonatypeProfileName)),
+      profileName.getOrElse(extracted.get(sonatypeProfileName))
     )
     try {
       body(service)
