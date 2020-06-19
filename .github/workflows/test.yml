@@ -23,7 +23,7 @@ jobs:
       - name: scalafmt
         run: ./sbt scalafmtCheckAll
   test_jdk11:
-    name: Test JDK11
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -35,5 +35,5 @@ jobs:
           path: ~/.cache
           key: ${{ runner.os }}-jdk11-${{ hashFiles('**/*.sbt') }}
           restore-keys: ${{ runner.os }}-jdk11-
-      - name: Test
+      - name: sbt scripted test
         run: ./sbt compile scripted
