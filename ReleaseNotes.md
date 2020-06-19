@@ -1,6 +1,11 @@
 Release Notes
 ===
 
+# 3.9.3
+- 2020-06-19
+- Fixes an issue when using `sbt "sonatypeReleaseAll (sonatypeProfileName)` standalone without build.sbt file. 
+- Using GitHub Actions for CI
+
 # 3.9.2
 - 2020-03-27
 - Use a longer total timeout (upto 10 min.) for individual HTTP requests to address an issue like [#149](https://github.com/xerial/sbt-sonatype/issues/149)
