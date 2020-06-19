@@ -77,7 +77,8 @@ class SonatypeService(
     if (repos.size > 1) {
       throw SonatypeException(
         MULTIPLE_TARGETS,
-        s"Multiple staging repositories for ${descriptionKey} exists. Run sonatypeDropAll first to clean up old repositories")
+        s"Multiple staging repositories for ${descriptionKey} exists. Run sonatypeDropAll first to clean up old repositories"
+      )
     } else if (repos.size == 1) {
       val repo = repos.head
       info(s"Found a staging repository ${repo}")
@@ -144,7 +145,8 @@ class SonatypeService(
     if (profiles.isEmpty) {
       throw SonatypeException(
         MISSING_PROFILE,
-        s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt")
+        s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt"
+      )
     }
     profiles.head
   }

@@ -7,7 +7,6 @@ import wvlet.log.io.IOUtil
 import xerial.sbt.sonatype.SonatypeClient.StagingProfileResponse;
 
 /**
-  *
   */
 class SonatypeClientTest extends AirSpec {
   test("parse profile json") {

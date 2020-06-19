@@ -49,7 +49,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-val AIRFRAME_VERSION = "20.5.1"
+val AIRFRAME_VERSION = "20.6.0"
 
 // Project modules
 lazy val sbtSonatype =
