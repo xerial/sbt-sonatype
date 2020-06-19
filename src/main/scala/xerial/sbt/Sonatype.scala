@@ -271,7 +271,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   private val sonatypeReleaseAll =
     commandWithRepositoryId("sonatypeReleaseAll", "Publish all staging repositories to Maven central") {
       (state: State, arg: Option[String]) =>
-        withSonatypeService(state) { rest =>
+        withSonatypeService(state, arg) { rest =>
           val tasks = rest.stagingRepositoryProfiles().map { repo =>
             Future.apply(rest.closeAndPromote(repo))
           }
