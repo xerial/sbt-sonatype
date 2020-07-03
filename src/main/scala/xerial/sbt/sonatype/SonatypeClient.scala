@@ -5,16 +5,16 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 
-import com.twitter.finagle.http.{MediaType, Request, Response}
-import com.twitter.util.Duration
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
 import wvlet.airframe.control.{Control, ResultClass, Retry}
-import wvlet.airframe.http.finagle.Finagle
-import wvlet.airframe.http.{HttpClient, HttpStatus}
+import wvlet.airframe.http.HttpHeader.MediaType
+import wvlet.airframe.http.HttpMessage.{Request, Response}
+import wvlet.airframe.http.client.{URLConnectionClient, URLConnectionClientConfig}
+import wvlet.airframe.http._
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeException.{
   BUNDLE_UPLOAD_FAILURE,
@@ -22,6 +22,8 @@ import xerial.sbt.sonatype.SonatypeException.{
   STAGE_FAILURE,
   STAGE_IN_PROGRESS
 }
+
+import scala.concurrent.duration.Duration
 
 /**
   * REST API Client for Sonatype API (nexus-staigng)
@@ -61,28 +63,40 @@ class SonatypeClient(
     new java.net.URL(repoUri).getPath
   }
 
-  private val clientConfig = Finagle.client
+  object SonatypeClientBackend extends HttpClientBackend {
+    def newSyncClient(serverAddress: String, clientConfig: HttpClientConfig): HttpSyncClient[Request, Response] = {
+      new URLConnectionClient(
+        ServerAddress(serverAddress),
+        URLConnectionClientConfig(
+          requestFilter = clientConfig.requestFilter,
+          retryContext = clientConfig.retryContext,
+          codecFactory = clientConfig.codecFactory,
+          readTimeout = Duration(timeoutMillis, TimeUnit.MILLISECONDS),
+        )
+      )
+    }
+  }
+
+  private val clientConfig = HttpClientConfig(SonatypeClientBackend)
   // airframe-http will retry the request several times within this timeout duration.
-    .withTimeout(Duration(10, TimeUnit.MINUTES))
-    .withRetryContext {
-      import wvlet.airframe.http.finagle._
+    .withRetryContext { context =>
       // For individual REST calls, use a normal jittering
-      HttpClient
-        .defaultHttpClientRetry[Request, Response]
+      context
         .withMaxRetry(15)
         .withJitter(initialIntervalMillis = 1500, maxIntervalMillis = 30000)
-    }.withRequestFilter { request =>
-      request.setContentTypeJson()
-      request.accept = MediaType.Json
-      request.authorization = s"Basic ${base64Credentials}"
-      request
+    }
+    .withRequestFilter { request =>
+      request.withContentTypeJson
+        .withAccept(MediaType.ApplicationJson)
+        .withHeader(HttpHeader.Authorization, s"Basic ${base64Credentials}")
     }
 
   private val httpClient = clientConfig.newSyncClient(repoUri)
 
   // Create stage is not idempotent, so we just need to wait for a long time without retry
   private val httpClientForCreateStage =
-    clientConfig.noRetry
+    clientConfig
+      .withRetryContext(_.noRetry)
       .newSyncClient(repoUri)
 
   override def close(): Unit = {
