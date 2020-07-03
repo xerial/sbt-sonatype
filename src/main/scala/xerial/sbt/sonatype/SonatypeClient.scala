@@ -71,7 +71,7 @@ class SonatypeClient(
           requestFilter = clientConfig.requestFilter,
           retryContext = clientConfig.retryContext,
           codecFactory = clientConfig.codecFactory,
-          readTimeout = Duration(timeoutMillis, TimeUnit.MILLISECONDS),
+          readTimeout = Duration(timeoutMillis, TimeUnit.MILLISECONDS)
         )
       )
     }
