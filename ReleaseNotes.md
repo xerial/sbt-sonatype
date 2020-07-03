@@ -1,6 +1,11 @@
 Release Notes
 ===
 
+# 3.9.4
+- 2020-07-03
+- Use URLConnection based HTTP client to remove the dependency to Finagle and Jackson
+- internal: Upgrade to airframe-http 20.6.2
+
 # 3.9.3
 - 2020-06-19
 - Fixes an issue when using `sbt "sonatypeReleaseAll (sonatypeProfileName)` standalone without build.sbt file. 
