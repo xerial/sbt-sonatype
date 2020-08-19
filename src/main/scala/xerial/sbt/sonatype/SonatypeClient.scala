@@ -78,7 +78,7 @@ class SonatypeClient(
   }
 
   private val clientConfig = HttpClientConfig(SonatypeClientBackend)
-  // airframe-http will retry the request several times within this timeout duration.
+    // airframe-http will retry the request several times within this timeout duration.
     .withRetryContext { context =>
       // For individual REST calls, use a normal jittering
       context
