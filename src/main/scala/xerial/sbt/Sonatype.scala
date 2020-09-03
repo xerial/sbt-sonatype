@@ -54,7 +54,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   private implicit val ec = ExecutionContext.global
 
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
-    sonatypeProfileName := organization.value,
+    sonatypeProfileName := organizationToProfileName(organization.value),
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
     sonatypeProjectHosting := None,
@@ -420,4 +420,16 @@ object Sonatype extends AutoPlugin with LogSupport {
   private def commandWithRepositoryId(name: String, briefHelp: String) =
     Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
 
+  private def organizationToProfileName(organization: String): String = {
+    val parts = organization.split('.').toList
+    val profile = parts match {
+      case "com" :: "github" :: _ => parts.take(3)
+      case "io" :: "github" :: _  => parts.take(3)
+      case "com" :: "gitlab" :: _ => parts.take(3)
+      case "io" :: "gitlab" :: _  => parts.take(3)
+      case "uk" :: _              => parts.take(3)
+      case _                      => parts.take(2)
+    }
+    profile.mkString(".")
+  }
 }
