@@ -31,6 +31,14 @@ object Sonatype extends AutoPlugin with LogSupport {
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypePublishToBundle         = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypeTargetRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
+    val sonatypeTopLevelGroupIdAsProfileName =
+      settingKey[Boolean](
+        """Whether to use only top-level groupId as the staging profile name (e.g. only `com.company`, even though the whole groupId is `com.company.project.product`).
+          |Note that groupIds like `com.github.*` or `uk.*` are exception and the staging profile name will contain 3 parts, so `io.gitlab.team.project` will result to profile `io.gitlab.team`.
+          |This is suitable because Sonatype prefers to create only one staging profile, which corresponds to the top-level groupId and then every other artifact which has this groupId prefix can be published there.
+          |Defaults to false, because it may be a breaking change for some projects, but will be enabled by default at the next major release of `sbt-sonatype`.
+          |""".stripMargin
+      )
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
     val sonatypeSessionName     = settingKey[String]("Used for identifying a sonatype staging repository")
@@ -54,7 +62,11 @@ object Sonatype extends AutoPlugin with LogSupport {
   private implicit val ec = ExecutionContext.global
 
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
-    sonatypeProfileName := organizationToProfileName(organization.value),
+    sonatypeTopLevelGroupIdAsProfileName := false,
+    sonatypeProfileName := {
+      if (sonatypeTopLevelGroupIdAsProfileName.value) topLevelGroupId(organization.value)
+      else organization.value
+    },
     sonatypeRepository := "https://oss.sonatype.org/service/local",
     sonatypeCredentialHost := "oss.sonatype.org",
     sonatypeProjectHosting := None,
@@ -420,7 +432,12 @@ object Sonatype extends AutoPlugin with LogSupport {
   private def commandWithRepositoryId(name: String, briefHelp: String) =
     Command(name, (name, briefHelp), briefHelp)(_ => repositoryIdParser)(_)
 
-  private def organizationToProfileName(organization: String): String = {
+  /** Extracts the "top-level" part of the groupId, which contains 2 parts most of the time:
+    * `com.company.project.product` -> `com.company`.
+    * Note that groupIds like `com.github.*` or `uk.*` are exceptions, because they require 3 parts:
+    * `io.gitlab.team.project` -> `io.gitlab.team`.
+    */
+  def topLevelGroupId(organization: String): String = {
     val parts = organization.split('.').toList
     val profile = parts match {
       case "com" :: "github" :: _ => parts.take(3)

@@ -4,6 +4,7 @@ import wvlet.airframe.codec.{JSONCodec, MessageCodec}
 import wvlet.airframe.msgpack.spi.MessagePack
 import wvlet.airspec.AirSpec
 import wvlet.log.io.IOUtil
+import xerial.sbt.Sonatype
 import xerial.sbt.sonatype.SonatypeClient.StagingProfileResponse;
 
 /**
@@ -23,5 +24,17 @@ class SonatypeClientTest extends AirSpec {
     unpacked.data.size shouldBe 2
 
     profile shouldBe unpacked
+  }
+  test("topLevelGroupId com.company.project.product = com.company") {
+    val groupId  = "com.company.project.product"
+    val expected = "com.company"
+    val actual   = Sonatype.topLevelGroupId(groupId)
+    actual shouldBe expected
+  }
+  test("topLevelGroupId io.gitlab.team.project = io.gitlab.team") {
+    val groupId  = "io.gitlab.team.project"
+    val expected = "io.gitlab.team"
+    val actual   = Sonatype.topLevelGroupId(groupId)
+    actual shouldBe expected
   }
 }
