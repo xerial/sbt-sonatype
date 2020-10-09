@@ -18,7 +18,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt 1.x series.
 - You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
-- [Blazingly Fast Relase to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
+- [Blazingly Fast Release to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
 
 ## Prerequisites
 
@@ -145,7 +145,7 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 ## Commands
 
 Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
-* __sonatypeBundleRelase__
+* __sonatypeBundleRelease__
   * This will run a sequence of commands `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease` in one step.
   * You must run `publishSigned` before this command to create a local staging bundle.
 
