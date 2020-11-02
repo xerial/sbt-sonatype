@@ -89,7 +89,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     },
     sonatypePublishTo := Some(sonatypeDefaultResolver.value),
     sonatypeBundleDirectory := {
-      (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${version.value}"
+      (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${(ThisBuild / version).value}"
     },
     sonatypeBundleClean := {
       IO.delete(sonatypeBundleDirectory.value)
