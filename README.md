@@ -65,7 +65,7 @@ If `isSnapshot.value` is true (e.g., if the version name contains -SNAPSHOT), pu
 If necessary, you can tweak several configurations:
 ```scala
 // [Optional] The local staging folder name:
-sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / s"${version.value}"
+sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / (ThisBuild / version).value
 
 // [Optional] If you need to manage unique session names by yourself, change this default setting:
 sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}"

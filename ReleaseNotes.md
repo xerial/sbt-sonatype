@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.5
+- 2020-11-02
+- Fixes an issue when different versions of sub modules exist [#197](https://github.com/xerial/sbt-sonatype/issues/197)
+
 # 3.9.4
 - 2020-07-03
 - Use URLConnection based HTTP client to remove the dependency to Finagle and Jackson
