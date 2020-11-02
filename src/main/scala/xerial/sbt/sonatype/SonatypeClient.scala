@@ -25,8 +25,7 @@ import xerial.sbt.sonatype.SonatypeException.{
 
 import scala.concurrent.duration.Duration
 
-/**
-  * REST API Client for Sonatype API (nexus-staigng)
+/** REST API Client for Sonatype API (nexus-staigng)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html
   */
 class SonatypeClient(
@@ -143,8 +142,7 @@ class SonatypeClient(
 
   private val monitor = new ActivityMonitor()
 
-  /**
-    * backoff retry (max 15 sec. / each http request) until the timeout reaches (upto 60 min by default)
+  /** backoff retry (max 15 sec. / each http request) until the timeout reaches (upto 60 min by default)
     */
   private val retryer = {
     val maxInterval  = 15000
@@ -302,13 +300,11 @@ object SonatypeClient extends LogSupport {
 
   case class StagingProfileResponse(data: Seq[StagingProfile] = Seq.empty)
 
-  /**
-    * Staging profile is the information associated to a Sonatype account.
+  /** Staging profile is the information associated to a Sonatype account.
     */
   case class StagingProfile(id: String, name: String, repositoryTargetId: String)
 
-  /**
-    * Staging repository profile has an id of deployed artifact and the current staging state.
+  /** Staging repository profile has an id of deployed artifact and the current staging state.
     */
   case class StagingRepositoryProfile(
       profileId: String,
@@ -348,8 +344,7 @@ object SonatypeClient extends LogSupport {
 
   case class Prop(name: String, value: String)
 
-  /**
-    * ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
+  /** ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
     * @param timestamp
     * @param name
     * @param severity
@@ -401,8 +396,7 @@ object SonatypeClient extends LogSupport {
     }
   }
 
-  /**
-    * Staging activity is an action to the staged repository
+  /** Staging activity is an action to the staged repository
     * @param name activity name, e.g. open, close, promote, etc.
     * @param started
     * @param stopped

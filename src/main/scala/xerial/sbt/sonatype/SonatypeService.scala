@@ -10,8 +10,7 @@ import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_P
 
 import scala.util.Try
 
-/**
-  * Interface to access the REST API of Nexus
+/** Interface to access the REST API of Nexus
   * @param profileName
   */
 class SonatypeService(
@@ -201,8 +200,7 @@ class SonatypeService(
 
 object SonatypeService {
 
-  /**
-    * Switches of a Sonatype command to use
+  /** Switches of a Sonatype command to use
     */
   sealed trait CommandType {
     def errNotFound: String

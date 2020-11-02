@@ -17,8 +17,7 @@ import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-/**
-  * Plugin for automating release processes at Sonatype Nexus
+/** Plugin for automating release processes at Sonatype Nexus
   */
 object Sonatype extends AutoPlugin with LogSupport {
   wvlet.log.Logger.init
