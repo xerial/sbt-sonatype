@@ -101,7 +101,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       }
     },
     sonatypeDefaultResolver := {
-      val profileM = sonatypeTargetRepositoryProfile.?.value
+      val profileM   = sonatypeTargetRepositoryProfile.?.value
       val repository = sonatypeRepository.value
       val staged = profileM.map { stagingRepoProfile =>
         "releases" at s"$repository/${stagingRepoProfile.deployPath}"
