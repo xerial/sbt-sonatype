@@ -66,8 +66,8 @@ class SonatypeService(
   def openRepositories   = stagingRepositoryProfiles().filter(_.isOpen).sortBy(_.repositoryId)
   def closedRepositories = stagingRepositoryProfiles().filter(_.isClosed).sortBy(_.repositoryId)
 
-  def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
-    sonatypClient.uploadBundle(localBundlePath, remoteUrl)
+  def uploadBundle(localBundlePath: File, deployPath: String): Unit = {
+    sonatypClient.uploadBundle(localBundlePath, deployPath)
   }
 
   def openOrCreateByKey(descriptionKey: String): StagingRepositoryProfile = {
