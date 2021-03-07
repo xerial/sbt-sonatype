@@ -28,6 +28,14 @@ A sbt plugin for publishing your project to the Maven central repository through
      * Create a GPG key
      * Open a JIRA ticket to get a permission for synchronizing your project to the Central Repository (aka Maven Central).
 
+   > ⚠️ Legacy Host
+   >
+   > By default, this plugin is configured to use the legacy Sonatype Nexus repository.
+   > Nexus accounts created on or after February 2021 are provisioned using the new host `s01.oss.sonatype.org`.
+   >
+   > If you are creating a new account take care to use `s01.oss.sonatype.org` instead of `oss.sonatype.org` including
+   > override the `sonatypeRepository` and `sonatypeCredentialHost` on the root sbt project.
+
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
     * [Uploading to a Staging Repository via REST API](https://support.sonatype.com/hc/en-us/articles/213465868-Uploading-to-a-Staging-Repository-via-REST-API)
@@ -76,6 +84,10 @@ sonatypeTimeoutMillis := 60 * 60 * 1000
 // [If you cannot use bundle upload] Use this setting when you need to uploads artifacts directly to Sonatype
 // With this setting, you cannot use sonatypeBundleXXX commands
 publishTo := sonatypePublishTo.value
+
+// [If using an account created on or after February 2021] Use the new Sonatype Nexus repository:
+sonatypeCredentialHost := "s01.oss.sonatype.org"
+sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
