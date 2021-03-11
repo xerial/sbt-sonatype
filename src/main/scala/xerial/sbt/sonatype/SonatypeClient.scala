@@ -268,8 +268,8 @@ class SonatypeClient(
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()
-        // Adding a trailing slash is necessary upload a bundle file to a proper location:
-        val endpoint      = s"$repositoryUrl/$deployPath/"
+        // Adding a trailing slash is necessary to upload a bundle file to a proper location:
+        val endpoint      = s"${repositoryUrl}/${deployPath}/"
         val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
 
         val credentialProvider = new BasicCredentialsProvider()
@@ -325,7 +325,7 @@ object SonatypeClient extends LogSupport {
     def toDropped  = copy(`type` = "dropped")
     def toReleased = copy(`type` = "released")
 
-    def deployPath: String = s"staging/deployByRepositoryId/$repositoryId"
+    def deployPath: String = s"staging/deployByRepositoryId/${repositoryId}"
   }
 
   case class CreateStageResponse(
