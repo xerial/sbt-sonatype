@@ -255,7 +255,7 @@ class SonatypeClient(
     httpClient.get[Seq[StagingActivity]](s"${pathPrefix}/staging/repository/${r.repositoryId}/activity")
   }
 
-  def uploadBundle(localBundlePath: File, remoteUrl: String): Unit = {
+  def uploadBundle(localBundlePath: File, deployPath: String): Unit = {
     retryer
       .retryOn {
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
@@ -268,8 +268,8 @@ class SonatypeClient(
       }
       .run {
         val parameters = ParametersBuilder.defaults().build()
-        // Adding a trailing slash is necessary upload a bundle file to a proper location:
-        val endpoint      = s"${remoteUrl}/"
+        // Adding a trailing slash is necessary to upload a bundle file to a proper location:
+        val endpoint      = s"${repositoryUrl}/${deployPath}/"
         val clientBuilder = new Hc4ClientBuilder(parameters, endpoint)
 
         val credentialProvider = new BasicCredentialsProvider()
@@ -325,7 +325,7 @@ object SonatypeClient extends LogSupport {
     def toDropped  = copy(`type` = "dropped")
     def toReleased = copy(`type` = "released")
 
-    def deployUrl: String = s"https://oss.sonatype.org/service/local/staging/deployByRepositoryId/${repositoryId}"
+    def deployPath: String = s"staging/deployByRepositoryId/${repositoryId}"
   }
 
   case class CreateStageResponse(

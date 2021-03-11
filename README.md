@@ -18,7 +18,7 @@ A sbt plugin for publishing your project to the Maven central repository through
 - [Release notes](ReleaseNotes.md)
 - sbt-sonatype is available for sbt 1.x series.
 - You can also use sbt-sonatype for [publishing non-sbt projects](README.md#publishing-maven-projects) (e.g., Maven, Gradle, etc.)
-- [Blazingly Fast Release to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
+- Blog: [Blazingly Fast Release to Sonatype](https://medium.com/@taroleo/sbt-sonatype-f02bdafd78f1)
 
 ## Prerequisites
 
@@ -27,6 +27,7 @@ A sbt plugin for publishing your project to the Maven central repository through
      * Create a Sonatype account
      * Create a GPG key
      * Open a JIRA ticket to get a permission for synchronizing your project to the Central Repository (aka Maven Central).
+
 
  * Related articles:
     * [Deploying to Sonatype - sbt Documentation](http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html)
@@ -54,10 +55,20 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
 ### build.sbt
 
-To use sbt-sonatype, you need to create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder specified by `sonatypeBundleDirectory`. By default the folder is `(project root)/target/sonatype-staging/(version)`. Add the following `publishTo` setting to create a local bundle of your project:
+To use sbt-sonatype, you need to create a bundle of your project artifacts (e.g., .jar, .javadoc, .asc files, etc.) into a local folder specified by `sonatypeBundleDirectory`. By default, the folder is `(project root)/target/sonatype-staging/(version)`. Add the following `publishTo` setting to create a local bundle of your project:
 ```scala
 publishTo := sonatypePublishToBundle.value
 ```
+
+  > ⚠️ Legacy Host
+  >
+  > By default, this plugin is configured to use the legacy Sonatype repository `oss.sonatype.org`. If you created a new account on or after February 2021, add `sonatypeCredentialHost` settings:
+  >
+  > ```scala
+  > // For all Sonatype accounts created on or after February 2021
+  > ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+  > ```
+
 With this setting, `publishSigned` will create a bundle of your project to the local staging folder. If the project has multiple modules, all of the artifacts will be assembled into the same folder to create a single bundle.
 
 If `isSnapshot.value` is true (e.g., if the version name contains -SNAPSHOT), publishSigned task will upload files to the Sonatype Snapshots repository without using the local bundle folder.
@@ -76,6 +87,10 @@ sonatypeTimeoutMillis := 60 * 60 * 1000
 // [If you cannot use bundle upload] Use this setting when you need to uploads artifacts directly to Sonatype
 // With this setting, you cannot use sonatypeBundleXXX commands
 publishTo := sonatypePublishTo.value
+
+// [If necessary] Settings for using custom Nexus repositories:
+sonatypeCredentialHost := "s01.oss.sonatype.org"
+sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 ```
 
 ### $HOME/.sbt/(sbt-version 0.13 or 1.0)/sonatype.sbt
