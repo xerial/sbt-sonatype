@@ -33,14 +33,14 @@ object Sonatype extends AutoPlugin with LogSupport {
     val sonatypeTargetRepositoryProfile = settingKey[StagingRepositoryProfile]("Stating repository profile")
     val sonatypeProjectHosting =
       settingKey[Option[ProjectHosting]]("Shortcut to fill in required Maven Central information")
-    val sonatypeSessionName     = settingKey[String]("Used for identifying a sonatype staging repository")
-    val sonatypeTimeoutMillis   = settingKey[Int]("milliseconds before giving up Sonatype API requests")
-    val sonatypeBundleClean     = taskKey[Unit]("Clean up the local bundle folder")
-    val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
-    val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
-    val sonatypeLogLevel        = settingKey[String]("log level: trace, debug, info warn, error")
+    val sonatypeSessionName      = settingKey[String]("Used for identifying a sonatype staging repository")
+    val sonatypeTimeoutMillis    = settingKey[Int]("milliseconds before giving up Sonatype API requests")
+    val sonatypeBundleClean      = taskKey[Unit]("Clean up the local bundle folder")
+    val sonatypeBundleDirectory  = settingKey[File]("Directory to create a bundle")
+    val sonatypeBundleRelease    = taskKey[String]("Release a bundle to Sonatype")
+    val sonatypeLogLevel         = settingKey[String]("log level: trace, debug, info warn, error")
     val sonatypeSnapshotResolver = settingKey[Resolver]("Sonatype snapshot resolver")
-    val sonatypeStagingResolver = settingKey[Resolver]("Sonatype staging resolver")
+    val sonatypeStagingResolver  = settingKey[Resolver]("Sonatype staging resolver")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
