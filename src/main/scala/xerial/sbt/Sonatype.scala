@@ -101,10 +101,10 @@ object Sonatype extends AutoPlugin with LogSupport {
       }
     },
     sonatypeDefaultResolver := {
-      val profileM = sonatypeTargetRepositoryProfile.?.value
-
+      val profileM   = sonatypeTargetRepositoryProfile.?.value
+      val repository = sonatypeRepository.value
       val staged = profileM.map { stagingRepoProfile =>
-        "releases" at stagingRepoProfile.deployUrl
+        "releases" at s"$repository/${stagingRepoProfile.deployPath}"
       }
       staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
         Opts.resolver.sonatypeSnapshots
@@ -154,7 +154,7 @@ object Sonatype extends AutoPlugin with LogSupport {
           val repo       = prepare(state, rest)
           val extracted  = Project.extract(state)
           val bundlePath = extracted.get(sonatypeBundleDirectory)
-          rest.uploadBundle(bundlePath, repo.deployUrl)
+          rest.uploadBundle(bundlePath, repo.deployPath)
           rest.closeAndPromote(repo)
           updatePublishSettings(state, repo)
         }
@@ -169,7 +169,7 @@ object Sonatype extends AutoPlugin with LogSupport {
           val descriptionKey = extracted.get(sonatypeSessionName)
           rest.openOrCreateByKey(descriptionKey)
         }
-        rest.uploadBundle(bundlePath, repo.deployUrl)
+        rest.uploadBundle(bundlePath, repo.deployPath)
         updatePublishSettings(state, repo)
       }
   }
