@@ -1,6 +1,11 @@
 Release Notes
 ===
 
+# 3.9.6
+- 2021-03-10
+- Support a new sonatype host with `sonatypeCredentialHost := "s01.oss.sonatype.org"` setting
+- internal: Upgrade to airframe 21.3.0
+
 # 3.9.5
 - 2020-11-02
 - Fixes an issue when different versions of sub modules exist [#197](https://github.com/xerial/sbt-sonatype/issues/197)
