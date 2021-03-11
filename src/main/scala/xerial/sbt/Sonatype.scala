@@ -9,6 +9,7 @@ package xerial.sbt
 
 import sbt.Keys._
 import sbt._
+import sbt.librarymanagement.MavenRepository
 import wvlet.log.{LogLevel, LogSupport}
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 import xerial.sbt.sonatype.SonatypeService._
@@ -38,6 +39,8 @@ object Sonatype extends AutoPlugin with LogSupport {
     val sonatypeBundleDirectory = settingKey[File]("Directory to create a bundle")
     val sonatypeBundleRelease   = taskKey[String]("Release a bundle to Sonatype")
     val sonatypeLogLevel        = settingKey[String]("log level: trace, debug, info warn, error")
+    val sonatypeSnapshotResolver = settingKey[Resolver]("Sonatype snapshot resolver")
+    val sonatypeStagingResolver = settingKey[Resolver]("Sonatype staging resolver")
   }
 
   object SonatypeKeys extends SonatypeKeys {}
@@ -98,10 +101,22 @@ object Sonatype extends AutoPlugin with LogSupport {
     },
     sonatypePublishToBundle := {
       if (version.value.endsWith("-SNAPSHOT")) {
-        Some(Opts.resolver.sonatypeSnapshots)
+        Some(sonatypeSnapshotResolver.value)
       } else {
         Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
       }
+    },
+    sonatypeSnapshotResolver := {
+      MavenRepository(
+        "sonatype-snapshots",
+        s"https://${sonatypeCredentialHost.value}/content/repositories/snapshots"
+      )
+    },
+    sonatypeStagingResolver := {
+      MavenRepository(
+        "sonatype-staging",
+        s"https://${sonatypeCredentialHost.value}/service/local/staging/deploy/maven2"
+      )
     },
     sonatypeDefaultResolver := {
       val profileM   = sonatypeTargetRepositoryProfile.?.value
@@ -110,9 +125,9 @@ object Sonatype extends AutoPlugin with LogSupport {
         "releases" at s"${repository}/${stagingRepoProfile.deployPath}"
       }
       staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
-        Opts.resolver.sonatypeSnapshots
+        sonatypeSnapshotResolver.value
       } else {
-        Opts.resolver.sonatypeStaging
+        sonatypeStagingResolver.value
       })
     },
     sonatypeTimeoutMillis := 60 * 60 * 1000, // 60 minutes
