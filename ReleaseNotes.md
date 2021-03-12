@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.7
+- 2021-03-12
+- Fixes a bug in releasing snapshot artifacts to the new s01.oss.sonatype.org repository.
+
 # 3.9.6
 - 2021-03-10
 - Support a new sonatype host with `sonatypeCredentialHost := "s01.oss.sonatype.org"` setting
