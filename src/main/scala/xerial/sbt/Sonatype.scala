@@ -61,6 +61,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
     sonatypeRepository := s"https://${sonatypeCredentialHost.value}/service/local",
+    sonatypeCredentialHost := Option(sonatypeCredentialHost.value).getOrElse(sonatypeLegacy),
     sonatypeProjectHosting := None,
     publishMavenStyle := true,
     pomIncludeRepository := { _ =>
