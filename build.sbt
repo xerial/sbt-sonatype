@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 import ReleaseTransformations._
 
 lazy val buildSettings: Seq[Setting[_]] = Seq(
@@ -62,7 +64,9 @@ lazy val sbtSonatype =
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       libraryDependencies ++= Seq(
         "org.sonatype.spice.zapper" % "spice-zapper"   % "1.3",
-        "org.wvlet.airframe"        %% "airframe-http" % AIRFRAME_VERSION,
+        "org.wvlet.airframe"        %% "airframe-http" % AIRFRAME_VERSION
+                // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
+                excludeAll(ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
         "org.wvlet.airframe"        %% "airspec"       % AIRFRAME_VERSION % "test"
       )
     )

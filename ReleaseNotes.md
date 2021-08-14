@@ -1,6 +1,9 @@
 Release Notes
 ===
 
+# 3.9.9
+- Remove scala-parser-combinator 2.x dependency. This is a workaround for sbt-pgp, which still depends on scala-parser-combinators 1.x.
+
 # 3.9.8
 - Scope sonatypeCredentialHost to the build instead of projects. (#242)
 - internal: Upgrade to airframe 21.8.0
