@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.8
+- Scope sonatypeCredentialHost to the build instead of projects. (#242)
+- internal: Upgrade to airframe 21.8.0
+
 # 3.9.7
 - 2021-03-12
 - Fixes a bug in releasing snapshot artifacts to the new s01.oss.sonatype.org repository.
