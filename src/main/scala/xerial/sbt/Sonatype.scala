@@ -49,6 +49,7 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   override def trigger         = allRequirements
   override def projectSettings = sonatypeSettings
+  override def buildSettings   = sonatypeBuildSettings
 
   import autoImport._
   import complete.DefaultParsers._
@@ -58,10 +59,12 @@ object Sonatype extends AutoPlugin with LogSupport {
   val sonatypeLegacy = "oss.sonatype.org"
   val sonatype01     = "s01.oss.sonatype.org"
 
+  lazy val sonatypeBuildSettings = Seq[Def.Setting[_]](
+    sonatypeCredentialHost := sonatypeLegacy
+  )
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName := organization.value,
     sonatypeRepository := s"https://${sonatypeCredentialHost.value}/service/local",
-    sonatypeCredentialHost := sonatypeLegacy,
     sonatypeProjectHosting := None,
     publishMavenStyle := true,
     pomIncludeRepository := { _ =>
