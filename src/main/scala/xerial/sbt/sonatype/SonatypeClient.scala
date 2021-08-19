@@ -344,7 +344,8 @@ object SonatypeClient extends LogSupport {
 
   case class Prop(name: String, value: String)
 
-  /** ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a StagingActivity ruleset
+  /** ActivityEvent is an evaluation result (e.g., checksum, signature check, etc.) of a rule defined in a
+    * StagingActivity ruleset
     * @param timestamp
     * @param name
     * @param severity
@@ -397,7 +398,8 @@ object SonatypeClient extends LogSupport {
   }
 
   /** Staging activity is an action to the staged repository
-    * @param name activity name, e.g. open, close, promote, etc.
+    * @param name
+    *   activity name, e.g. open, close, promote, etc.
     * @param started
     * @param stopped
     * @param events

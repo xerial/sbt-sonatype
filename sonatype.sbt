@@ -2,8 +2,8 @@ import xerial.sbt.Sonatype._
 
 publishMavenStyle := true
 
-sonatypeProfileName := "org.xerial"
-sonatypeProjectHosting := Some(GitHubHosting(user="xerial", repository="sbt-sonatype", email="leo@xerial.org"))
+sonatypeProfileName    := "org.xerial"
+sonatypeProjectHosting := Some(GitHubHosting(user = "xerial", repository = "sbt-sonatype", email = "leo@xerial.org"))
 developers := List(
   Developer(id = "leo", name = "Taro L. Saito", email = "leo@xerial.org", url = url("http://xerial.org/leo"))
 )

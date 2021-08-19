@@ -6,8 +6,7 @@ import wvlet.airspec.AirSpec
 import wvlet.log.io.IOUtil
 import xerial.sbt.sonatype.SonatypeClient.StagingProfileResponse;
 
-/**
-  */
+/** */
 class SonatypeClientTest extends AirSpec {
   test("parse profile json") {
     val json    = IOUtil.readAsString("/profiles.json")
