@@ -121,15 +121,17 @@ class SonatypeService(
     myProfiles
   }
 
-  private def withCache[A: scala.reflect.runtime.universe.TypeTag](fileName: String, a: => A): A = {
+  private def withCache[A: scala.reflect.runtime.universe.TypeTag](label: String, fileName: String, a: => A): A = {
     val codec     = MessageCodecFactory.defaultFactoryForJSON.of[A]
     val cachedir  = (Vector("sbt", "sonatype") ++ cacheToken).mkString("-")
     val cacheRoot = new File(s"target/${cachedir}")
     val cacheFile = new File(cacheRoot, fileName)
     val value: A = if (cacheFile.exists() && cacheFile.length() > 0) {
       Try {
-        val json = IO.read(cacheFile)
-        codec.fromJson(json)
+        val json   = IO.read(cacheFile)
+        val retval = codec.fromJson(json)
+        info(s"Using cached ${label}...")
+        retval
       }.getOrElse(a)
     } else {
       a
@@ -140,7 +142,7 @@ class SonatypeService(
   }
 
   def stagingProfiles: Seq[StagingProfile] = {
-    val profiles = withCache(s"sonatype-profile-${profileName}.json", sonatypClient.stagingProfiles)
+    val profiles = withCache("staging profiles", s"sonatype-profile-${profileName}.json", sonatypClient.stagingProfiles)
     profiles.filter(_.name == profileName)
   }
 
