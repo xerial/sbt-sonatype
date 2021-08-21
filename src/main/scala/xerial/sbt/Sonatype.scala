@@ -17,6 +17,7 @@ import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.hashing.MurmurHash3
 
 /** Plugin for automating release processes at Sonatype Nexus
   */
@@ -411,15 +412,26 @@ object Sonatype extends AutoPlugin with LogSupport {
     val extracted = Project.extract(state)
     val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
+
+    val repositoryUrl  = extracted.get(sonatypeRepository)
+    val creds          = getCredentials(extracted, state)
+    val credentialHost = extracted.get(sonatypeCredentialHost)
+
+    val hashsum: String = {
+      val input = Vector(repositoryUrl, creds.toString(), credentialHost).mkString("-")
+      MurmurHash3.stringHash(input).abs.toString()
+    }
+
     val sonatypeClient = new SonatypeClient(
-      repositoryUrl = extracted.get(sonatypeRepository),
-      cred = getCredentials(extracted, state),
-      credentialHost = extracted.get(sonatypeCredentialHost),
+      repositoryUrl = repositoryUrl,
+      cred = creds,
+      credentialHost = credentialHost,
       timeoutMillis = extracted.get(sonatypeTimeoutMillis)
     )
     val service = new SonatypeService(
       sonatypeClient,
-      profileName.getOrElse(extracted.get(sonatypeProfileName))
+      profileName.getOrElse(extracted.get(sonatypeProfileName)),
+      Some(hashsum)
     )
     try {
       body(service)
