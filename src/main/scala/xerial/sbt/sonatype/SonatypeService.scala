@@ -15,10 +15,13 @@ import scala.util.Try
   */
 class SonatypeService(
     sonatypClient: SonatypeClient,
-    val profileName: String
+    val profileName: String,
+    cacheToken: Option[String]
 ) extends LogSupport
     with AutoCloseable {
   import SonatypeService._
+
+  def this(sonatypClient: SonatypeClient, profileName: String) = this(sonatypClient, profileName, None)
 
   info(s"sonatypeRepository  : ${sonatypClient.repoUri}")
   info(s"sonatypeProfileName : ${profileName}")
@@ -120,7 +123,9 @@ class SonatypeService(
 
   private def withCache[A: scala.reflect.runtime.universe.TypeTag](fileName: String, a: => A): A = {
     val codec     = MessageCodecFactory.defaultFactoryForJSON.of[A]
-    val cacheFile = new File(fileName)
+    val cachedir  = (Vector("sbt", "sonatype") ++ cacheToken).mkString("-")
+    val cacheRoot = new File(s"target/${cachedir}")
+    val cacheFile = new File(cacheRoot, fileName)
     val value: A = if (cacheFile.exists() && cacheFile.length() > 0) {
       Try {
         val json = IO.read(cacheFile)
@@ -135,7 +140,7 @@ class SonatypeService(
   }
 
   def stagingProfiles: Seq[StagingProfile] = {
-    val profiles = withCache(s"target/sonatype-profile-${profileName}.json", sonatypClient.stagingProfiles)
+    val profiles = withCache(s"sonatype-profile-${profileName}.json", sonatypClient.stagingProfiles)
     profiles.filter(_.name == profileName)
   }
 
