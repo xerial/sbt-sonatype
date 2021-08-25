@@ -25,8 +25,8 @@ object Sonatype extends AutoPlugin with LogSupport {
   wvlet.log.Logger.init
 
   trait SonatypeKeys {
-    val sonatypeRepository              = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
-    val sonatypeProfileName             = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
+    val sonatypeRepository  = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
+    val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost          = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeDefaultResolver         = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
@@ -64,10 +64,10 @@ object Sonatype extends AutoPlugin with LogSupport {
     sonatypeCredentialHost := sonatypeLegacy
   )
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
-    sonatypeProfileName := organization.value,
-    sonatypeRepository := s"https://${sonatypeCredentialHost.value}/service/local",
+    sonatypeProfileName    := organization.value,
+    sonatypeRepository     := s"https://${sonatypeCredentialHost.value}/service/local",
     sonatypeProjectHosting := None,
-    publishMavenStyle := true,
+    publishMavenStyle      := true,
     pomIncludeRepository := { _ =>
       false
     },
@@ -90,7 +90,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       } else Seq.empty
     },
     homepage := homepage.value.orElse(sonatypeProjectHosting.value.map(h => url(h.homepage))),
-    scmInfo := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
+    scmInfo  := sonatypeProjectHosting.value.map(_.scmInfo).orElse(scmInfo.value),
     developers := {
       val derived = sonatypeProjectHosting.value.map(h => List(h.developer)).getOrElse(List.empty)
       if (developers.value.isEmpty) derived
@@ -137,8 +137,8 @@ object Sonatype extends AutoPlugin with LogSupport {
       })
     },
     sonatypeTimeoutMillis := 60 * 60 * 1000, // 60 minutes
-    sonatypeSessionName := s"[sbt-sonatype] ${name.value} ${version.value}",
-    sonatypeLogLevel := "info",
+    sonatypeSessionName   := s"[sbt-sonatype] ${name.value} ${version.value}",
+    sonatypeLogLevel      := "info",
     commands ++= Seq(
       sonatypeBundleRelease,
       sonatypeBundleUpload,

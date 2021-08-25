@@ -1,8 +1,8 @@
-organization := System.getProperty("organization", "org.xerial.operations")
-sonatypeProfileName := System.getProperty("profile.name", "org.xerial")
-version := System.getProperty("version", "0.1")
+organization           := System.getProperty("organization", "org.xerial.operations")
+sonatypeProfileName    := System.getProperty("profile.name", "org.xerial")
+version                := System.getProperty("version", "0.1")
 sonatypeCredentialHost := System.getProperty("host", "oss.sonatype.org")
-sonatypeRepository := System.getProperty("repo", s"https${sonatypeRepository.value}//service/local")
+sonatypeRepository     := System.getProperty("repo", s"https${sonatypeRepository.value}//service/local")
 
 pomExtra := {
   <url>https://github.com/xerial/sbt-sonatype</url> <licenses>
