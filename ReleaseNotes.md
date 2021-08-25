@@ -1,6 +1,10 @@
 Release Notes
 ===
 
+# 3.9.10
+- Improve the cache management to support s01.oss.sonatype.org
+- Internal: Upgrade to airframe 21.8.1 (no scala-parser-combinator dependency)
+
 # 3.9.9
 - Remove scala-parser-combinator 2.x dependency. This is a workaround for sbt-pgp, which still depends on scala-parser-combinators 1.x.
 
