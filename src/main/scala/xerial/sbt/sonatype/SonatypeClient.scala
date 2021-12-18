@@ -32,7 +32,7 @@ class SonatypeClient(
     repositoryUrl: String,
     cred: Seq[Credentials],
     credentialHost: String,
-    timeoutMillis: Int = 60 * 60 * 1000
+    timeoutMillis: Int = 3 * 60 * 60 * 1000
 ) extends AutoCloseable
     with LogSupport {
 
