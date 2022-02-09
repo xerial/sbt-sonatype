@@ -1,6 +1,11 @@
 Release Notes
 ===
 
+# 3.9.11
+- Use unique names for resolvers to support s01.oss.sonatype.org [https://github.com/xerial/sbt-sonatype/pull](#279)
+- Increase the max retry to 100, timeoutMillis to 3 hours for big projects
+- [internal] Upgrade to airframe 22.1.0
+
 # 3.9.10
 - Improve the cache management to support s01.oss.sonatype.org
 - Internal: Upgrade to airframe 21.8.1 (no scala-parser-combinator dependency)
