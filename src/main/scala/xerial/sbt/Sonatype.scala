@@ -114,13 +114,13 @@ object Sonatype extends AutoPlugin with LogSupport {
     },
     sonatypeSnapshotResolver := {
       MavenRepository(
-        "sonatype-snapshots",
+        s"${sonatypeCredentialHost.value.replace('.', '-')}-snapshots",
         s"https://${sonatypeCredentialHost.value}/content/repositories/snapshots"
       )
     },
     sonatypeStagingResolver := {
       MavenRepository(
-        "sonatype-staging",
+        s"${sonatypeCredentialHost.value.replace('.', '-')}-staging",
         s"https://${sonatypeCredentialHost.value}/service/local/staging/deploy/maven2"
       )
     },
@@ -128,7 +128,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       val profileM   = sonatypeTargetRepositoryProfile.?.value
       val repository = sonatypeRepository.value
       val staged = profileM.map { stagingRepoProfile =>
-        "releases" at s"${repository}/${stagingRepoProfile.deployPath}"
+        s"${sonatypeCredentialHost.value.replace('.', '-')}-releases" at s"${repository}/${stagingRepoProfile.deployPath}"
       }
       staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
         sonatypeSnapshotResolver.value
