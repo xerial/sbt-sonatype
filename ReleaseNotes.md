@@ -2,7 +2,7 @@ Release Notes
 ===
 
 # 3.9.11
-- Use unique names for resolvers to support s01.oss.sonatype.org [https://github.com/xerial/sbt-sonatype/pull](#279)
+- Use unique names for resolvers to support s01.oss.sonatype.org [https://github.com/xerial/sbt-sonatype/pull/#279](#279)
 - Increase the max retry to 100, timeoutMillis to 3 hours for big projects
 - [internal] Upgrade to airframe 22.1.0
 
