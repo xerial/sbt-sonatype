@@ -414,16 +414,16 @@ object Sonatype extends AutoPlugin with LogSupport {
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
 
     val currentSonatypeProfile = profileName.getOrElse(extracted.get(ThisBuild / sonatypeProfileName))
-    val repositoryUrl  = extracted.get(ThisBuild / sonatypeRepository)
-    val credentialHost = extracted.get(ThisBuild / sonatypeCredentialHost)
-    val timeoutMillis = extracted.get(sonatypeTimeoutMillis)
+    val repositoryUrl          = extracted.get(ThisBuild / sonatypeRepository)
+    val credentialHost         = extracted.get(ThisBuild / sonatypeCredentialHost)
+    val timeoutMillis          = extracted.get(sonatypeTimeoutMillis)
 
     info(s"[sbt-sonatype settings]")
     info(s"ThisBuild / sonatypeProfileName: ${currentSonatypeProfile}")
     info(s"ThisBuild / sonatypeRepository: ${repositoryUrl}")
     info(s"ThisBuild / sonatypeCredentialHost: ${credentialHost}")
 
-    val creds          = getCredentials(extracted, state)
+    val creds = getCredentials(extracted, state)
     val hashsum: String = {
       val input = Vector(repositoryUrl, creds.toString(), credentialHost).mkString("-")
       MurmurHash3.stringHash(input).abs.toString()
