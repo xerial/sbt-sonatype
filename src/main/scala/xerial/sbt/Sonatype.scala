@@ -65,7 +65,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   )
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName    := organization.value,
-    sonatypeRepository     := s"https://${sonatypeCredentialHost.value}/service/local",
+    sonatypeRepository     := s"https://${(ThisBuild / sonatypeCredentialHost).value}/service/local",
     sonatypeProjectHosting := None,
     publishMavenStyle      := true,
     pomIncludeRepository := { _ =>
@@ -413,15 +413,11 @@ object Sonatype extends AutoPlugin with LogSupport {
     val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
 
-    val currentSonatypeProfile = profileName.getOrElse(extracted.get(ThisBuild / sonatypeProfileName))
-    val repositoryUrl          = extracted.get(ThisBuild / sonatypeRepository)
+    // #276 Need to use the root configuration
     val credentialHost         = extracted.get(ThisBuild / sonatypeCredentialHost)
+    val currentSonatypeProfile = profileName.getOrElse(extracted.get(sonatypeProfileName))
+    val repositoryUrl          = extracted.get(sonatypeRepository)
     val timeoutMillis          = extracted.get(sonatypeTimeoutMillis)
-
-    info(s"[sbt-sonatype settings]")
-    info(s"ThisBuild / sonatypeProfileName: ${currentSonatypeProfile}")
-    info(s"ThisBuild / sonatypeRepository: ${repositoryUrl}")
-    info(s"ThisBuild / sonatypeCredentialHost: ${credentialHost}")
 
     val creds = getCredentials(extracted, state)
     val hashsum: String = {
