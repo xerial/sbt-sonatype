@@ -1,6 +1,9 @@
 Release Notes
 ===
 
+# 3.9.12
+- A fix for [#276](https://github.com/xerial/sbt-sonatype/issues/#276): Always use `ThisBuild / sonatypeCredentialHost` setting [#285](https://github.com/xerial/sbt-sonatype/pull/#285)
+
 # 3.9.11
 - Use unique names for resolvers to support s01.oss.sonatype.org [#279](https://github.com/xerial/sbt-sonatype/pull/#279)
 - Increase the max retry to 100, timeoutMillis to 3 hours for big projects
