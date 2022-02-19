@@ -24,8 +24,8 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   organizationHomepage := Some(new URL("http://xerial.org/")),
   description := "A sbt plugin for publishing Scala/Java projects to the Maven Central through Sonatype Nexus REST API",
   Test / publishArtifact := false,
-  sbtPlugin               := true,
-  parallelExecution       := true,
+  sbtPlugin              := true,
+  parallelExecution      := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts := {
@@ -51,7 +51,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-val AIRFRAME_VERSION = "22.1.0"
+val AIRFRAME_VERSION = "22.2.0"
 
 // Project modules
 lazy val sbtSonatype =
