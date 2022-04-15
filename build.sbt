@@ -23,17 +23,17 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   organizationName     := "Xerial project",
   organizationHomepage := Some(new URL("http://xerial.org/")),
   description := "A sbt plugin for publishing Scala/Java projects to the Maven Central through Sonatype Nexus REST API",
-  publishArtifact in Test := false,
+  Test / publishArtifact  := false,
   sbtPlugin               := true,
   parallelExecution       := true,
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts := {
-    scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
+    scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
   },
   crossSbtVersions              := Vector("1.2.8"),
   releaseCrossBuild             := false,
-  releaseTagName                := { (version in ThisBuild).value },
+  releaseTagName                := { (ThisBuild / version).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,

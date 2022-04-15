@@ -23,17 +23,24 @@ jobs:
       - name: scalafmt
         run: ./sbt scalafmtCheckAll
   test_jdk11:
-    name: Test
+    name: Test JDK11
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: olafurpg/setup-scala@v10
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
         with:
-          java-version: adopt@1.11
-      - uses: actions/cache@v2
+          distribution: 'temurin'
+          java-version: 11
+      - name: sbt scripted test
+        run: ./sbt compile scripted
+  test_jdk17:
+    name: Test JDK17
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
         with:
-          path: ~/.cache
-          key: ${{ runner.os }}-jdk11-${{ hashFiles('**/*.sbt') }}
-          restore-keys: ${{ runner.os }}-jdk11-
+          distribution:	'temurin'
+          java-version:	17
       - name: sbt scripted test
         run: ./sbt compile scripted
