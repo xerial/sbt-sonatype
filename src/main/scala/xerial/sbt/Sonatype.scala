@@ -65,7 +65,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   )
   lazy val sonatypeSettings = Seq[Def.Setting[_]](
     sonatypeProfileName    := organization.value,
-    sonatypeRepository     := s"https://${(ThisBuild / sonatypeCredentialHost).value}/service/local",
+    sonatypeRepository     := s"https://${sonatypeCredentialHost.value}/service/local",
     sonatypeProjectHosting := None,
     publishMavenStyle      := true,
     pomIncludeRepository := { _ =>
@@ -413,13 +413,10 @@ object Sonatype extends AutoPlugin with LogSupport {
     val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
 
-    // #276 Need to use the root configuration
-    val credentialHost         = extracted.get(ThisBuild / sonatypeCredentialHost)
-    val currentSonatypeProfile = profileName.getOrElse(extracted.get(sonatypeProfileName))
-    val repositoryUrl          = extracted.get(sonatypeRepository)
-    val timeoutMillis          = extracted.get(sonatypeTimeoutMillis)
+    val repositoryUrl  = extracted.get(sonatypeRepository)
+    val creds          = getCredentials(extracted, state)
+    val credentialHost = extracted.get(sonatypeCredentialHost)
 
-    val creds = getCredentials(extracted, state)
     val hashsum: String = {
       val input = Vector(repositoryUrl, creds.toString(), credentialHost).mkString("-")
       MurmurHash3.stringHash(input).abs.toString()
@@ -429,11 +426,11 @@ object Sonatype extends AutoPlugin with LogSupport {
       repositoryUrl = repositoryUrl,
       cred = creds,
       credentialHost = credentialHost,
-      timeoutMillis = timeoutMillis
+      timeoutMillis = extracted.get(sonatypeTimeoutMillis)
     )
     val service = new SonatypeService(
       sonatypeClient,
-      currentSonatypeProfile,
+      profileName.getOrElse(extracted.get(sonatypeProfileName)),
       Some(hashsum)
     )
     try {
