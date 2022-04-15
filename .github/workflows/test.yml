@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-	  java-version: 11
+          java-version: 11
       - name: sbt scripted test
         run: ./sbt compile scripted
   test_jdk17:
