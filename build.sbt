@@ -29,7 +29,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts := {
-    scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
+    scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
   },
   crossSbtVersions              := Vector("1.2.8"),
   releaseCrossBuild             := false,
