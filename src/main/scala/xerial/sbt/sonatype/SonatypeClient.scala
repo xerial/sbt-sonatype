@@ -15,7 +15,12 @@ import wvlet.airframe.http.HttpMessage.{Request, Response}
 import wvlet.airframe.http.client.{URLConnectionClient, URLConnectionClientConfig}
 import wvlet.airframe.http.*
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, MISSING_CREDENTIAL, STAGE_FAILURE, STAGE_IN_PROGRESS}
+import xerial.sbt.sonatype.SonatypeException.{
+  BUNDLE_UPLOAD_FAILURE,
+  MISSING_CREDENTIAL,
+  STAGE_FAILURE,
+  STAGE_IN_PROGRESS
+}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -57,8 +62,7 @@ class SonatypeClient(
     new java.net.URL(repoUri).getPath
   }
 
-  /**
-    * Defined for setting URLConnectionClient specific configurations
+  /** Defined for setting URLConnectionClient specific configurations
     */
   object SonatypeClientBackend extends HttpClientBackend {
     def newSyncClient(serverAddress: String, clientConfig: HttpClientConfig): HttpSyncClient[Request, Response] = {
@@ -73,8 +77,11 @@ class SonatypeClient(
       )
     }
     override def defaultExecutionContext: ExecutionContext = ???
-    override def defaultRequestRetryer: Retry.RetryContext =     HttpClient.defaultHttpClientRetry[Request, Response]
-    override def newAsyncClient(serverAddress: String, clientConfig: HttpClientConfig): HttpClient[Future, Request, Response] = ???
+    override def defaultRequestRetryer: Retry.RetryContext = HttpClient.defaultHttpClientRetry[Request, Response]
+    override def newAsyncClient(
+        serverAddress: String,
+        clientConfig: HttpClientConfig
+    ): HttpClient[Future, Request, Response] = ???
     override def newRPCClientForScalaJS(clientConfig: HttpClientConfig): RPCHttpClient = ???
   }
 
