@@ -3,8 +3,8 @@ Release Notes
 
 # 3.9.13
 
-- Upgraded airframe-http to 22.5.0 to fix JDK17-specific error (#293)[https://github.com/xerial/sbt-sonatype/issues/293]
-- Revereted the fix for #276 due to the regression
+- Upgraded airframe-http to 22.5.0 to fix JDK17-specific error [#293](https://github.com/xerial/sbt-sonatype/issues/293)
+- Reverted the fix for #276 due to the regression
 
 
 # 3.9.12 
