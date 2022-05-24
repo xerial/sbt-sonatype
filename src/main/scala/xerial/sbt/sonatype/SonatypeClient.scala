@@ -4,7 +4,6 @@ import java.io.{File, IOException}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.TimeUnit
-
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.ParametersBuilder
@@ -14,7 +13,7 @@ import wvlet.airframe.control.{Control, ResultClass, Retry}
 import wvlet.airframe.http.HttpHeader.MediaType
 import wvlet.airframe.http.HttpMessage.{Request, Response}
 import wvlet.airframe.http.client.{URLConnectionClient, URLConnectionClientConfig}
-import wvlet.airframe.http._
+import wvlet.airframe.http.*
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeException.{
   BUNDLE_UPLOAD_FAILURE,
@@ -23,6 +22,7 @@ import xerial.sbt.sonatype.SonatypeException.{
   STAGE_IN_PROGRESS
 }
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
 /** REST API Client for Sonatype API (nexus-staigng)
@@ -62,6 +62,8 @@ class SonatypeClient(
     new java.net.URL(repoUri).getPath
   }
 
+  /** Defined for setting URLConnectionClient specific configurations
+    */
   object SonatypeClientBackend extends HttpClientBackend {
     def newSyncClient(serverAddress: String, clientConfig: HttpClientConfig): HttpSyncClient[Request, Response] = {
       new URLConnectionClient(
@@ -74,6 +76,13 @@ class SonatypeClient(
         )
       )
     }
+    override def defaultExecutionContext: ExecutionContext = ???
+    override def defaultRequestRetryer: Retry.RetryContext = HttpClient.defaultHttpClientRetry[Request, Response]
+    override def newAsyncClient(
+        serverAddress: String,
+        clientConfig: HttpClientConfig
+    ): HttpClient[Future, Request, Response] = ???
+    override def newRPCClientForScalaJS(clientConfig: HttpClientConfig): RPCHttpClient = ???
   }
 
   private val clientConfig = HttpClientConfig(SonatypeClientBackend)
