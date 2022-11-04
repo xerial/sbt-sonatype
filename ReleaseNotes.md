@@ -2,9 +2,11 @@ Release Notes
 ===
 
 # 3.9.14
-- 
+ 
 - Upgraded airframe-http to 22.11.0
 - Add more Sonatype API error handling
+- Upgrade to sbt 1.7.3
+- Use sbt-dynver for versioning
 
 # 3.9.13
 
