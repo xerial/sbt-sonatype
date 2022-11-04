@@ -65,6 +65,7 @@ class SonatypeClient(
     Http.client
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
       .withBackend(URLConnectionClientBackend)
+      .withJSONEncoding
       // Need to set a longer timeout as Sonatype API may not respond quickly
       .withReadTimeout(Duration(timeoutMillis, TimeUnit.MILLISECONDS))
       // airframe-http will retry the request several times within this timeout duration.
