@@ -1,6 +1,11 @@
 Release Notes
 ===
 
+# 3.9.14
+- 
+- Upgraded airframe-http to 22.11.0
+- Add more Sonatype API error handling
+
 # 3.9.13
 
 - Upgraded airframe-http to 22.5.0 to fix JDK17-specific error [#293](https://github.com/xerial/sbt-sonatype/issues/293)
