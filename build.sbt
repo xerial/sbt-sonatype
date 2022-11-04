@@ -26,6 +26,8 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   Test / publishArtifact := false,
   sbtPlugin              := true,
   parallelExecution      := true,
+  // Enforcing JDK8 target
+  javacOptions ++= Seq("-source", "8", "-target", "8"),
   scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
   scriptedBufferLog := false,
   scriptedLaunchOpts := {
