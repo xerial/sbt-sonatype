@@ -283,3 +283,16 @@ Then, run `sonatypeReleaseAll` command by specifying your `sonatypeProfileName`.
 $ sbt "sonatypeReleaseAll org.xerial"
 ```
 
+
+
+## For sbt-sonatype developers
+
+Releasing sbt-sonatype to Sonatype:
+
+````
+## Add a new git tag
+$ git tag v3.9.x
+$ ./sbt
+> publishSigned
+> sonatypeBundleRelease
+```

@@ -18,6 +18,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 import ReleaseTransformations._
 
+ThisBuild / dynverSeparator := "-"
+
 lazy val buildSettings: Seq[Setting[_]] = Seq(
   organization         := "org.xerial.sbt",
   organizationName     := "Xerial project",
@@ -30,24 +32,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   scriptedBufferLog := false,
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
-  },
-  releaseCrossBuild             := false,
-  releaseTagName                := { (ThisBuild / version).value },
-  releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-  releaseProcess := Seq[ReleaseStep](
-    checkSnapshotDependencies,
-    inquireVersions,
-    runClean,
-    releaseStepCommandAndRemaining("^ test"),
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    releaseStepCommandAndRemaining("publishSigned"),
-    releaseStepCommand("sonatypeBundleRelease"),
-    setNextVersion,
-    commitNextVersion,
-    pushChanges
-  )
+  }
 )
 
 val AIRFRAME_VERSION = "22.11.0"
