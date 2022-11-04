@@ -31,7 +31,6 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   scriptedLaunchOpts := {
     scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
   },
-  crossSbtVersions              := Vector("1.2.8"),
   releaseCrossBuild             := false,
   releaseTagName                := { (ThisBuild / version).value },
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -51,7 +50,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-val AIRFRAME_VERSION = "22.5.0"
+val AIRFRAME_VERSION = "22.11.0"
 
 // Project modules
 lazy val sbtSonatype =
@@ -67,6 +66,6 @@ lazy val sbtSonatype =
         "org.wvlet.airframe"       %% "airframe-http" % AIRFRAME_VERSION
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
-        "org.wvlet.airframe" %% "airspec" % AIRFRAME_VERSION % "test"
+        "org.wvlet.airframe" %% "airspec" % AIRFRAME_VERSION % Test
       )
     )
