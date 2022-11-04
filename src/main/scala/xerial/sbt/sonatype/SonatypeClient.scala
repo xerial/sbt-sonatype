@@ -220,14 +220,20 @@ class SonatypeClient(
 
   def dropStage(currentProfile: StagingProfile, repo: StagingRepositoryProfile): Response = {
     info(s"Dropping staging repository $repo")
-    val ret = httpClient.call[Map[String, StageTransitionRequest], Response](
-      Http.POST(s"${pathPrefix}/staging/profiles/${repo.profileId}/drop"),
-      newStageTransitionRequest(currentProfile, repo)
-    )
-    if (ret.statusCode != HttpStatus.Created_201.code) {
-      throw SonatypeException(STAGE_FAILURE, s"Failed to drop the repository. [${ret.status}]: ${ret.contentString}")
+    try {
+      val ret = httpClient.call[Map[String, StageTransitionRequest], Response](
+        Http.POST(s"${pathPrefix}/staging/profiles/${repo.profileId}/drop"),
+        newStageTransitionRequest(currentProfile, repo)
+      )
+      if (ret.statusCode != HttpStatus.Created_201.code) {
+        throw SonatypeException(STAGE_FAILURE, s"Failed to drop the repository. [${ret.status}]: ${ret.contentString}")
+      }
+      ret
+    } catch {
+      case e: HttpClientException if e.status == HttpStatus.NotFound_404 =>
+        warn(s"Staging repository ${repo.profileId} is not found. It might already have been dropped: ${e.getMessage}")
+        e.response.toHttpResponse
     }
-    ret
   }
 
   private def newStageTransitionRequest(
