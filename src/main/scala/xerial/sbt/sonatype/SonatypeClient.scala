@@ -231,7 +231,7 @@ class SonatypeClient(
       ret
     } catch {
       case e: HttpClientException if e.status == HttpStatus.NotFound_404 =>
-        warn(s"Staging repository ${repo.profileId} is not found. It might have been already dropped: ${e.getMessage}")
+        warn(s"Staging repository ${repo.profileId} is not found. It might already have been dropped: ${e.getMessage}")
         e.response.toHttpResponse
     }
   }
