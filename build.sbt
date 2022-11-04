@@ -16,8 +16,6 @@
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-import ReleaseTransformations._
-
 ThisBuild / dynverSeparator := "-"
 
 lazy val buildSettings: Seq[Setting[_]] = Seq(
