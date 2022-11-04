@@ -251,6 +251,9 @@ class SonatypeClient(
   def uploadBundle(localBundlePath: File, deployPath: String): Unit = {
     retryer
       .retryOn {
+        case e: IOException if e.getMessage.contains("502 Bad Gateway") =>
+          // #303 502 can be returned during the bundle upload
+          Retry.retryableFailure(e)
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
           Retry.nonRetryableFailure(
             SonatypeException(
