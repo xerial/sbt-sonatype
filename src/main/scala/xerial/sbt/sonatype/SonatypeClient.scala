@@ -260,6 +260,9 @@ class SonatypeClient(
         case e: IOException if e.getMessage.contains("502 Bad Gateway") =>
           // #303 502 can be returned during the bundle upload
           Retry.retryableFailure(e)
+        case e: IOException if e.getMessage.contains("Operation timed out") =>
+          // #223 SSLException
+          Retry.retryableFailure(e)
         case e: IOException if e.getMessage.contains("400 Bad Request") =>
           Retry.nonRetryableFailure(
             SonatypeException(
