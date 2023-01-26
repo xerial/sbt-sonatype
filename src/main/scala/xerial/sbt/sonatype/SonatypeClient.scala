@@ -72,7 +72,7 @@ class SonatypeClient(
       .withRetryContext { context =>
         // For individual REST calls, use a normal jittering
         context
-          .withMaxRetry(100)
+          .withMaxRetry(1000)
           .withJitter(initialIntervalMillis = 1500, maxIntervalMillis = 30000)
       }
       .withRequestFilter { request =>
