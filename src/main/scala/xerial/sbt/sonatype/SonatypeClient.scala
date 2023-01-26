@@ -63,6 +63,8 @@ class SonatypeClient(
 
   private val clientConfig = {
     Http.client
+      // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
+      .noCircuitBreaker
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
       .withBackend(URLConnectionClientBackend)
       .withJSONEncoding
