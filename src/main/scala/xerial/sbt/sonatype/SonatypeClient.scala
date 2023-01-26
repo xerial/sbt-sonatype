@@ -63,6 +63,8 @@ class SonatypeClient(
 
   private val clientConfig = {
     Http.client
+      // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
+      .noCircuitBreaker
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
       .withBackend(URLConnectionClientBackend)
       .withJSONEncoding
@@ -72,7 +74,7 @@ class SonatypeClient(
       .withRetryContext { context =>
         // For individual REST calls, use a normal jittering
         context
-          .withMaxRetry(100)
+          .withMaxRetry(1000)
           .withJitter(initialIntervalMillis = 1500, maxIntervalMillis = 30000)
       }
       .withRequestFilter { request =>
