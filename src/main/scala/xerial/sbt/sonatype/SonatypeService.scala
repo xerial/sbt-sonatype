@@ -1,11 +1,12 @@
 package xerial.sbt.sonatype
 
-import java.io.File
+import org.xerial.sbt.sonatype.BuildInfo
 
+import java.io.File
 import sbt.io.IO
 import wvlet.airframe.codec.MessageCodecFactory
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeClient._
+import xerial.sbt.sonatype.SonatypeClient.*
 import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
 
 import scala.util.Try
@@ -23,6 +24,7 @@ class SonatypeService(
 
   def this(sonatypClient: SonatypeClient, profileName: String) = this(sonatypClient, profileName, None)
 
+  info(s"sbt-sonatype version: ${BuildInfo.version}")
   info(s"sonatypeRepository  : ${sonatypClient.repoUri}")
   info(s"sonatypeProfileName : ${profileName}")
 

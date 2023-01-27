@@ -47,7 +47,7 @@ class SonatypeClient(
     credt
   }
 
-  private val base64Credentials = {
+  private lazy val base64Credentials = {
     val credt = directCredentials
     Base64.getEncoder.encodeToString(s"${credt.userName}:${credt.passwd}".getBytes(StandardCharsets.UTF_8))
   }
@@ -61,7 +61,7 @@ class SonatypeClient(
     new java.net.URL(repoUri).getPath
   }
 
-  private val clientConfig = {
+  private[sonatype] val clientConfig = {
     Http.client
       // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
       .noCircuitBreaker
@@ -84,7 +84,7 @@ class SonatypeClient(
       }
   }
 
-  private val httpClient = clientConfig.newSyncClient(repoUri)
+  private[sonatype] val httpClient = clientConfig.newSyncClient(repoUri)
 
   // Create stage is not idempotent, so we just need to wait for a long time without retry
   private val httpClientForCreateStage =
