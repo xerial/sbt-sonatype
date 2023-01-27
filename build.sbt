@@ -42,10 +42,12 @@ lazy val sbtSonatype =
   project
     .withId("sbt-sonatype")
     .in(file("."))
-    .enablePlugins(ScriptedPlugin)
+    .enablePlugins(ScriptedPlugin, BuildInfoPlugin)
     .settings(
       buildSettings,
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
+      buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+      buildInfoPackage := "org.xerial.sbt.sonatype",
       libraryDependencies ++= Seq(
         "org.sonatype.spice.zapper" % "spice-zapper"  % "1.3",
         "org.wvlet.airframe"       %% "airframe-http" % AIRFRAME_VERSION

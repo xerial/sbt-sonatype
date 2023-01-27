@@ -23,4 +23,9 @@ class SonatypeClientTest extends AirSpec {
 
     profile shouldBe unpacked
   }
+
+//  test("create client") {
+//    val client = new SonatypeClient("https://httpbin.org/", Seq.empty, "")
+//    client.httpClient.readAs[Json](Http.GET("/status/500"))
+//  }
 }
