@@ -63,8 +63,9 @@ class SonatypeClient(
 
   private[sonatype] val clientConfig = {
     Http.client
+      .withName("sonatype-client")
       // Put the log file under target/sbt-sonatype directory
-      .withLoggerConfig(_.withLogFileName("target/sbt-sonatype/http_client.json"))
+      .withLoggerConfig(_.withLogFileName("target/sbt-sonatype/sonatype_client_logs.json"))
       // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
       .noCircuitBreaker
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
