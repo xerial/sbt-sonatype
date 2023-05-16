@@ -1,6 +1,8 @@
 Release Notes
 ===
 
+See [the release note page](https://github.com/xerial/sbt-sonatype/releases) for the latest release notes. 
+
 # 3.9.14
  
 - Upgraded airframe-http to 22.11.0
