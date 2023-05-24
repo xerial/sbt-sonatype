@@ -1,0 +1,18 @@
+pull_request_rules:
+  - name: Automatic merge Scala Steward PRs
+    conditions:
+      - author=xerial-bot
+      - check-success=Code Format
+      - check-success=Test JDK11
+      - check-success=Test JDK17
+      - or:
+        - title~=^Update airframe-
+        - title~=^Update sbt-airframe
+        - title~=^Update airspec
+        - title~=^Update scalafmt-core
+        - label=sbt-plugin-update
+        - label=test-library-update
+        - label=library-update  
+    actions:
+      merge:
+        method: squash
