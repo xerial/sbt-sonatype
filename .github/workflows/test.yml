@@ -19,14 +19,14 @@ jobs:
     name: Code Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: scalafmt
         run: ./sbt scalafmtCheckAll
   test_jdk11:
     name: Test JDK11
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -37,7 +37,7 @@ jobs:
     name: Test JDK17
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
         with:
           distribution:	'temurin'
