@@ -7,12 +7,12 @@ A sbt plugin for publishing your project to the Maven central repository through
     * Create GPG signed artifacts to a local staging repository.
     * Make sure adding `publishTo := sonatypePublishToBundle.value` to your build.sbt
  * `sonatypeBundleRelease` (New in sbt-sonatype 3.4)
-    * This command will prepare a new remote staging repository at Sonatype. If there are exisiting staging repositories that have the same description with `sonatypeSessionName` key, sbt-sonatype will discard them properly.
+    * This command will prepare a new remote staging repository at Sonatype. If there are  existing staging repositories that have the same description with `sonatypeSessionName` key, sbt-sonatype will discard them properly.
     * Then, it will upload the artifacts in the local staging folder to the remote staging repository. Uploading artifacts as a bundle is much faster than uploading each artifact to Sonatype. For example, thousands of files can be uploaded in several minutes with bundle upload.
     * Finally, this command will perform the close and release steps at the Sonatype Nexus repository to verify the Maven central requirements.
 
  After these steps, your project will be synchronized to the Maven central within ten minutes. No longer need to enter the web interface of
- [Sonatype Nexus repository](http://oss.sonatype.org/) to performe these release steps.
+ [Sonatype Nexus repository](http://oss.sonatype.org/) to perform these release steps.
 
 
 - [Release notes](ReleaseNotes.md)
@@ -109,7 +109,7 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
 sbt-sonatype is an auto-plugin, which will automatically configure your build. There are a few settings though that you need to define by yourself:
 
   * `sonatypeProfileName`
-     * This is your Sonatype acount profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
+     * This is your Sonatype account profile name, e.g. `org.xerial`. If you do not set this value, it will be the same with the `organization` value.
   * `pomExtra`
      * A fragment of Maven's pom.xml. You must define url, licenses, scm and developers tags in this XML to satisfy [Central Repository sync requirements](http://central.sonatype.org/pages/requirements.html).
 
@@ -166,7 +166,7 @@ Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
 
 ### Individual Step Commands
 * __sonatypePrepare__
-  * Drop the exising staging repositories (if exist) and create a new staging repository using `sonatypeSessionName` as a unique key.
+  * Drop the existing staging repositories (if exist) and create a new staging repository using `sonatypeSessionName` as a unique key.
   * This will update `sonatypePublishTo` setting.
   * For cross-build projects, make sure running this command only once at the beginning of the release process.
     * Usually using sonatypeBundleUpload should be sufficient, but if you need to parallelize artifact uploads, run `sonatypeOpen` before each upload to reuse the already created stging repository.
@@ -184,7 +184,7 @@ Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
 * __sonatypeReleaseAll__ (sonatypeProfileName)?
   * Close and promote all staging repositories (Useful for cross-building projects)
 
-## Other Commmands
+## Other Commands
 * __sonatypeBundleClean__
   * Clean a local bundle folder
 * __sonatypeClean__
