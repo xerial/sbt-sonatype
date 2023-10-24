@@ -21,8 +21,10 @@ SCALA_VERSION="2.12.18"
 
 ThisBuild / dynverSeparator := "-"
 
+// Set scala version for passing scala-steward run on JDK20
+ThisBuild / scalaVersion := SCALA_VERSION
+
 lazy val buildSettings: Seq[Setting[_]] = Seq(
-  scalaVersion         := SCALA_VERSION,
   organization         := "org.xerial.sbt",
   organizationName     := "Xerial project",
   organizationHomepage := Some(new URL("http://xerial.org/")),
