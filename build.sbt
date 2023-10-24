@@ -16,9 +16,13 @@
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
+// Must use Scala 2.12.x for sbt plugins
+SCALA_VERSION="2.12.18"
+
 ThisBuild / dynverSeparator := "-"
 
 lazy val buildSettings: Seq[Setting[_]] = Seq(
+  scalaVersion         := SCALA_VERSION,
   organization         := "org.xerial.sbt",
   organizationName     := "Xerial project",
   organizationHomepage := Some(new URL("http://xerial.org/")),
