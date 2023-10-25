@@ -2,17 +2,9 @@ name: CI
 
 on:
   pull_request:
-    paths:
-      - '**.scala'
-      - '**.sbt'
-      - '.github/workflows/**.yml'
   push:
     branches:
       - master
-    paths:
-      - '**.scala'
-      - '**.sbt'
-      - '.github/workflows/**.yml'
 
 jobs:
   code_format:
