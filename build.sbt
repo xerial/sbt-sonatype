@@ -17,7 +17,7 @@
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 // Must use Scala 2.12.x for sbt plugins
-val SCALA_VERSION="2.12.18"
+val SCALA_VERSION = "2.12.18"
 
 ThisBuild / dynverSeparator := "-"
 
@@ -41,7 +41,7 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   }
 )
 
-val AIRFRAME_VERSION = "23.9.3"
+val AIRFRAME_VERSION = "23.10.0"
 
 // Project modules
 lazy val sbtSonatype =
