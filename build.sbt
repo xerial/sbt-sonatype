@@ -17,7 +17,7 @@
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 // Must use Scala 2.12.x for sbt plugins
-val SCALA_VERSION = "2.12.18"
+val SCALA_VERSION = "2.13.12"
 
 ThisBuild / dynverSeparator := "-"
 
