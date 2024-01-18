@@ -19,6 +19,7 @@ import xerial.sbt.sonatype.SonatypeException.{
 }
 
 import java.io.{File, IOException}
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.TimeUnit
@@ -52,14 +53,9 @@ class SonatypeClient(
     Base64.getEncoder.encodeToString(s"${credt.userName}:${credt.passwd}".getBytes(StandardCharsets.UTF_8))
   }
 
-  lazy val repoUri = {
-    def repoBase(url: String) = if (url.endsWith("/")) url.dropRight(1) else url
-    val url                   = repoBase(repositoryUrl)
-    url
-  }
-  private val pathPrefix = {
-    new java.net.URL(repoUri).getPath
-  }
+  lazy val repoUri: URI = URI.create(repositoryUrl.stripSuffix("/"))
+
+  private val pathPrefix = repoUri.getPath
 
   private[sonatype] val clientConfig = {
     Http.client
@@ -87,13 +83,13 @@ class SonatypeClient(
       }
   }
 
-  private[sonatype] val httpClient = clientConfig.newSyncClient(repoUri)
+  private[sonatype] val httpClient = clientConfig.newSyncClient(repoUri.toString)
 
   // Create stage is not idempotent, so we just need to wait for a long time without retry
   private val httpClientForCreateStage =
     clientConfig
       .withRetryContext(_.noRetry)
-      .newSyncClient(repoUri)
+      .newSyncClient(repoUri.toString)
 
   override def close(): Unit = {
     Control.closeResources(httpClient, httpClientForCreateStage)

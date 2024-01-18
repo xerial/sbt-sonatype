@@ -6,6 +6,7 @@ import java.io.File
 import sbt.io.IO
 import wvlet.airframe.codec.MessageCodecFactory
 import wvlet.log.LogSupport
+import xerial.sbt.Sonatype
 import xerial.sbt.sonatype.SonatypeClient.*
 import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
 
@@ -151,10 +152,8 @@ class SonatypeService(
   lazy val currentProfile: StagingProfile = {
     val profiles = stagingProfiles
     if (profiles.isEmpty) {
-      throw SonatypeException(
-        MISSING_PROFILE,
-        s"Profile ${profileName} is not found. Check your sonatypeProfileName setting in build.sbt"
-      )
+      val error = MISSING_PROFILE(profileName, sonatypClient.repoUri.getHost)
+      throw SonatypeException(error, error.message)
     }
     profiles.head
   }
