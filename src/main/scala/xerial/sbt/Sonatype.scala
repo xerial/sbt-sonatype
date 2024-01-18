@@ -59,7 +59,7 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   val sonatypeLegacy = "oss.sonatype.org"
   val sonatype01     = "s01.oss.sonatype.org"
-  val KnownOssHosts  = Seq(sonatypeLegacy, sonatype01)
+  val knownOssHosts  = Seq(sonatypeLegacy, sonatype01)
 
   lazy val sonatypeBuildSettings = Seq[Def.Setting[_]](
     sonatypeCredentialHost := sonatypeLegacy

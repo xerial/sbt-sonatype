@@ -23,16 +23,13 @@ object SonatypeException {
   case object MISSING_STAGING_PROFILE extends ErrorCode
 
   case class MISSING_PROFILE(profileName: String, host: String) extends ErrorCode {
-    val problem = s"Profile $profileName is not found on $host"
-
-    val possibleAlternativeHosts: Seq[String] = Sonatype.KnownOssHosts.filterNot(_ == host)
-
-    val hostAdvice = s"try ${possibleAlternativeHosts.mkString(", or ")}?"
-
-    val advice: String =
+    def problem                               = s"Profile ${profileName} is not found on ${host}"
+    def possibleAlternativeHosts: Seq[String] = Sonatype.knownOssHosts.filterNot(_ == host)
+    def hostAdvice                            = s"try ${possibleAlternativeHosts.mkString(", or ")}?"
+    def advice: String =
       s"In your sbt settings, check your sonatypeProfileName and sonatypeCredentialHost ($hostAdvice)"
 
-    val message: String = s"$problem. $advice"
+    def message: String = s"${problem}. ${advice}"
   }
 
   case object UNKNOWN_STAGE extends ErrorCode
