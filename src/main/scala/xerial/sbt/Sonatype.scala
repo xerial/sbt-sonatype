@@ -12,8 +12,8 @@ import sbt._
 import sbt.librarymanagement.MavenRepository
 import wvlet.log.{LogLevel, LogSupport}
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
-import xerial.sbt.sonatype.SonatypeService._
-import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
+import xerial.sbt.sonatype.SonatypeService.*
+import xerial.sbt.sonatype.{EnvironmentCredentials, SonatypeClient, SonatypeException, SonatypeService}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -77,15 +77,13 @@ object Sonatype extends AutoPlugin with LogSupport {
         case _                    => false
       }
       if (!alreadyContainsSonatypeCredentials) {
-        val env = sys.env.get(_)
         (for {
-          username <- env("SONATYPE_USERNAME")
-          password <- env("SONATYPE_PASSWORD")
+          usernameAndPassword <- EnvironmentCredentials.getUsernameAndPassword()
         } yield Credentials(
           "Sonatype Nexus Repository Manager",
           sonatypeCredentialHost.value,
-          username,
-          password
+          usernameAndPassword.username,
+          usernameAndPassword.password
         )).toSeq
       } else Seq.empty
     },
