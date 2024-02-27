@@ -16,13 +16,18 @@
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-// Must use Scala 2.12.x for sbt plugins
-val SCALA_VERSION = "2.12.19"
+val versions = new {
+  val scala = "2.12.19" // Must use Scala 2.12.x for sbt plugins
+  val airframe = "24.3.0"
+  val sonatypeZapperClient = "1.3"
+  val sttp = "4.0.0-M9"
+  val circe = "0.14.6"
+}
 
 ThisBuild / dynverSeparator := "-"
 
 // Set scala version for passing scala-steward run on JDK20
-ThisBuild / scalaVersion := SCALA_VERSION
+ThisBuild / scalaVersion := versions.scala
 
 lazy val buildSettings: Seq[Setting[_]] = Seq(
   organization         := "org.xerial.sbt",
@@ -41,8 +46,6 @@ lazy val buildSettings: Seq[Setting[_]] = Seq(
   }
 )
 
-val AIRFRAME_VERSION = "24.3.0"
-
 // Project modules
 lazy val sbtSonatype =
   project
@@ -54,11 +57,16 @@ lazy val sbtSonatype =
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       buildInfoPackage := "org.xerial.sbt.sonatype",
+      scalacOptions ++= Seq("-Ywarn-unused-import", "-nowarn"),
       libraryDependencies ++= Seq(
-        "org.sonatype.spice.zapper" % "spice-zapper"  % "1.3",
-        "org.wvlet.airframe"       %% "airframe-http" % AIRFRAME_VERSION
+        "org.sonatype.spice.zapper" % "spice-zapper"  % versions.sonatypeZapperClient,
+        "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
-        "org.wvlet.airframe" %% "airspec" % AIRFRAME_VERSION % Test
+        "org.wvlet.airframe" %% "airspec" % versions.airframe % Test,
+        "com.softwaremill.sttp.client4" %% "core" % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "circe" % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "slf4j-backend" % versions.sttp,
+        "io.circe" %% "circe-generic" % versions.circe
       )
     )

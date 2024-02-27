@@ -1,15 +1,13 @@
 package xerial.sbt.sonatype
 
 import org.xerial.sbt.sonatype.BuildInfo
-
-import java.io.File
 import sbt.io.IO
 import wvlet.airframe.codec.MessageCodecFactory
 import wvlet.log.LogSupport
-import xerial.sbt.Sonatype
 import xerial.sbt.sonatype.SonatypeClient.*
 import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
 
+import java.io.File
 import scala.util.Try
 
 /** Interface to access the REST API of Nexus
@@ -21,7 +19,7 @@ class SonatypeService(
     cacheToken: Option[String]
 ) extends LogSupport
     with AutoCloseable {
-  import SonatypeService._
+  import SonatypeService.*
 
   def this(sonatypClient: SonatypeClient, profileName: String) = this(sonatypClient, profileName, None)
 

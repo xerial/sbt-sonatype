@@ -7,13 +7,22 @@
 
 package xerial.sbt
 
-import sbt.Keys._
-import sbt._
+import sbt.Keys.{credentials, *}
+import sbt.*
 import sbt.librarymanagement.MavenRepository
 import wvlet.log.{LogLevel, LogSupport}
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
-import xerial.sbt.sonatype.SonatypeService._
-import xerial.sbt.sonatype.{SonatypeClient, SonatypeException, SonatypeService}
+import xerial.sbt.sonatype.SonatypeException.GENERIC_ERROR
+import xerial.sbt.sonatype.SonatypeService.*
+import xerial.sbt.sonatype.{
+  DeploymentName,
+  SonatypeCentralClient,
+  SonatypeCentralService,
+  SonatypeClient,
+  SonatypeException,
+  SonatypeService
+}
+import xerial.sbt.sonatype.utils.Extensions.*
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -27,7 +36,9 @@ object Sonatype extends AutoPlugin with LogSupport {
   trait SonatypeKeys {
     val sonatypeRepository  = settingKey[String]("Sonatype repository URL: e.g. https://oss.sonatype.org/service/local")
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
-    val sonatypeCredentialHost          = settingKey[String]("Credential host. Default is oss.sonatype.org")
+    val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
+    val sonatypeCentralDeploymentName =
+      settingKey[DeploymentName]("Deployment name. Default is <organization>.<artifact_name>-<version>")
     val sonatypeDefaultResolver         = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypePublishToBundle         = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
@@ -57,9 +68,10 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   private implicit val ec = ExecutionContext.global
 
-  val sonatypeLegacy = "oss.sonatype.org"
-  val sonatype01     = "s01.oss.sonatype.org"
-  val knownOssHosts  = Seq(sonatypeLegacy, sonatype01)
+  val sonatypeLegacy      = "oss.sonatype.org"
+  val sonatype01          = "s01.oss.sonatype.org"
+  val sonatypeCentralHost = SonatypeCentralClient.host
+  val knownOssHosts       = Seq(sonatypeLegacy, sonatype01)
 
   lazy val sonatypeBuildSettings = Seq[Def.Setting[_]](
     sonatypeCredentialHost := sonatypeLegacy
@@ -97,7 +109,12 @@ object Sonatype extends AutoPlugin with LogSupport {
       if (developers.value.isEmpty) derived
       else developers.value
     },
-    sonatypePublishTo := Some(sonatypeDefaultResolver.value),
+    sonatypeCentralDeploymentName := DeploymentName.fromArtifact(organization.value, name.value, version.value),
+    sonatypePublishTo := {
+      if (sonatypeCredentialHost.value == SonatypeCentralClient.host && version.value.endsWith("-SNAPSHOT")) {
+        None
+      } else Some(sonatypeDefaultResolver.value)
+    },
     sonatypeBundleDirectory := {
       (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${(ThisBuild / version).value}"
     },
@@ -106,9 +123,13 @@ object Sonatype extends AutoPlugin with LogSupport {
     },
     sonatypePublishToBundle := {
       if (version.value.endsWith("-SNAPSHOT")) {
-        // Sonatype snapshot repositories have no support for bundle upload,
-        // so use direct publishing to the snapshot repo.
-        Some(sonatypeSnapshotResolver.value)
+        if (sonatypeCredentialHost.value == sonatypeCentralHost) {
+          None
+        } else {
+          // Sonatype snapshot repositories have no support for bundle upload,
+          // so use direct publishing to the snapshot repo.
+          Some(sonatypeSnapshotResolver.value)
+        }
       } else {
         Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
       }
@@ -126,16 +147,20 @@ object Sonatype extends AutoPlugin with LogSupport {
       )
     },
     sonatypeDefaultResolver := {
-      val profileM   = sonatypeTargetRepositoryProfile.?.value
-      val repository = sonatypeRepository.value
-      val staged = profileM.map { stagingRepoProfile =>
-        s"${sonatypeCredentialHost.value.replace('.', '-')}-releases" at s"${repository}/${stagingRepoProfile.deployPath}"
-      }
-      staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
-        sonatypeSnapshotResolver.value
+      if (sonatypeCredentialHost.value == SonatypeCentralClient.host) {
+        Resolver.url(s"https://$sonatypeCredentialHost")
       } else {
-        sonatypeStagingResolver.value
-      })
+        val profileM   = sonatypeTargetRepositoryProfile.?.value
+        val repository = sonatypeRepository.value
+        val staged = profileM.map { stagingRepoProfile =>
+          s"${sonatypeCredentialHost.value.replace('.', '-')}-releases" at s"${repository}/${stagingRepoProfile.deployPath}"
+        }
+        staged.getOrElse(if (version.value.endsWith("-SNAPSHOT")) {
+          sonatypeSnapshotResolver.value
+        } else {
+          sonatypeStagingResolver.value
+        })
+      }
     },
     sonatypeTimeoutMillis := 60 * 60 * 1000, // 60 minutes
     sonatypeSessionName   := s"[sbt-sonatype] ${name.value} ${version.value}",
@@ -175,13 +200,34 @@ object Sonatype extends AutoPlugin with LogSupport {
   private val sonatypeBundleRelease =
     newCommand("sonatypeBundleRelease", "Upload a bundle in sonatypeBundleDirectory and release it at Sonatype") {
       state: State =>
-        withSonatypeService(state) { rest =>
-          val repo       = prepare(state, rest)
-          val extracted  = Project.extract(state)
-          val bundlePath = extracted.get(sonatypeBundleDirectory)
-          rest.uploadBundle(bundlePath, repo.deployPath)
-          rest.closeAndPromote(repo)
-          updatePublishSettings(state, repo)
+        val extracted      = Project.extract(state)
+        val credentialHost = extracted.get(sonatypeCredentialHost)
+
+        val bundlePath        = extracted.get(sonatypeBundleDirectory)
+        val isVersionSnapshot = extracted.get(version).endsWith("-SNAPSHOT")
+
+        if (credentialHost == SonatypeCentralClient.host) {
+          if (isVersionSnapshot) {
+            error(
+              "Version cannot be a snapshot version when deploying to sonatype central. Please ensure that the version is publishable and try again."
+            )
+            state.fail
+          } else {
+            val deploymentName = extracted.get(sonatypeCentralDeploymentName)
+            withSonatypeCentralService(state) { service =>
+              service
+                .uploadBundle(bundlePath, deploymentName)
+                .map(_ => state)
+            }
+          }
+        } else {
+          withSonatypeService(state) { rest =>
+            val repo       = prepare(state, rest)
+            val bundlePath = extracted.get(sonatypeBundleDirectory)
+            rest.uploadBundle(bundlePath, repo.deployPath)
+            rest.closeAndPromote(repo)
+            updatePublishSettings(state, repo)
+          }
         }
     }
 
@@ -397,14 +443,40 @@ object Sonatype extends AutoPlugin with LogSupport {
       "invalid input. please input a repository id"
     )
 
-  private val sonatypeProfileParser: complete.Parser[Option[String]] =
-    (Space ~> token(StringBasic, "(sonatypeProfileName)")).?.!!!(
-      "invalid input. please input sonatypeProfileName (e.g., org.xerial)"
-    )
-
   private def getCredentials(extracted: Extracted, state: State) = {
-    val (nextState, credential) = extracted.runTask(credentials, state)
+    val (_, credential) = extracted.runTask(credentials, state)
     credential
+  }
+
+  private def withSonatypeCentralService(
+      state: State
+  )(func: SonatypeCentralService => Either[SonatypeException, State]): State = {
+    val extracted = Project.extract(state)
+    val logLevel  = LogLevel(extracted.get(sonatypeLogLevel))
+    wvlet.log.Logger.setDefaultLogLevel(logLevel)
+
+    val credentials = getCredentials(extracted, state)
+
+    val eitherOp = for {
+      client <- SonatypeCentralClient.fromCredentials(credentials)
+      service = new SonatypeCentralService(client)
+      res <-
+        try {
+          func(service)
+        } catch {
+          case e: Throwable => Left(new SonatypeException(GENERIC_ERROR, e.getMessage))
+        } finally {
+          client.close()
+        }
+    } yield res
+
+    try {
+      eitherOp.getOrError
+    } catch {
+      case e: SonatypeException =>
+        error(e.toString)
+        state.fail
+    }
   }
 
   private def withSonatypeService(state: State, profileName: Option[String] = None)(
