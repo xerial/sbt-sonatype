@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+addCommandAlias("format", "scalafmtAll; scalafmtSbt")
+
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 val versions = new {
