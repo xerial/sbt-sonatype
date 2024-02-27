@@ -10,7 +10,12 @@ import sttp.client4.quick.quickRequest
 import sttp.client4.{Request, Response, ResponseException, SyncBackend, UriContext, multipartFile}
 import sttp.model.HeaderNames
 import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeCentralClient.{DeploymentId, DeploymentState, PublishingType, StatusCheckResponseBody}
+import xerial.sbt.sonatype.SonatypeCentralClient.{
+  DeploymentId,
+  DeploymentState,
+  PublishingType,
+  StatusCheckResponseBody
+}
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, JSON_PARSING_ERROR, STATUS_CHECK_FAILURE}
 import xerial.sbt.sonatype.utils.Extensions.*
 

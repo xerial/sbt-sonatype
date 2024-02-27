@@ -17,11 +17,11 @@
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 val versions = new {
-  val scala = "2.12.19" // Must use Scala 2.12.x for sbt plugins
-  val airframe = "24.3.0"
+  val scala                = "2.12.19" // Must use Scala 2.12.x for sbt plugins
+  val airframe             = "24.3.0"
   val sonatypeZapperClient = "1.3"
-  val sttp = "4.0.0-M9"
-  val circe = "0.14.6"
+  val sttp                 = "4.0.0-M9"
+  val circe                = "0.14.6"
 }
 
 ThisBuild / dynverSeparator := "-"
@@ -63,10 +63,10 @@ lazy val sbtSonatype =
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
-        "org.wvlet.airframe" %% "airspec" % versions.airframe % Test,
-        "com.softwaremill.sttp.client4" %% "core" % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "circe" % versions.sttp,
+        "org.wvlet.airframe"            %% "airspec"       % versions.airframe % Test,
+        "com.softwaremill.sttp.client4" %% "core"          % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "circe"         % versions.sttp,
         "com.softwaremill.sttp.client4" %% "slf4j-backend" % versions.sttp,
-        "io.circe" %% "circe-generic" % versions.circe
+        "io.circe"                      %% "circe-generic" % versions.circe
       )
     )
