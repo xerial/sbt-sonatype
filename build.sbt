@@ -23,7 +23,7 @@ val versions = new {
   val airframe             = "24.3.0"
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M9"
-  val circe                = "0.14.6"
+  val zioJson              = "0.6.2"
 }
 
 ThisBuild / dynverSeparator := "-"
@@ -67,8 +67,8 @@ lazy val sbtSonatype =
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
         "org.wvlet.airframe"            %% "airspec"       % versions.airframe % Test,
         "com.softwaremill.sttp.client4" %% "core"          % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "circe"         % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "zio-json"      % versions.sttp,
         "com.softwaremill.sttp.client4" %% "slf4j-backend" % versions.sttp,
-        "io.circe"                      %% "circe-generic" % versions.circe
+        "dev.zio"                       %% "zio-json"      % versions.zioJson
       )
     )

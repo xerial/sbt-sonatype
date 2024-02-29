@@ -13,7 +13,11 @@ import java.nio.file.{Files, Path}
 
 class SonatypeCentralService(client: SonatypeCentralClient) extends LogSupport {
 
-  def uploadBundle(localBundlePath: File, deploymentName: DeploymentName): Either[SonatypeException, Unit] = for {
+  def uploadBundle(
+      localBundlePath: File,
+      deploymentName: DeploymentName,
+      publishingType: PublishingType
+  ): Either[SonatypeException, Unit] = for {
     bundleZipDirectory <- Try(Files.createDirectory(Path.of(s"${localBundlePath.getPath}-bundle"))).toEither.leftMap {
       err =>
         SonatypeException(BUNDLE_ZIP_ERROR, s"Error creating bundle zip directory. ${err.getMessage}")
@@ -21,7 +25,7 @@ class SonatypeCentralService(client: SonatypeCentralClient) extends LogSupport {
     zipFile <- Try(zipDirectory(localBundlePath, bundleZipDirectory)).toEither.leftMap { err =>
       SonatypeException(BUNDLE_ZIP_ERROR, err.getMessage)
     }
-    deploymentId <- client.uploadBundle(zipFile, deploymentName, Some(PublishingType.USER_MANAGED))
+    deploymentId <- client.uploadBundle(zipFile, deploymentName, Some(publishingType))
     _ = info(s"Checking if deployment succeeded for deployment id: ${deploymentId.unapply}...")
     didDeploySucceed <- client.didDeploySucceed(deploymentId)
     _ <- Either.cond(

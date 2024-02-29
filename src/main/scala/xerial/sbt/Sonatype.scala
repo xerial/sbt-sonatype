@@ -7,10 +7,12 @@
 
 package xerial.sbt
 
+import sbt.complete.Parser
 import sbt.Keys.{credentials, *}
 import sbt.*
 import sbt.librarymanagement.MavenRepository
 import wvlet.log.{LogLevel, LogSupport}
+import xerial.sbt.sonatype.SonatypeCentralClient.PublishingType
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 import xerial.sbt.sonatype.SonatypeException.GENERIC_ERROR
 import xerial.sbt.sonatype.SonatypeService.*
@@ -38,7 +40,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     val sonatypeProfileName = settingKey[String]("Profile name at Sonatype: e.g. org.xerial")
     val sonatypeCredentialHost = settingKey[String]("Credential host. Default is oss.sonatype.org")
     val sonatypeCentralDeploymentName =
-      settingKey[DeploymentName]("Deployment name. Default is <organization>.<artifact_name>-<version>")
+      settingKey[String]("Deployment name. Default is <organization>.<artifact_name>-<version>")
     val sonatypeDefaultResolver         = settingKey[Resolver]("Default Sonatype Resolver")
     val sonatypePublishTo               = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
     val sonatypePublishToBundle         = settingKey[Option[Resolver]]("Default Sonatype publishTo target")
@@ -109,7 +111,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       if (developers.value.isEmpty) derived
       else developers.value
     },
-    sonatypeCentralDeploymentName := DeploymentName.fromArtifact(organization.value, name.value, version.value),
+    sonatypeCentralDeploymentName := DeploymentName.fromArtifact(organization.value, name.value, version.value).unapply,
     sonatypePublishTo := {
       if (sonatypeCredentialHost.value == SonatypeCentralClient.host && version.value.endsWith("-SNAPSHOT")) {
         None
@@ -196,6 +198,43 @@ object Sonatype extends AutoPlugin with LogSupport {
     val (droppedRepo, createdRepo) = Await.result(merged, Duration.Inf)
     createdRepo
   }
+  private def sonatypeCentralDeployCommand(state: State, publishingType: PublishingType): State = {
+    val extracted         = Project.extract(state)
+    val bundlePath        = extracted.get(sonatypeBundleDirectory)
+    val credentialHost    = extracted.get(sonatypeCredentialHost)
+    val isVersionSnapshot = extracted.get(version).endsWith("-SNAPSHOT")
+
+    if (credentialHost == SonatypeCentralClient.host) {
+      if (isVersionSnapshot) {
+        error(
+          "Version cannot be a snapshot version when deploying to sonatype central. Please ensure that the version is publishable and try again."
+        )
+        state.fail
+      } else {
+        val deploymentName = DeploymentName.fromRawString(extracted.get(sonatypeCentralDeploymentName))
+        withSonatypeCentralService(state) { service =>
+          service
+            .uploadBundle(bundlePath, deploymentName, publishingType)
+            .map(_ => state)
+        }
+      }
+    } else {
+      error(
+        s"sonatypeCredentialHost key needs to be set to $sonatypeCentralHost in order to release to sonatype central. Please adjust the key and try again."
+      )
+      state.fail
+    }
+  }
+
+  private val sonatypeCentralUpload = newCommand(
+    "sonatypeCentralUpload",
+    "Upload a bundle in sonatypeBundleDirectory to Sonatype Central that can be released after manual approval in Sonatype Central"
+  )(sonatypeCentralDeployCommand(_, PublishingType.USER_MANAGED))
+
+  private val sonatypeCentralRelease = newCommand(
+    "sonatypeCentralRelease",
+    "Upload a bundle in sonatypeBundleDirectory to Sonatype Central that will be released automatically to Maven Central"
+  )(sonatypeCentralDeployCommand(_, PublishingType.AUTOMATIC))
 
   private val sonatypeBundleRelease =
     newCommand("sonatypeBundleRelease", "Upload a bundle in sonatypeBundleDirectory and release it at Sonatype") {
@@ -203,23 +242,8 @@ object Sonatype extends AutoPlugin with LogSupport {
         val extracted      = Project.extract(state)
         val credentialHost = extracted.get(sonatypeCredentialHost)
 
-        val bundlePath        = extracted.get(sonatypeBundleDirectory)
-        val isVersionSnapshot = extracted.get(version).endsWith("-SNAPSHOT")
-
         if (credentialHost == SonatypeCentralClient.host) {
-          if (isVersionSnapshot) {
-            error(
-              "Version cannot be a snapshot version when deploying to sonatype central. Please ensure that the version is publishable and try again."
-            )
-            state.fail
-          } else {
-            val deploymentName = extracted.get(sonatypeCentralDeploymentName)
-            withSonatypeCentralService(state) { service =>
-              service
-                .uploadBundle(bundlePath, deploymentName)
-                .map(_ => state)
-            }
-          }
+          sonatypeCentralDeployCommand(state, PublishingType.AUTOMATIC)
         } else {
           withSonatypeService(state) { rest =>
             val repo       = prepare(state, rest)

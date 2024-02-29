@@ -1,12 +1,10 @@
 package xerial.sbt.sonatype
 
-import io.circe.Decoder
-import io.circe.generic.semiauto.*
 import sbt.librarymanagement.ivy.Credentials
-import sttp.client4.circe.asJson
 import sttp.client4.httpurlconnection.HttpURLConnectionBackend
 import sttp.client4.logging.slf4j.Slf4jLoggingBackend
 import sttp.client4.quick.quickRequest
+import sttp.client4.ziojson.asJson
 import sttp.client4.{Request, Response, ResponseException, SyncBackend, UriContext, multipartFile}
 import sttp.model.HeaderNames
 import wvlet.log.LogSupport
@@ -18,6 +16,7 @@ import xerial.sbt.sonatype.SonatypeCentralClient.{
 }
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, JSON_PARSING_ERROR, STATUS_CHECK_FAILURE}
 import xerial.sbt.sonatype.utils.Extensions.*
+import zio.json.{DeriveJsonDecoder, JsonDecoder}
 
 import java.io.File
 import scala.concurrent.duration.DurationInt
@@ -42,7 +41,7 @@ private[sbt] class SonatypeCentralClient(
     }
 
   private def parseJsonBody[A](
-      responseBody: Either[ResponseException[String, io.circe.Error], A]
+      responseBody: Either[ResponseException[String, String], A]
   ): Either[SonatypeException, A] = responseBody.leftMap { responseException =>
     SonatypeException(JSON_PARSING_ERROR, responseException.getMessage)
   }
@@ -166,7 +165,7 @@ object SonatypeCentralClient {
     case object USER_MANAGED extends PublishingType("USER_MANAGED")
   }
 
-  implicit val deploymentStateDecoder: Decoder[DeploymentState] = Decoder[String].emap { str =>
+  implicit val deploymentStateDecoder: JsonDecoder[DeploymentState] = JsonDecoder.string.mapOrFail { str =>
     DeploymentState
       .parse(str).toRight(
         s"Could not parse received value to a valid deployment state. Received value: $str. Expected value to be one of the following: ${DeploymentState.values
@@ -197,7 +196,8 @@ object SonatypeCentralClient {
     def unapply: String = id
   }
 
-  implicit val statusCheckResponseBodyDecoder: Decoder[StatusCheckResponseBody] = deriveDecoder[StatusCheckResponseBody]
+  implicit val statusCheckResponseBodyDecoder: JsonDecoder[StatusCheckResponseBody] =
+    DeriveJsonDecoder.gen[StatusCheckResponseBody]
 
   final case class StatusCheckResponseBody(
       deploymentId: String,
