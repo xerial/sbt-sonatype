@@ -7,28 +7,19 @@
 
 package xerial.sbt
 
-import sbt.complete.Parser
-import sbt.Keys.{credentials, *}
 import sbt.*
 import sbt.librarymanagement.MavenRepository
+import sbt.Keys.*
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.Duration
+import scala.util.hashing.MurmurHash3
 import wvlet.log.{LogLevel, LogSupport}
+import xerial.sbt.sonatype.*
+import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeCentralClient.PublishingType
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 import xerial.sbt.sonatype.SonatypeException.GENERIC_ERROR
 import xerial.sbt.sonatype.SonatypeService.*
-import xerial.sbt.sonatype.{
-  DeploymentName,
-  SonatypeCentralClient,
-  SonatypeCentralService,
-  SonatypeClient,
-  SonatypeException,
-  SonatypeService
-}
-import xerial.sbt.sonatype.utils.Extensions.*
-
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.hashing.MurmurHash3
 
 /** Plugin for automating release processes at Sonatype Nexus
   */
@@ -65,8 +56,8 @@ object Sonatype extends AutoPlugin with LogSupport {
   override def projectSettings = sonatypeSettings
   override def buildSettings   = sonatypeBuildSettings
 
-  import autoImport._
-  import complete.DefaultParsers._
+  import autoImport.*
+  import complete.DefaultParsers.*
 
   private implicit val ec = ExecutionContext.global
 

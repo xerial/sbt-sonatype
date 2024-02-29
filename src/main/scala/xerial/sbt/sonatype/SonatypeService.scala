@@ -1,14 +1,13 @@
 package xerial.sbt.sonatype
 
+import java.io.File
 import org.xerial.sbt.sonatype.BuildInfo
 import sbt.io.IO
+import scala.util.Try
 import wvlet.airframe.codec.MessageCodecFactory
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeClient.*
 import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
-
-import java.io.File
-import scala.util.Try
 
 /** Interface to access the REST API of Nexus
   * @param profileName

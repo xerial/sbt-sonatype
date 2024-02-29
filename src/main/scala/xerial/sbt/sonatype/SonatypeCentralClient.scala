@@ -1,13 +1,18 @@
 package xerial.sbt.sonatype
 
+import java.io.File
 import sbt.librarymanagement.ivy.Credentials
+import scala.concurrent.duration.DurationInt
+import scala.math.pow
+import scala.util.Try
+import sttp.client4.{multipartFile, Request, Response, ResponseException, SyncBackend, UriContext}
 import sttp.client4.httpurlconnection.HttpURLConnectionBackend
 import sttp.client4.logging.slf4j.Slf4jLoggingBackend
 import sttp.client4.quick.quickRequest
 import sttp.client4.ziojson.asJson
-import sttp.client4.{Request, Response, ResponseException, SyncBackend, UriContext, multipartFile}
 import sttp.model.HeaderNames
 import wvlet.log.LogSupport
+import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeCentralClient.{
   DeploymentId,
   DeploymentState,
@@ -15,13 +20,7 @@ import xerial.sbt.sonatype.SonatypeCentralClient.{
   StatusCheckResponseBody
 }
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, JSON_PARSING_ERROR, STATUS_CHECK_FAILURE}
-import xerial.sbt.sonatype.utils.Extensions.*
 import zio.json.{DeriveJsonDecoder, JsonDecoder}
-
-import java.io.File
-import scala.concurrent.duration.DurationInt
-import scala.math.pow
-import scala.util.Try
 
 private[sbt] class SonatypeCentralClient(
     backend: SyncBackend,

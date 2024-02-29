@@ -1,22 +1,21 @@
 package xerial.sbt.sonatype
 
-import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
-import org.apache.http.impl.client.BasicCredentialsProvider
-import org.sonatype.spice.zapper.ParametersBuilder
-import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
-import sbt.librarymanagement.ivy.Credentials
-import wvlet.airframe.control.{Control, ResultClass, Retry}
-import wvlet.airframe.http.*
-import wvlet.airframe.http.HttpHeader.MediaType
-import wvlet.airframe.http.HttpMessage.Response
-import wvlet.airframe.http.client.URLConnectionClientBackend
-import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STAGE_FAILURE, STAGE_IN_PROGRESS}
-
 import java.io.{File, IOException}
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
+import org.apache.http.impl.client.BasicCredentialsProvider
+import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
+import org.sonatype.spice.zapper.ParametersBuilder
+import sbt.librarymanagement.ivy.Credentials
 import scala.concurrent.duration.Duration
+import wvlet.airframe.control.{Control, ResultClass, Retry}
+import wvlet.airframe.http.*
+import wvlet.airframe.http.client.URLConnectionClientBackend
+import wvlet.airframe.http.HttpHeader.MediaType
+import wvlet.airframe.http.HttpMessage.Response
+import wvlet.log.LogSupport
+import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STAGE_FAILURE, STAGE_IN_PROGRESS}
 
 /** REST API Client for Sonatype API (nexus-staging)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html

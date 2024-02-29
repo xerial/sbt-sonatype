@@ -1,15 +1,13 @@
 package xerial.sbt.sonatype
 
-import wvlet.log.LogSupport
-
 import java.io.{File, FileInputStream, FileOutputStream}
+import java.nio.file.{Files, Path}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 import scala.util.Try
+import wvlet.log.LogSupport
+import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeCentralClient.PublishingType
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_ZIP_ERROR, STAGE_FAILURE}
-import xerial.sbt.sonatype.utils.Extensions.*
-
-import java.nio.file.{Files, Path}
 
 class SonatypeCentralService(client: SonatypeCentralClient) extends LogSupport {
 
