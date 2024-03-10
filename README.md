@@ -90,6 +90,12 @@ If `isSnapshot.value` is true (e.g., if the version name contains -SNAPSHOT), pu
 
 If necessary, you can tweak several configurations:
 ```scala
+    val sonatypeCentralDeploymentName =
+  settingKey[String]("Deployment name. Default is <organization>.<artifact_name>-<version>")
+// [Optional] If you need to manage the default Sonatype Central deployment name, change the setting below. 
+// If publishing multiple modules, ensure that this is set on the module level, rather than on the build level.
+sonatypeCentralDeploymentName := s"${organization.value}.${name.value}-${version.value}"
+
 // [Optional] The local staging folder name:
 sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / target.value.getName / "sonatype-staging" / (ThisBuild / version).value
 
