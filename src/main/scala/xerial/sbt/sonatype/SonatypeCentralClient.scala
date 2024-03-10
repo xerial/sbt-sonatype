@@ -19,6 +19,7 @@ import xerial.sbt.sonatype.SonatypeCentralClient.{
   PublishingType,
   StatusCheckResponseBody
 }
+import xerial.sbt.sonatype.SonatypeCentralClient.DeploymentState.*
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, JSON_PARSING_ERROR, STATUS_CHECK_FAILURE}
 import zio.json.{DeriveJsonDecoder, JsonDecoder}
 
@@ -111,7 +112,10 @@ private[sbt] class SonatypeCentralClient(
     res.map(DeploymentId)
   }
 
-  def didDeploySucceed(deploymentId: DeploymentId): Either[SonatypeException, Boolean] = {
+  def didDeploySucceed(
+      deploymentId: DeploymentId,
+      shouldDeployBePublished: Boolean
+  ): Either[SonatypeException, Boolean] = {
     val finalEndpoint = uri"$clientUrl/status".addParam("id", deploymentId.unapply)
 
     for {
@@ -126,16 +130,17 @@ private[sbt] class SonatypeCentralClient(
       }
       responseBody <- parseJsonBody(res.body)
       finalRes <-
-        if (
-          responseBody.deploymentState == DeploymentState.VALIDATING || responseBody.deploymentState == DeploymentState.PENDING
-        ) {
+        if (responseBody.deploymentState.isNonFinal) {
           Thread.sleep(5000L)
-          didDeploySucceed(deploymentId)
+          didDeploySucceed(deploymentId, shouldDeployBePublished)
         } else if (responseBody.deploymentState == DeploymentState.FAILED) {
           error(
             s"Deployment failed for deployment id: ${deploymentId.unapply}. Current deployment state: ${responseBody.deploymentState.unapply}"
           )
           Right(false)
+        } else if (responseBody.deploymentState != PUBLISHED && shouldDeployBePublished) {
+          Thread.sleep(5000L)
+          didDeploySucceed(deploymentId, shouldDeployBePublished)
         } else {
           info(
             s"Deployment succeeded for deployment id: ${deploymentId.unapply}. Current deployment state: ${responseBody.deploymentState.unapply}"
@@ -174,6 +179,13 @@ object SonatypeCentralClient {
 
   sealed abstract class DeploymentState(private val id: String) {
     def unapply: String = id
+
+    def isNonFinal: Boolean = this match {
+      case PENDING    => true
+      case PUBLISHING => true
+      case VALIDATING => true
+      case _          => false
+    }
   }
 
   object DeploymentState {

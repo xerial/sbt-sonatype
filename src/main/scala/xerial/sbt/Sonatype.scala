@@ -159,6 +159,8 @@ object Sonatype extends AutoPlugin with LogSupport {
     sonatypeSessionName   := s"[sbt-sonatype] ${name.value} ${version.value}",
     sonatypeLogLevel      := "info",
     commands ++= Seq(
+      sonatypeCentralRelease,
+      sonatypeCentralUpload,
       sonatypeBundleRelease,
       sonatypeBundleUpload,
       sonatypePrepare,

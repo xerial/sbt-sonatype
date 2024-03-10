@@ -24,6 +24,7 @@ val versions = new {
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M9"
   val zioJson              = "0.6.2"
+  val scalatest            = "3.2.18"
 }
 
 ThisBuild / dynverSeparator := "-"
@@ -65,10 +66,11 @@ lazy val sbtSonatype =
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
-        "org.wvlet.airframe"            %% "airspec"       % versions.airframe % Test,
+        "org.wvlet.airframe"            %% "airspec"       % versions.airframe  % Test,
         "com.softwaremill.sttp.client4" %% "core"          % versions.sttp,
         "com.softwaremill.sttp.client4" %% "zio-json"      % versions.sttp,
         "com.softwaremill.sttp.client4" %% "slf4j-backend" % versions.sttp,
-        "dev.zio"                       %% "zio-json"      % versions.zioJson
+        "dev.zio"                       %% "zio-json"      % versions.zioJson,
+        "org.scalatest"                 %% "scalatest"     % versions.scalatest % Test
       )
     )
