@@ -7,16 +7,17 @@
 
 package xerial.sbt
 
+import com.lumidion.sonatype.central.client.core.{DeploymentName, PublishingType}
 import sbt.*
 import sbt.librarymanagement.MavenRepository
 import sbt.Keys.*
+
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.hashing.MurmurHash3
 import wvlet.log.{LogLevel, LogSupport}
 import xerial.sbt.sonatype.*
 import xerial.sbt.sonatype.utils.Extensions.*
-import xerial.sbt.sonatype.SonatypeCentralClient.PublishingType
 import xerial.sbt.sonatype.SonatypeClient.StagingRepositoryProfile
 import xerial.sbt.sonatype.SonatypeException.GENERIC_ERROR
 import xerial.sbt.sonatype.SonatypeService.*
@@ -204,7 +205,7 @@ object Sonatype extends AutoPlugin with LogSupport {
         )
         state.fail
       } else {
-        val deploymentName = DeploymentName.fromRawString(extracted.get(sonatypeCentralDeploymentName))
+        val deploymentName = DeploymentName(extracted.get(sonatypeCentralDeploymentName))
         withSonatypeCentralService(state) { service =>
           service
             .uploadBundle(bundlePath, deploymentName, publishingType)

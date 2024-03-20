@@ -5,11 +5,14 @@ import java.util.Base64
 import sbt.librarymanagement.ivy.Credentials
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.MISSING_CREDENTIAL
+import com.lumidion.sonatype.central.client.core.SonatypeCredentials as SonatypeCentralCredentials
 
 private[sonatype] final case class SonatypeCredentials private (userName: String, password: String) {
   override def toString: String = "SonatypeCredentials(userName: <redacted>, password: <redacted>)"
 
   def toBase64: String = Base64.getEncoder.encodeToString(s"${userName}:${password}".getBytes(StandardCharsets.UTF_8))
+
+  def toSonatypeCentralCredentials: SonatypeCentralCredentials = SonatypeCentralCredentials(userName, password)
 }
 
 object SonatypeCredentials {

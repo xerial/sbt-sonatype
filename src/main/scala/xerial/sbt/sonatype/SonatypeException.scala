@@ -12,6 +12,8 @@ sealed trait ErrorCode
 
 object SonatypeException {
 
+  case object AUTH_ERROR extends ErrorCode
+
   case object BUNDLE_ZIP_ERROR extends ErrorCode
 
   case object GENERIC_ERROR extends ErrorCode
