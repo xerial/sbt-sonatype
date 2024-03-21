@@ -11,7 +11,6 @@ import com.lumidion.sonatype.central.client.core.{DeploymentName, PublishingType
 import sbt.*
 import sbt.librarymanagement.MavenRepository
 import sbt.Keys.*
-
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.hashing.MurmurHash3

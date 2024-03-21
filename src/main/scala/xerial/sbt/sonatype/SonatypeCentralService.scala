@@ -1,7 +1,6 @@
 package xerial.sbt.sonatype
 
 import com.lumidion.sonatype.central.client.core.{DeploymentName, PublishingType}
-
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.{Files, Path}
 import java.util.zip.{ZipEntry, ZipOutputStream}

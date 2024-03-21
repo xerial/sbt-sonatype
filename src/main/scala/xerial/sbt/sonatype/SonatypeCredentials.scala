@@ -1,11 +1,11 @@
 package xerial.sbt.sonatype
 
+import com.lumidion.sonatype.central.client.core.{SonatypeCredentials => SonatypeCentralCredentials}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import sbt.librarymanagement.ivy.Credentials
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.MISSING_CREDENTIAL
-import com.lumidion.sonatype.central.client.core.SonatypeCredentials as SonatypeCentralCredentials
 
 private[sonatype] final case class SonatypeCredentials private (userName: String, password: String) {
   override def toString: String = "SonatypeCredentials(userName: <redacted>, password: <redacted>)"

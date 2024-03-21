@@ -68,7 +68,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
   > ```
 
 #### Sonatype Central Host
-As of February 1st, 2024, Sonatype has switched all new account registration over to the Sonatype Central portal and legacy `sonatype.org` accounts will eventually migrate there. To configure sbt to publish to the Sonatype Central portal, simply add the following:
+As of early 2024, Sonatype has switched all new account registration over to the Sonatype Central portal and legacy `sonatype.org` accounts will eventually migrate there. To configure sbt to publish to the Sonatype Central portal, simply add the following:
 
 ```sbt
 import xerial.sbt.Sonatype.sonatypeCentralHost
@@ -181,6 +181,7 @@ Note: If your project version has "SNAPSHOT" suffix, your project will be publis
 ## Commands
 
 ### Multi-Step Commands:
+Usually, we only need to run `sonatypeBundleRelease` command in sbt-sonatype:
 * __sonatypeBundleRelease__
   * If `sonatypeCredentialHost` is set to a host other than the Sonatype Central portal, this command will run a sequence of commands `; sonatypePrepare; sonatypeBundleUpload; sonatypeRelease` in one step.
   * If `sonatypeCredentialHost` is set to the Sonatype Central portal, this command will default to the **sonatypeCentralRelease** command.

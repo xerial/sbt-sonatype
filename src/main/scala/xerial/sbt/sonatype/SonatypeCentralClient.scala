@@ -22,7 +22,7 @@ import sttp.client4.ziojson.asJson
 import sttp.model.StatusCode
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.utils.Extensions.*
-import xerial.sbt.sonatype.SonatypeException.{AUTH_ERROR, BUNDLE_UPLOAD_FAILURE, STATUS_CHECK_FAILURE}
+import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STATUS_CHECK_FAILURE, USER_ERROR}
 
 private[sbt] class SonatypeCentralClient(
     client: SyncSonatypeClient
@@ -41,10 +41,11 @@ private[sbt] class SonatypeCentralClient(
         SonatypeException(errorCode, s"$errorContext. ${err.getMessage}")
       }
       finalResponse <- response match {
-        case Left(HttpError(message, StatusCode.Forbidden)) =>
-          Left(new SonatypeException(AUTH_ERROR, s"$errorContext. Message Received: $message"))
-        case Left(HttpError(message, StatusCode.Unauthorized)) =>
-          Left(new SonatypeException(AUTH_ERROR, s"$errorContext. Message Received: $message"))
+        case Left(HttpError(message, code))
+            if (code == StatusCode.Forbidden) || (code == StatusCode.Unauthorized) || (code == StatusCode.BadRequest) =>
+          Left(
+            new SonatypeException(USER_ERROR, s"$errorContext. Status code: ${code.code}. Message Received: $message")
+          )
         case Left(ex) =>
           if (retriesLeft > 0) {
             val exponent                   = pow(5, retriesAttempted).toInt
