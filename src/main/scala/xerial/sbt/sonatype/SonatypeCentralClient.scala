@@ -24,7 +24,7 @@ import wvlet.log.LogSupport
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STATUS_CHECK_FAILURE, USER_ERROR}
 
-private[sbt] class SonatypeCentralClient(
+private[sonatype] class SonatypeCentralClient(
     client: SyncSonatypeClient
 ) extends AutoCloseable
     with LogSupport {

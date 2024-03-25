@@ -9,7 +9,7 @@ import wvlet.log.LogSupport
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_ZIP_ERROR, STAGE_FAILURE}
 
-class SonatypeCentralService(client: SonatypeCentralClient) extends LogSupport {
+private[sbt] class SonatypeCentralService(client: SonatypeCentralClient) extends LogSupport {
 
   def uploadBundle(
       localBundlePath: File,

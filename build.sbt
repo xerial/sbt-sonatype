@@ -70,6 +70,6 @@ lazy val sbtSonatype =
         "com.lumidion"                  %% "sonatype-central-client-sttp-core" % versions.sonatypeClient,
         "com.lumidion"                  %% "sonatype-central-client-zio-json"  % versions.sonatypeClient,
         "com.softwaremill.sttp.client4" %% "slf4j-backend"                     % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "zio-json"                          % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "zio-json"                          % versions.sttp
       )
     )
