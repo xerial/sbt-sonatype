@@ -12,9 +12,19 @@ sealed trait ErrorCode
 
 object SonatypeException {
 
+  case object USER_ERROR extends ErrorCode
+
+  case object BUNDLE_ZIP_ERROR extends ErrorCode
+
+  case object GENERIC_ERROR extends ErrorCode
+
+  case object JSON_PARSING_ERROR extends ErrorCode
+
   case object STAGE_IN_PROGRESS extends ErrorCode
 
   case object STAGE_FAILURE extends ErrorCode
+
+  case object STATUS_CHECK_FAILURE extends ErrorCode
 
   case object BUNDLE_UPLOAD_FAILURE extends ErrorCode
 

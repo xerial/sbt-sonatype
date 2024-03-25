@@ -1,29 +1,21 @@
 package xerial.sbt.sonatype
 
-import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
-import org.apache.http.impl.client.BasicCredentialsProvider
-import org.sonatype.spice.zapper.ParametersBuilder
-import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
-import sbt.librarymanagement.ivy.{Credentials, DirectCredentials}
-import wvlet.airframe.control.{Control, ResultClass, Retry}
-import wvlet.airframe.http.*
-import wvlet.airframe.http.HttpHeader.MediaType
-import wvlet.airframe.http.HttpMessage.Response
-import wvlet.airframe.http.client.URLConnectionClientBackend
-import wvlet.log.LogSupport
-import xerial.sbt.sonatype.SonatypeException.{
-  BUNDLE_UPLOAD_FAILURE,
-  MISSING_CREDENTIAL,
-  STAGE_FAILURE,
-  STAGE_IN_PROGRESS
-}
-
 import java.io.{File, IOException}
 import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.util.Base64
 import java.util.concurrent.TimeUnit
+import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
+import org.apache.http.impl.client.BasicCredentialsProvider
+import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
+import org.sonatype.spice.zapper.ParametersBuilder
+import sbt.librarymanagement.ivy.Credentials
 import scala.concurrent.duration.Duration
+import wvlet.airframe.control.{Control, ResultClass, Retry}
+import wvlet.airframe.http.*
+import wvlet.airframe.http.client.URLConnectionClientBackend
+import wvlet.airframe.http.HttpHeader.MediaType
+import wvlet.airframe.http.HttpMessage.Response
+import wvlet.log.LogSupport
+import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STAGE_FAILURE, STAGE_IN_PROGRESS}
 
 /** REST API Client for Sonatype API (nexus-staging)
   * https://repository.sonatype.org/nexus-staging-plugin/default/docs/rest.html
@@ -36,22 +28,9 @@ class SonatypeClient(
 ) extends AutoCloseable
     with LogSupport {
 
-  private lazy val directCredentials = {
-    val credt: DirectCredentials = Credentials
-      .forHost(cred, credentialHost)
-      .getOrElse {
-        throw SonatypeException(
-          MISSING_CREDENTIAL,
-          s"No credential is found for ${credentialHost}. Prepare ~/.sbt/(sbt_version)/sonatype.sbt file."
-        )
-      }
-    credt
-  }
+  private lazy val sonatypeCredentials = SonatypeCredentials.fromEnvOrError(cred, credentialHost)
 
-  private lazy val base64Credentials = {
-    val credt = directCredentials
-    Base64.getEncoder.encodeToString(s"${credt.userName}:${credt.passwd}".getBytes(StandardCharsets.UTF_8))
-  }
+  private lazy val base64Credentials = sonatypeCredentials.toBase64
 
   lazy val repoUri: URI = URI.create(repositoryUrl.stripSuffix("/"))
 
@@ -281,7 +260,7 @@ class SonatypeClient(
 
         val credentialProvider = new BasicCredentialsProvider()
         val usernamePasswordCredentials =
-          new UsernamePasswordCredentials(directCredentials.userName, directCredentials.passwd)
+          new UsernamePasswordCredentials(sonatypeCredentials.userName, sonatypeCredentials.password)
 
         credentialProvider.setCredentials(AuthScope.ANY, usernamePasswordCredentials)
 
