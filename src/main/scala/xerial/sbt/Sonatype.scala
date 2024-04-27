@@ -105,7 +105,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       IO.delete(sonatypeBundleDirectory.value)
     },
     sonatypePublishToBundle := {
-      if (version.value.endsWith("-SNAPSHOT")) {
+      if (isSnapshot.value) {
         // Sonatype snapshot repositories have no support for bundle upload,
         // so use direct publishing to the snapshot repo.
         Some(sonatypeSnapshotResolver.value)
