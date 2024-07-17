@@ -20,7 +20,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 val versions = new {
   val scala                = "2.12.19" // Must use Scala 2.12.x for sbt plugins
-  val airframe             = "24.7.0"
+  val airframe             = "24.7.1"
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M10"
   val zioJson              = "0.6.2"
