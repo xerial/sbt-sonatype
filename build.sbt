@@ -24,7 +24,7 @@ val versions = new {
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M10"
   val zioJson              = "0.6.2"
-  val sonatypeClient       = "0.1.0"
+  val sonatypeClient       = "0.3.0"
 }
 
 ThisBuild / dynverSeparator := "-"
