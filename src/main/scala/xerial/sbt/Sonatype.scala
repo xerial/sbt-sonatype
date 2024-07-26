@@ -141,7 +141,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     },
     sonatypeDefaultResolver := {
       if (sonatypeCredentialHost.value == SonatypeCentralClient.host) {
-        Resolver.url(s"https://$sonatypeCredentialHost")
+        Resolver.url(s"https://${sonatypeCredentialHost.value}")
       } else {
         val profileM   = sonatypeTargetRepositoryProfile.?.value
         val repository = sonatypeRepository.value
