@@ -16,6 +16,10 @@ project/plugins/project/
 .scala_dependencies
 .idea*
 .bsp
+.vscode/
+.bloop/
+.metals/
+metals.sbt
 
 src/sbt-test/*/*/bin/.lib
 
