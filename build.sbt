@@ -22,9 +22,8 @@ val versions = new {
   val scala                = "2.12.19" // Must use Scala 2.12.x for sbt plugins
   val airframe             = "24.7.0"
   val sonatypeZapperClient = "1.3"
-  val sttp                 = "4.0.0-M10"
-  val zioJson              = "0.6.2"
-  val sonatypeClient       = "0.1.0"
+  val sttp                 = "4.0.0-M16"
+  val sonatypeClient       = "0.3.0"
 }
 
 ThisBuild / dynverSeparator := "-"
@@ -70,8 +69,8 @@ lazy val sbtSonatype =
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
         "org.wvlet.airframe"            %% "airspec"                           % versions.airframe % Test,
         "com.lumidion"                  %% "sonatype-central-client-sttp-core" % versions.sonatypeClient,
-        "com.lumidion"                  %% "sonatype-central-client-zio-json"  % versions.sonatypeClient,
+        "com.lumidion"                  %% "sonatype-central-client-upickle"   % versions.sonatypeClient,
         "com.softwaremill.sttp.client4" %% "slf4j-backend"                     % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "zio-json"                          % versions.sttp
+        "com.softwaremill.sttp.client4" %% "upickle"                           % versions.sttp
       )
     )
