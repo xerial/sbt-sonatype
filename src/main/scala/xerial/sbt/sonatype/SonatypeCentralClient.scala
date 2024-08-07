@@ -9,7 +9,7 @@ import com.lumidion.sonatype.central.client.core.{
 }
 import com.lumidion.sonatype.central.client.core.DeploymentState.PUBLISHED
 import com.lumidion.sonatype.central.client.sttp.core.SyncSonatypeClient
-import com.lumidion.sonatype.central.client.zio.json.decoders.*
+import com.lumidion.sonatype.central.client.upickle.decoders.*
 import java.io.File
 import sbt.librarymanagement.ivy.Credentials
 import scala.math.pow
@@ -18,7 +18,7 @@ import sttp.client4.{HttpError, ResponseException}
 import sttp.client4.httpurlconnection.HttpURLConnectionBackend
 import sttp.client4.logging.slf4j.Slf4jLoggingBackend
 import sttp.client4.logging.LoggingOptions
-import sttp.client4.ziojson.asJson
+import sttp.client4.upicklejson.default.*
 import sttp.model.StatusCode
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.utils.Extensions.*
