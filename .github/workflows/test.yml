@@ -14,25 +14,30 @@ jobs:
       - uses: actions/checkout@v4
       - name: scalafmt
         run: ./sbt scalafmtCheckAll
-  test_jdk11:
-    name: Test JDK11
-    runs-on: ubuntu-latest
+  test:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            distribution: zulu
+            java: 8
+          - os: ubuntu-latest
+            distribution: temurin
+            java: 11
+          - os: ubuntu-latest
+            distribution: temurin
+            java: 17
+          - os: windows-latest
+            distribution: temurin
+            java: 17
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: 11
-      - name: sbt scripted test
-        run: ./sbt compile scripted
-  test_jdk17:
-    name: Test JDK17
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution:	'temurin'
-          java-version:	17
+          distribution: "${{ matrix.distribution }}"
+          java-version: "${{ matrix.java }}"
       - name: sbt scripted test
         run: ./sbt compile scripted
