@@ -2,7 +2,7 @@ package xerial.sbt.sonatype
 
 import com.lumidion.sonatype.central.client.core.{DeploymentName, PublishingType}
 import java.io.{File, FileInputStream, FileOutputStream}
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 import scala.util.Try
 import wvlet.log.LogSupport
@@ -16,7 +16,7 @@ private[sbt] class SonatypeCentralService(client: SonatypeCentralClient) extends
       deploymentName: DeploymentName,
       publishingType: PublishingType
   ): Either[SonatypeException, Unit] = for {
-    bundleZipDirectory <- Try(Files.createDirectory(Path.of(s"${localBundlePath.getPath}-bundle"))).toEither.leftMap {
+    bundleZipDirectory <- Try(Files.createDirectory(Paths.get(s"${localBundlePath.getPath}-bundle"))).toEither.leftMap {
       err =>
         SonatypeException(BUNDLE_ZIP_ERROR, s"Error creating bundle zip directory. ${err.getMessage}")
     }
