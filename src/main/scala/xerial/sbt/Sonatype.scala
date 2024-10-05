@@ -59,7 +59,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   import autoImport.*
   import complete.DefaultParsers.*
 
-  private implicit val ec = ExecutionContext.global
+  private implicit val ec: ExecutionContext = ExecutionContext.global
 
   val sonatypeLegacy      = "oss.sonatype.org"
   val sonatype01          = "s01.oss.sonatype.org"
@@ -231,7 +231,7 @@ object Sonatype extends AutoPlugin with LogSupport {
 
   private val sonatypeBundleRelease =
     newCommand("sonatypeBundleRelease", "Upload a bundle in sonatypeBundleDirectory and release it at Sonatype") {
-      state: State =>
+      (state: State) =>
         val extracted      = Project.extract(state)
         val credentialHost = extracted.get(sonatypeCredentialHost)
 
@@ -249,7 +249,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     }
 
   private val sonatypeBundleUpload = newCommand("sonatypeBundleUpload", "Upload a bundle in sonatypeBundleDirectory") {
-    state: State =>
+    (state: State) =>
       val extracted  = Project.extract(state)
       val bundlePath = extracted.get(sonatypeBundleDirectory)
       withSonatypeService(state) { rest =>
@@ -265,7 +265,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   private val sonatypePrepare = newCommand(
     "sonatypePrepare",
     "Clean (if exists) and create a staging repository for releasing the current version, then update publishTo"
-  ) { state: State =>
+  ) { (state: State) =>
     withSonatypeService(state) { rest =>
       val repo = prepare(state, rest)
       updatePublishSettings(state, repo)
@@ -275,7 +275,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   private val sonatypeOpen = newCommand(
     "sonatypeOpen",
     "Open (or create if not exists) to a staging repository for the current version, then update publishTo"
-  ) { state: State =>
+  ) { (state: State) =>
     withSonatypeService(state) { rest =>
       // Re-open or create a staging repository
       val descriptionKey = Project.extract(state).get(sonatypeSessionName)
@@ -345,7 +345,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     }
 
   private val sonatypeClean =
-    newCommand("sonatypeClean", "Clean a staging repository for the current version if it exists") { state: State =>
+    newCommand("sonatypeClean", "Clean a staging repository for the current version if it exists") { (state: State) =>
       val extracted = Project.extract(state)
       withSonatypeService(state) { rest =>
         val descriptionKey = extracted.get(sonatypeSessionName)
@@ -379,7 +379,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       }
   }
 
-  private val sonatypeLog = newCommand("sonatypeLog", "Show staging activity logs at Sonatype") { state: State =>
+  private val sonatypeLog = newCommand("sonatypeLog", "Show staging activity logs at Sonatype") { (state: State) =>
     withSonatypeService(state) { rest =>
       val alist = rest.activities
       if (alist.isEmpty)
@@ -395,7 +395,7 @@ object Sonatype extends AutoPlugin with LogSupport {
   }
 
   private val sonatypeStagingRepositoryProfiles =
-    newCommand("sonatypeStagingRepositoryProfiles", "Show the list of staging repository profiles") { state: State =>
+    newCommand("sonatypeStagingRepositoryProfiles", "Show the list of staging repository profiles") { (state: State) =>
       withSonatypeService(state) { rest =>
         val repos = rest.stagingRepositoryProfiles()
         if (repos.isEmpty)
@@ -409,7 +409,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     }
 
   private val sonatypeStagingProfiles = newCommand("sonatypeStagingProfiles", "Show the list of staging profiles") {
-    state: State =>
+    (state: State) =>
       withSonatypeService(state) { rest =>
         val profiles = rest.stagingProfiles
         if (profiles.isEmpty)
