@@ -124,7 +124,7 @@ class SonatypeClient(
     // init * (multiplier ^ n) = max
     // n = log(max / init) / log(multiplier)
     val retryCountUntilMaxInterval = (math.log(maxInterval.toDouble / initInterval) / math.log(1.5)).toInt.max(1)
-    val numRetry                   = (timeoutMillis / maxInterval).ceil.toInt
+    val numRetry                   = (timeoutMillis / maxInterval).toDouble.ceil.toInt
     Retry.withBackOff(
       maxRetry = retryCountUntilMaxInterval + numRetry,
       initialIntervalMillis = initInterval,

@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
+crossScalaVersions += "3.3.4"
+
+pluginCrossBuild / sbtVersion := {
+  scalaBinaryVersion.value match {
+    case "2.12" =>
+      (pluginCrossBuild / sbtVersion).value
+    case _ =>
+      "2.0.0-M2"
+  }
+}
+
 addCommandAlias("format", "scalafmtAll; scalafmtSbt")
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -61,7 +72,15 @@ lazy val sbtSonatype =
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       buildInfoPackage := "org.xerial.sbt.sonatype",
-      scalacOptions ++= Seq("-Ywarn-unused-import", "-nowarn"),
+      scalacOptions ++= Seq("-nowarn"),
+      scalacOptions += {
+        scalaBinaryVersion.value match {
+          case "2.12" =>
+            "-Ywarn-unused-import"
+          case _ =>
+            "-Wunused:imports"
+        }
+      },
       libraryDependencies ++= Seq(
         "org.sonatype.spice.zapper" % "spice-zapper"  % versions.sonatypeZapperClient,
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
