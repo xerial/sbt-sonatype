@@ -4,8 +4,9 @@ version                := System.getProperty("version", "0.1")
 sonatypeCredentialHost := System.getProperty("host", "oss.sonatype.org")
 sonatypeRepository     := System.getProperty("repo", s"https${sonatypeRepository.value}//service/local")
 
-pomExtra := {
-  <url>https://github.com/xerial/sbt-sonatype</url> <licenses>
+pomExtra := (
+  <url>https://github.com/xerial/sbt-sonatype</url>
+  <licenses>
     <license>
       <name>Apache 2</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
@@ -23,4 +24,4 @@ pomExtra := {
       <url>http://xerial.org/leo</url>
     </developer>
   </developers>
-}
+)
