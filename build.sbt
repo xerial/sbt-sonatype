@@ -72,7 +72,6 @@ lazy val sbtSonatype =
       testFrameworks += new TestFramework("wvlet.airspec.Framework"),
       buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       buildInfoPackage := "org.xerial.sbt.sonatype",
-      scalacOptions ++= Seq("-nowarn"),
       scalacOptions += {
         scalaBinaryVersion.value match {
           case "2.12" =>

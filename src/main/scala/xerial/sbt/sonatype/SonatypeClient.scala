@@ -8,6 +8,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import org.sonatype.spice.zapper.ParametersBuilder
 import sbt.librarymanagement.ivy.Credentials
+import scala.annotation.nowarn
 import scala.concurrent.duration.Duration
 import wvlet.airframe.control.{Control, ResultClass, Retry}
 import wvlet.airframe.http.*
@@ -36,6 +37,7 @@ class SonatypeClient(
 
   private val pathPrefix = repoUri.getPath
 
+  @nowarn("msg=URLConnectionClientBackend")
   private[sonatype] val clientConfig = {
     Http.client
       .withName("sonatype-client")
