@@ -4,7 +4,7 @@ import java.io.File
 import org.xerial.sbt.sonatype.BuildInfo
 import sbt.io.IO
 import scala.util.Try
-import wvlet.airframe.codec.MessageCodecFactory
+import wvlet.airframe.codec.MessageCodec
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.SonatypeClient.*
 import xerial.sbt.sonatype.SonatypeException.{MISSING_PROFILE, MISSING_STAGING_PROFILE, MULTIPLE_TARGETS, UNKNOWN_STAGE}
@@ -17,6 +17,7 @@ class SonatypeService(
     val profileName: String,
     cacheToken: Option[String]
 ) extends LogSupport
+    with SonatypeCompat
     with AutoCloseable {
   import SonatypeService.*
 
@@ -121,8 +122,7 @@ class SonatypeService(
     myProfiles
   }
 
-  private def withCache[A: scala.reflect.runtime.universe.TypeTag](label: String, fileName: String, a: => A): A = {
-    val codec     = MessageCodecFactory.defaultFactoryForJSON.of[A]
+  private def withCache[A](label: String, fileName: String, a: => A)(implicit codec: MessageCodec[A]): A = {
     val cachedir  = (Vector("sbt", "sonatype") ++ cacheToken).mkString("-")
     val cacheRoot = new File(s"target/${cachedir}")
     val cacheFile = new File(cacheRoot, fileName)
