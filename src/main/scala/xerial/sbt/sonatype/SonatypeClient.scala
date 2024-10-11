@@ -39,10 +39,8 @@ class SonatypeClient(
 
   @nowarn("msg=URLConnectionClientBackend")
   private[sonatype] val clientConfig = {
-    Http.client
+    var config = Http.client
       .withName("sonatype-client")
-      // Put the log file under target/sbt-sonatype directory
-      .withLoggerConfig(_.withLogFileName("target/sbt-sonatype/sonatype_client_logs.json"))
       // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
       .noCircuitBreaker
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
@@ -62,6 +60,20 @@ class SonatypeClient(
           .withAccept(MediaType.ApplicationJson)
           .withHeader(HttpHeader.Authorization, s"Basic ${base64Credentials}")
       }
+
+    val javaVersion = sys.props.getOrElse("java.version", "unknown")
+    if (javaVersion.startsWith("1.")) {
+      warn(
+        s"Disabled http client logging as Java version ${javaVersion} is no longer supported. Please use Java 17 or later."
+      )
+      config = config.noLogging
+    } else {
+      // Put the log file under target/sbt-sonatype directory
+      config = config.withLoggerConfig {
+        _.withLogFileName("target/sbt-sonatype/sonatype_client_logs.json")
+      }
+    }
+    config
   }
 
   private[sonatype] val httpClient = clientConfig.newSyncClient(repoUri.toString)
