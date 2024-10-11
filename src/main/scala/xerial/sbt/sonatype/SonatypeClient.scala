@@ -41,8 +41,6 @@ class SonatypeClient(
   private[sonatype] val clientConfig = {
     var config = Http.client
       .withName("sonatype-client")
-      // TODO Enable client-side logging while avoiding Java8 compatibility of log-rotator (logback-core 1.5.x)
-      .noLogging
       // Disables the circuit breaker, because Sonatype can be down for a long time https://github.com/xerial/sbt-sonatype/issues/363
       .noCircuitBreaker
       // Use URLConnectionClient for JDK8 compatibility. Remove this line when using JDK11 or later
