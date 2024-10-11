@@ -83,6 +83,8 @@ lazy val sbtSonatype =
       libraryDependencies ++= Seq(
         "org.sonatype.spice.zapper" % "spice-zapper"  % versions.sonatypeZapperClient,
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
+	  // Logback 1.5.8 dropposed Java 8 support
+	  exclude("ch.qos.logback", "logback-core")
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
           excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
         "org.wvlet.airframe"            %% "airspec"                           % versions.airframe % Test,
