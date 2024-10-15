@@ -1,4 +1,4 @@
-val SONATYPE_VERSION  = sys.env.getOrElse("SONATYPE_VERSION", "3.12.1")
+val SONATYPE_VERSION  = sys.env.getOrElse("SONATYPE_VERSION", "3.12.2")
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype"  % SONATYPE_VERSION)
 addSbtPlugin("com.github.sbt" % "sbt-pgp"       % "2.3.0")
 addSbtPlugin("org.scalameta"  % "sbt-scalafmt"  % "2.5.2")
