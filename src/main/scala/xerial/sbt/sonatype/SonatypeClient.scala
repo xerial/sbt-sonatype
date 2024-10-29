@@ -280,6 +280,12 @@ class SonatypeClient(
 
         clientBuilder.withPreemptiveRealm(credentialProvider)
 
+        if (!localBundlePath.isDirectory) {
+          info(
+            s"Directory $localBundlePath does not exist. Hint: Make sure you don't have any uncommitted files (i.e. generated via plugins like scalafmt)"
+          )
+        }
+
         import org.sonatype.spice.zapper.fs.DirectoryIOSource
         val deployables = new DirectoryIOSource(localBundlePath)
 
