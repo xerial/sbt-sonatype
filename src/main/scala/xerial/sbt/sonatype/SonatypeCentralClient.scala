@@ -15,7 +15,7 @@ import sbt.librarymanagement.ivy.Credentials
 import scala.math.pow
 import scala.util.Try
 import sttp.client4.{HttpError, ResponseException}
-import sttp.client4.httpurlconnection.HttpURLConnectionBackend
+import sttp.client4.okhttp.OkHttpSyncBackend
 import sttp.client4.logging.slf4j.Slf4jLoggingBackend
 import sttp.client4.logging.LoggingOptions
 import sttp.client4.upicklejson.default.*
@@ -121,7 +121,7 @@ object SonatypeCentralClient {
   def fromCredentials(credentials: Seq[Credentials]): Either[SonatypeException, SonatypeCentralClient] =
     for {
       sonatypeCredentials <- SonatypeCredentials.fromEnv(credentials, host)
-      backend = Slf4jLoggingBackend(HttpURLConnectionBackend())
+      backend = Slf4jLoggingBackend(OkHttpSyncBackend())
       client = new SyncSonatypeClient(
         sonatypeCredentials.toSonatypeCentralCredentials,
         backend,
