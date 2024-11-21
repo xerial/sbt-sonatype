@@ -89,6 +89,7 @@ lazy val sbtSonatype =
         "com.lumidion"                  %% "sonatype-central-client-sttp-core" % versions.sonatypeClient,
         "com.lumidion"                  %% "sonatype-central-client-upickle"   % versions.sonatypeClient,
         "com.softwaremill.sttp.client4" %% "slf4j-backend"                     % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "upickle"                           % versions.sttp
+        "com.softwaremill.sttp.client4" %% "upickle"                           % versions.sttp,
+        "com.softwaremill.sttp.client4" %% "okhttp-backend"                    % versions.sttp
       )
     )
