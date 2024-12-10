@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-crossScalaVersions += "3.3.4"
+crossScalaVersions += "3.6.2"
 
 pluginCrossBuild / sbtVersion := {
   scalaBinaryVersion.value match {
