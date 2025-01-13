@@ -84,7 +84,7 @@ lazy val sbtSonatype =
         "org.sonatype.spice.zapper" % "spice-zapper"  % versions.sonatypeZapperClient,
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
-          excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
+        excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
         "org.wvlet.airframe"            %% "airspec"                           % versions.airframe % Test,
         "com.lumidion"                  %% "sonatype-central-client-sttp-core" % versions.sonatypeClient,
         "com.lumidion"                  %% "sonatype-central-client-upickle"   % versions.sonatypeClient,
