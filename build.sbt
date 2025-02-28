@@ -34,7 +34,7 @@ val versions = new {
   val airframe             = "24.12.2"
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M16"
-  val sonatypeClient       = "0.3.0"
+  val sonatypeClient       = "0.4.0"
 }
 
 ThisBuild / dynverSeparator := "-"
