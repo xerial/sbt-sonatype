@@ -103,11 +103,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       else developers.value
     },
     sonatypeCentralDeploymentName := DeploymentName.fromArtifact(organization.value, name.value, version.value).unapply,
-    sonatypePublishTo := {
-      if (sonatypeCredentialHost.value == SonatypeCentralClient.host && version.value.endsWith("-SNAPSHOT")) {
-        None
-      } else Some(sonatypeDefaultResolver.value)
-    },
+    sonatypePublishTo             := Some(sonatypeDefaultResolver.value),
     sonatypeBundleDirectory := {
       (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${(ThisBuild / version).value}"
     },
@@ -117,7 +113,7 @@ object Sonatype extends AutoPlugin with LogSupport {
     sonatypePublishToBundle := {
       if (version.value.endsWith("-SNAPSHOT")) {
         if (sonatypeCredentialHost.value == sonatypeCentralHost) {
-          None
+          Some(Resolver.file("sonatype-local-bundle", sonatypeBundleDirectory.value))
         } else {
           // Sonatype snapshot repositories have no support for bundle upload,
           // so use direct publishing to the snapshot repo.
@@ -140,7 +136,7 @@ object Sonatype extends AutoPlugin with LogSupport {
       )
     },
     sonatypeDefaultResolver := {
-      if (sonatypeCredentialHost.value == SonatypeCentralClient.host) {
+      if (sonatypeCredentialHost.value == sonatypeCentralHost) {
         Resolver.url(s"https://${sonatypeCredentialHost.value}")
       } else {
         val profileM   = sonatypeTargetRepositoryProfile.?.value
@@ -197,19 +193,12 @@ object Sonatype extends AutoPlugin with LogSupport {
     val credentialHost    = extracted.get(sonatypeCredentialHost)
     val isVersionSnapshot = extracted.get(version).endsWith("-SNAPSHOT")
 
-    if (credentialHost == SonatypeCentralClient.host) {
-      if (isVersionSnapshot) {
-        error(
-          "Version cannot be a snapshot version when deploying to sonatype central. Please ensure that the version is publishable and try again."
-        )
-        state.fail
-      } else {
-        val deploymentName = DeploymentName(extracted.get(sonatypeCentralDeploymentName))
-        withSonatypeCentralService(state) { service =>
-          service
-            .uploadBundle(bundlePath, deploymentName, publishingType)
-            .map(_ => state)
-        }
+    if (credentialHost == sonatypeCentralHost) {
+      val deploymentName = DeploymentName(extracted.get(sonatypeCentralDeploymentName))
+      withSonatypeCentralService(state) { service =>
+        service
+          .uploadBundle(bundlePath, deploymentName, publishingType)
+          .map(_ => state)
       }
     } else {
       error(
@@ -235,7 +224,7 @@ object Sonatype extends AutoPlugin with LogSupport {
         val extracted      = Project.extract(state)
         val credentialHost = extracted.get(sonatypeCredentialHost)
 
-        if (credentialHost == SonatypeCentralClient.host) {
+        if (credentialHost == sonatypeCentralHost) {
           sonatypeCentralDeployCommand(state, PublishingType.AUTOMATIC)
         } else {
           withSonatypeService(state) { rest =>
