@@ -119,7 +119,10 @@ private[sonatype] class SonatypeCentralClient(
 object SonatypeCentralClient {
   val host: String = "central.sonatype.com"
 
-  def fromCredentials(credentials: Seq[Credentials], readTimeoutMillis: Long): Either[SonatypeException, SonatypeCentralClient] =
+  def fromCredentials(
+      credentials: Seq[Credentials],
+      readTimeoutMillis: Long
+  ): Either[SonatypeException, SonatypeCentralClient] =
     for {
       sonatypeCredentials <- SonatypeCredentials.fromEnv(credentials, host)
       backend = Slf4jLoggingBackend(HttpURLConnectionBackend())
