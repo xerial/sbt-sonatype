@@ -473,9 +473,12 @@ object Sonatype extends AutoPlugin with LogSupport {
     wvlet.log.Logger.setDefaultLogLevel(logLevel)
 
     val credentials = getCredentials(extracted, state)
-
+     
     val eitherOp = for {
-      client <- SonatypeCentralClient.fromCredentials(credentials)
+      client <- SonatypeCentralClient.fromCredentials(
+        credentials,
+        readTimeoutMillis = extracted.get(sonatypeTimeoutMillis)
+      )
       service = new SonatypeCentralService(client)
       res <-
         try {
