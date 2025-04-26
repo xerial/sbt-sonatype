@@ -188,10 +188,9 @@ object Sonatype extends AutoPlugin with LogSupport {
     createdRepo
   }
   private def sonatypeCentralDeployCommand(state: State, publishingType: PublishingType): State = {
-    val extracted         = Project.extract(state)
-    val bundlePath        = extracted.get(sonatypeBundleDirectory)
-    val credentialHost    = extracted.get(sonatypeCredentialHost)
-    val isVersionSnapshot = extracted.get(version).endsWith("-SNAPSHOT")
+    val extracted      = Project.extract(state)
+    val bundlePath     = extracted.get(sonatypeBundleDirectory)
+    val credentialHost = extracted.get(sonatypeCredentialHost)
 
     if (credentialHost == sonatypeCentralHost) {
       val deploymentName = DeploymentName(extracted.get(sonatypeCentralDeploymentName))

@@ -33,8 +33,7 @@ val versions = new {
   val scala                = "2.12.20" // Must use Scala 2.12.x for sbt plugins
   val airframe             = "24.12.2"
   val sonatypeZapperClient = "1.3"
-  val sttp                 = "4.0.0-M16"
-  val sonatypeClient       = "0.3.0"
+  val sonatypeClient       = "0.5.0"
 }
 
 ThisBuild / dynverSeparator := "-"
@@ -85,10 +84,7 @@ lazy val sbtSonatype =
         "org.wvlet.airframe"       %% "airframe-http" % versions.airframe
         // A workaround for sbt-pgp, which still depends on scala-parser-combinator 1.x
         excludeAll (ExclusionRule("org.scala-lang.modules", "scala-parser-combinators_2.12")),
-        "org.wvlet.airframe"            %% "airspec"                           % versions.airframe % Test,
-        "com.lumidion"                  %% "sonatype-central-client-sttp-core" % versions.sonatypeClient,
-        "com.lumidion"                  %% "sonatype-central-client-upickle"   % versions.sonatypeClient,
-        "com.softwaremill.sttp.client4" %% "slf4j-backend"                     % versions.sttp,
-        "com.softwaremill.sttp.client4" %% "upickle"                           % versions.sttp
+        "org.wvlet.airframe" %% "airspec"                           % versions.airframe % Test,
+        "com.lumidion"       %% "sonatype-central-client-gigahorse" % versions.sonatypeClient
       )
     )
