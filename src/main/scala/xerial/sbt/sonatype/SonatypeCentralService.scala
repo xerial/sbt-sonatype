@@ -25,7 +25,7 @@ private[sbt] class SonatypeCentralService(client: SonatypeCentralClient) extends
     }
     deploymentId <- client.uploadBundle(zipFile, deploymentName, Some(publishingType))
     _ = info(s"Checking if deployment succeeded for deployment id: ${deploymentId.unapply}...")
-    didDeploySucceed <- client.didDeploySucceed(deploymentId, publishingType == PublishingType.AUTOMATIC)
+    didDeploySucceed <- client.didDeploySucceed(deploymentId)
     _ <- Either.cond(
       didDeploySucceed,
       (),

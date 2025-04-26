@@ -1,36 +1,33 @@
 package xerial.sbt.sonatype
 
 import com.lumidion.sonatype.central.client.core.{
-  CheckStatusResponse,
   DeploymentId,
   DeploymentName,
   DeploymentState,
-  PublishingType
+  PublishingType,
+  SonatypeCentralError
 }
-import com.lumidion.sonatype.central.client.core.DeploymentState.PUBLISHED
-import com.lumidion.sonatype.central.client.sttp.core.SyncSonatypeClient
-import com.lumidion.sonatype.central.client.upickle.decoders.*
+import com.lumidion.sonatype.central.client.core.SonatypeCentralError.AuthorizationError
+import com.lumidion.sonatype.central.client.gigahorse.SyncSonatypeClient
+import gigahorse.support.okhttp.Gigahorse
+import gigahorse.HttpClient
 import java.io.File
 import sbt.librarymanagement.ivy.Credentials
+import scala.concurrent.ExecutionContext
 import scala.math.pow
 import scala.util.Try
-import sttp.client4.{HttpError, ResponseException}
-import sttp.client4.httpurlconnection.HttpURLConnectionBackend
-import sttp.client4.logging.slf4j.Slf4jLoggingBackend
-import sttp.client4.logging.LoggingOptions
-import sttp.client4.upicklejson.default.*
-import sttp.model.StatusCode
 import wvlet.log.LogSupport
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STATUS_CHECK_FAILURE, USER_ERROR}
 
 private[sonatype] class SonatypeCentralClient(
-    client: SyncSonatypeClient
+    client: SyncSonatypeClient,
+    httpClient: HttpClient
 ) extends AutoCloseable
     with LogSupport {
 
-  private def retryRequest[A, E](
-      request: => Either[ResponseException[String, E], A],
+  private def retryRequest[A](
+      request: => Either[SonatypeCentralError, A],
       errorContext: String,
       errorCode: ErrorCode,
       retriesLeft: Int,
@@ -41,10 +38,9 @@ private[sonatype] class SonatypeCentralClient(
         SonatypeException(errorCode, s"$errorContext. ${err.getMessage}")
       }
       finalResponse <- response match {
-        case Left(HttpError(message, code))
-            if (code == StatusCode.Forbidden) || (code == StatusCode.Unauthorized) || (code == StatusCode.BadRequest) =>
+        case Left(AuthorizationError(msg)) =>
           Left(
-            new SonatypeException(USER_ERROR, s"$errorContext. Status code: ${code.code}. Message Received: $message")
+            new SonatypeException(USER_ERROR, s"Authorization error. Message Received: $msg")
           )
         case Left(ex) =>
           if (retriesLeft > 0) {
@@ -55,7 +51,7 @@ private[sonatype] class SonatypeCentralClient(
               maximum
             } else initialMillisecondsToSleep
             Thread.sleep(finalMillisecondsToSleep)
-            info(s"$errorContext. Request failed with the following message: ${ex.getMessage}. Retrying request.")
+            error(s"$errorContext. Request failed with the following message: ${ex.getMessage}. Retrying request.")
             retryRequest(request, errorContext, errorCode, retriesLeft - 1, retriesAttempted + 1)
           } else {
             Left(SonatypeException(errorCode, ex.getMessage))
@@ -72,7 +68,7 @@ private[sonatype] class SonatypeCentralClient(
     info(s"Uploading bundle ${localBundlePath.getPath} to Sonatype Central")
 
     retryRequest(
-      client.uploadBundle(localBundlePath, deploymentName, publishingType).body,
+      client.uploadBundle(localBundlePath, deploymentName, publishingType),
       "Error uploading bundle to Sonatype Central",
       BUNDLE_UPLOAD_FAILURE,
       60
@@ -81,28 +77,46 @@ private[sonatype] class SonatypeCentralClient(
 
   def didDeploySucceed(
       deploymentId: DeploymentId,
-      shouldDeployBePublished: Boolean
+      previousDeployState: Option[DeploymentState] = None
   ): Either[SonatypeException, Boolean] = {
 
     for {
-      response <- retryRequest(
-        client.checkStatus(deploymentId)(asJson[CheckStatusResponse]).body,
+      responseOpt <- retryRequest(
+        client.checkStatus(deploymentId),
         "Error checking deployment status",
         STATUS_CHECK_FAILURE,
         10
       )
+      response <- responseOpt.toRight(
+        SonatypeException(
+          STATUS_CHECK_FAILURE,
+          s"Failed to check status for deployment id: ${deploymentId.unapply}. Deployment not found."
+        )
+      )
       finalRes <-
         if (response.deploymentState.isNonFinal) {
           Thread.sleep(5000L)
-          didDeploySucceed(deploymentId, shouldDeployBePublished)
+          didDeploySucceed(deploymentId)
         } else if (response.deploymentState == DeploymentState.FAILED) {
           error(
             s"Deployment failed for deployment id: ${deploymentId.unapply}. Current deployment state: ${response.deploymentState.unapply}"
           )
           Right(false)
-        } else if (response.deploymentState != PUBLISHED && shouldDeployBePublished) {
+        } else if (
+          response.deploymentState == DeploymentState.PENDING || response.deploymentState == DeploymentState.VALIDATING
+        ) {
+          val shouldStateBeLogged = previousDeployState.forall { previousState =>
+            if (previousState != response.deploymentState) {
+              true
+            } else {
+              false
+            }
+          }
+          if (shouldStateBeLogged) {
+            info(s"Current deployment state: ${response.deploymentState.unapply}")
+          }
           Thread.sleep(5000L)
-          didDeploySucceed(deploymentId, shouldDeployBePublished)
+          didDeploySucceed(deploymentId)
         } else {
           info(
             s"Deployment succeeded for deployment id: ${deploymentId.unapply}. Current deployment state: ${response.deploymentState.unapply}"
@@ -112,20 +126,22 @@ private[sonatype] class SonatypeCentralClient(
     } yield finalRes
   }
 
-  override def close(): Unit = client.close()
+  override def close(): Unit = httpClient.close()
 }
 
 object SonatypeCentralClient {
   val host: String = "central.sonatype.com"
 
-  def fromCredentials(credentials: Seq[Credentials]): Either[SonatypeException, SonatypeCentralClient] =
+  def fromCredentials(
+      credentials: Seq[Credentials]
+  )(implicit ec: ExecutionContext): Either[SonatypeException, SonatypeCentralClient] =
     for {
       sonatypeCredentials <- SonatypeCredentials.fromEnv(credentials, host)
-      backend = Slf4jLoggingBackend(HttpURLConnectionBackend())
+      httpClient = Gigahorse.http(Gigahorse.config)
       client = new SyncSonatypeClient(
         sonatypeCredentials.toSonatypeCentralCredentials,
-        backend,
-        Some(LoggingOptions(logRequestBody = Some(true), logResponseBody = Some(true)))
+        httpClient,
+        60
       )
-    } yield new SonatypeCentralClient(client)
+    } yield new SonatypeCentralClient(client, httpClient)
 }

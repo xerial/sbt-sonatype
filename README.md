@@ -68,7 +68,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
   > ```
 
 #### Sonatype Central Host
-As of early 2024, Sonatype has switched all new account registration over to the Sonatype Central portal and legacy `sonatype.org` accounts will eventually migrate there. To configure sbt to publish to the Sonatype Central portal, simply add the following:
+As of early 2024, Sonatype has switched all new account registration over to the Sonatype Central portal and legacy `sonatype.org` accounts will eventually migrate there. To configure sbt to publish to the Sonatype Central portal, both for releases and for snapshots, simply add the following:
 
 ```sbt
 import xerial.sbt.Sonatype.sonatypeCentralHost
