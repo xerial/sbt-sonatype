@@ -25,7 +25,8 @@ import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.{BUNDLE_UPLOAD_FAILURE, STATUS_CHECK_FAILURE, USER_ERROR}
 
 private[sonatype] class SonatypeCentralClient(
-    client: SyncSonatypeClient
+    client: SyncSonatypeClient,
+    readTimeoutMillis: Long
 ) extends AutoCloseable
     with LogSupport {
 
@@ -86,7 +87,7 @@ private[sonatype] class SonatypeCentralClient(
 
     for {
       response <- retryRequest(
-        client.checkStatus(deploymentId)(asJson[CheckStatusResponse]).body,
+        client.checkStatus(deploymentId, timeout = readTimeoutMillis)(asJson[CheckStatusResponse]).body,
         "Error checking deployment status",
         STATUS_CHECK_FAILURE,
         10
@@ -118,7 +119,10 @@ private[sonatype] class SonatypeCentralClient(
 object SonatypeCentralClient {
   val host: String = "central.sonatype.com"
 
-  def fromCredentials(credentials: Seq[Credentials]): Either[SonatypeException, SonatypeCentralClient] =
+  def fromCredentials(
+      credentials: Seq[Credentials],
+      readTimeoutMillis: Long
+  ): Either[SonatypeException, SonatypeCentralClient] =
     for {
       sonatypeCredentials <- SonatypeCredentials.fromEnv(credentials, host)
       backend = Slf4jLoggingBackend(HttpURLConnectionBackend())
@@ -127,5 +131,5 @@ object SonatypeCentralClient {
         backend,
         Some(LoggingOptions(logRequestBody = Some(true), logResponseBody = Some(true)))
       )
-    } yield new SonatypeCentralClient(client)
+    } yield new SonatypeCentralClient(client, readTimeoutMillis)
 }

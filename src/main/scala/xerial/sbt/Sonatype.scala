@@ -475,7 +475,10 @@ object Sonatype extends AutoPlugin with LogSupport {
     val credentials = getCredentials(extracted, state)
 
     val eitherOp = for {
-      client <- SonatypeCentralClient.fromCredentials(credentials)
+      client <- SonatypeCentralClient.fromCredentials(
+        credentials,
+        readTimeoutMillis = extracted.get(sonatypeTimeoutMillis).toLong
+      )
       service = new SonatypeCentralService(client)
       res <-
         try {
