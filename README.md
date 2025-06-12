@@ -124,7 +124,7 @@ For the authentication to Sonatype API, you need to set your Sonatype token info
 
 ```scala
 credentials += Credentials("Sonatype Nexus Repository Manager",
-        "oss.sonatype.org",
+        "central.sonatype.com",    // or "oss.sonatype.org" when using a legacy host
         "(Sonatype token user name)",
         "(Sonatype token password)")
 ```
