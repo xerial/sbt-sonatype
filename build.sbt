@@ -30,7 +30,7 @@ addCommandAlias("format", "scalafmtAll; scalafmtSbt")
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 val versions = new {
-  val scala                = "2.12.20" // Must use Scala 2.12.x for sbt plugins
+  val scala                = "2.12.21" // Must use Scala 2.12.x for sbt plugins
   val airframe             = "24.12.2"
   val sonatypeZapperClient = "1.3"
   val sttp                 = "4.0.0-M16"
