@@ -1,6 +1,8 @@
 sbt-sonatype plugin
 ======
 
+> ⚠️ **Deprecation Notice:** This plugin no longer works as Sonatype has deprecated the legacy API. Please use sbt's native Sonatype support instead. See the [official sbt documentation](https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html) for details.
+
 A sbt plugin for publishing your project to the Maven central repository through the REST API of Sonatype Nexus. Deploying artifacts to Sonatype repository is a requirement for synchronizing your projects to the [Maven central repository](https://repo1.maven.org/maven2/). __sbt-sonatype__ plugin enables two-step release of your Scala/Java projects.
 
  * `publishSigned` (with [sbt-pgp plugin](http://www.scala-sbt.org/sbt-pgp/))
