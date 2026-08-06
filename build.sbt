@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-crossScalaVersions += "3.6.2"
+crossScalaVersions += "3.8.4"
 
 pluginCrossBuild / sbtVersion := {
   scalaBinaryVersion.value match {
     case "2.12" =>
       (pluginCrossBuild / sbtVersion).value
     case _ =>
-      "2.0.0-M4"
+      "2.0.5"
   }
 }
+addSbtPlugin("com.github.sbt" % "sbt2-compat" % "0.2.0")
 
 addCommandAlias("format", "scalafmtAll; scalafmtSbt")
 

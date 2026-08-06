@@ -11,6 +11,7 @@ import com.lumidion.sonatype.central.client.core.{DeploymentName, PublishingType
 import sbt.*
 import sbt.librarymanagement.MavenRepository
 import sbt.Keys.*
+import sbtcompat.PluginCompat._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.hashing.MurmurHash3
@@ -78,10 +79,8 @@ object Sonatype extends AutoPlugin with LogSupport {
       false
     },
     credentials ++= {
-      val alreadyContainsSonatypeCredentials: Boolean = credentials.value.exists {
-        case d: DirectCredentials => d.host == sonatypeCredentialHost.value
-        case _                    => false
-      }
+      val alreadyContainsSonatypeCredentials: Boolean =
+        credentialForHost(credentials.value, sonatypeCredentialHost.value).isDefined
       if (!alreadyContainsSonatypeCredentials) {
         val env = sys.env.get(_)
         (for {

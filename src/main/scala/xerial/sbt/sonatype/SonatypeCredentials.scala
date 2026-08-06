@@ -3,7 +3,8 @@ package xerial.sbt.sonatype
 import com.lumidion.sonatype.central.client.core.{SonatypeCredentials => SonatypeCentralCredentials}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
-import sbt.librarymanagement.ivy.Credentials
+import sbt.Credentials
+import sbtcompat.PluginCompat._
 import xerial.sbt.sonatype.utils.Extensions.*
 import xerial.sbt.sonatype.SonatypeException.MISSING_CREDENTIAL
 
@@ -20,8 +21,7 @@ object SonatypeCredentials {
       credentials: Seq[Credentials],
       credentialHost: String
   ): Either[SonatypeException, SonatypeCredentials] = {
-    Credentials
-      .forHost(credentials, credentialHost)
+    credentialForHost(credentials, credentialHost)
       .toRight {
         SonatypeException(
           MISSING_CREDENTIAL,
