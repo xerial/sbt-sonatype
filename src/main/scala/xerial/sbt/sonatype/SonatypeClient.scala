@@ -7,7 +7,8 @@ import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.sonatype.spice.zapper.client.hc4.Hc4ClientBuilder
 import org.sonatype.spice.zapper.ParametersBuilder
-import sbt.librarymanagement.ivy.Credentials
+import sbt.Credentials
+import sbtcompat.PluginCompat._
 import scala.annotation.nowarn
 import scala.concurrent.duration.Duration
 import wvlet.airframe.control.{Control, ResultClass, Retry}

@@ -11,7 +11,7 @@ import com.lumidion.sonatype.central.client.core.DeploymentState.PUBLISHED
 import com.lumidion.sonatype.central.client.sttp.core.SyncSonatypeClient
 import com.lumidion.sonatype.central.client.upickle.decoders.*
 import java.io.File
-import sbt.librarymanagement.ivy.Credentials
+import sbt.Credentials
 import scala.math.pow
 import scala.util.Try
 import sttp.client4.{HttpError, ResponseException}
